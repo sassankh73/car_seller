@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useAuth, authFetch, getAuthHeaders } from "@/context/AuthContext";
 
 interface Project {
   id: string;
@@ -19,6 +19,7 @@ interface Studio {
   key: string;
   name: string;
   image_url: string;
+  preview_image_url: string;
 }
 
 export default function Dashboard() {
@@ -26,6 +27,7 @@ export default function Dashboard() {
   const commonT = useTranslations("common");
   const notificationT = useTranslations("notifications");
   const locale = useLocale();
+  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [studios, setStudios] = useState<Studio[]>([]);
@@ -42,14 +44,29 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Wait for auth to be ready
+    if (authLoading) return;
+
+    if (!isAuthenticated) {
+      // AuthContext will handle redirect
+      return;
+    }
+
     const loadData = async () => {
       try {
-        const [studiosRes, projectsRes] = await Promise.all([
-          axios.get("/api/studio"),
-          axios.get("/api/projects"),
-        ]);
-        setStudios(studiosRes.data);
-        setProjects(projectsRes.data);
+        // Studios are public (no auth needed)
+        const studiosRes = await fetch("/api/studio");
+        // Projects require auth
+        const projectsRes = await authFetch("/api/projects");
+
+        if (!studiosRes.ok || !projectsRes.ok) {
+          throw new Error(`API error: studios=${studiosRes.status}, projects=${projectsRes.status}`);
+        }
+
+        const studiosData = await studiosRes.json();
+        const projectsData = await projectsRes.json();
+        setStudios(studiosData);
+        setProjects(projectsData);
         setApiError(null);
       } catch (error) {
         console.error("Failed to load data:", error);
@@ -59,7 +76,7 @@ export default function Dashboard() {
       }
     };
     loadData();
-  }, []);
+  }, [authLoading, isAuthenticated, notificationT]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -85,13 +102,21 @@ export default function Dashboard() {
     formData.append("export_quality", exportQuality);
 
     try {
-      const response = await axios.post("/api/studio/process", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        responseType: "blob",
+      const authHeaders = getAuthHeaders();
+      const response = await fetch("/api/studio/process", {
+        method: "POST",
+        headers: authHeaders,
+        body: formData,
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Processing failed");
+      }
+
+      const blob = await response.blob();
       // Create preview URL from blob
-      const imageUrl = URL.createObjectURL(response.data);
+      const imageUrl = URL.createObjectURL(blob);
       setResultImage(imageUrl);
 
       // Create a new project entry
@@ -105,7 +130,7 @@ export default function Dashboard() {
     } catch (error: any) {
       console.error("Processing failed:", error);
       const errorMessage =
-        error.response?.data?.detail || notificationT("generationError");
+        error.message || notificationT("generationError");
       setApiError(errorMessage);
     } finally {
       setProcessing(false);
@@ -121,6 +146,21 @@ export default function Dashboard() {
     link.click();
     document.body.removeChild(link);
   };
+
+  // Show loading while auth is being verified
+  if (authLoading) {
+    return (
+      <main className="p-8 min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-gray-400">
+          <svg className="animate-spin h-8 w-8 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <p>{commonT("loading")}</p>
+        </div>
+      </main>
+    );
+  }
 
   // Studio translations mapping - Professional indoor studios only
   const studioTranslations: Record<string, string> = {
@@ -153,9 +193,28 @@ export default function Dashboard() {
             >
               {t("navigation.billing")}
             </Link>
+            {user?.role === "admin" && (
+              <Link
+                href={`/${locale}/admin/dashboard`}
+                className="text-indigo-400 hover:text-indigo-300 transition"
+              >
+                Admin
+              </Link>
+            )}
           </div>
           <div className="flex items-center space-x-4">
             <LanguageSwitcher />
+            {user && (
+              <span className="text-gray-400 text-sm">
+                {user.email}
+              </span>
+            )}
+            <button
+              onClick={logout}
+              className="text-red-400 hover:text-red-300 transition text-sm"
+            >
+              Logout
+            </button>
             <Link
               href={`/${locale}`}
               className="text-indigo-400 hover:text-indigo-300 transition"
@@ -273,23 +332,57 @@ export default function Dashboard() {
                 <h2 className="text-xl font-semibold text-white mb-4">
                   {t("studio.title")}
                 </h2>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   {studios.map((studio) => (
                     <button
                       key={studio.key}
                       onClick={() => setSelectedStudio(studio.key)}
-                      className={`p-3 rounded-lg border-2 transition ${
+                      className={`relative rounded-xl overflow-hidden border-2 transition group ${
                         selectedStudio === studio.key
-                          ? "border-indigo-500 bg-indigo-500/20"
+                          ? "border-indigo-500 ring-2 ring-indigo-500/50"
                           : "border-gray-600 hover:border-gray-500"
                       }`}
                     >
-                      <div className="text-xs text-gray-300 mb-1">
-                        {studioTranslations[studio.key] || studio.name}
+                      {/* Preview Image with graceful fallback */}
+                      <div className="aspect-[4/3] bg-gray-900 relative overflow-hidden">
+                        <div
+                          className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                          style={{
+                            backgroundImage: `url(${studio.preview_image_url})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }}
+                          onError={(e) => {
+                            // Fallback when image fails to load
+                            const target = e.currentTarget as HTMLElement;
+                            target.style.backgroundImage =
+                              "linear-gradient(135deg, #1f2937 0%, #374151 100%)";
+                          }}
+                        >
+                          {/* Loading state placeholder */}
+                          <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
+                            Loading preview...
+                          </div>
+                        </div>
+                        
+                        {/* Overlay gradient for readability */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                       </div>
-                      <div className="text-xs text-gray-500 capitalize">
-                        {studio.key.replace("_", " ")}
+                      
+                      {/* Studio info overlay */}
+                      <div className="p-3 bg-gray-800">
+                        <div className="text-sm font-medium text-white truncate">
+                          {studioTranslations[studio.key] || studio.name}
+                        </div>
+                        <div className="text-xs text-gray-400 capitalize mt-0.5">
+                          {studio.key.replace("_", " ")}
+                        </div>
                       </div>
+                      
+                      {/* Selection indicator */}
+                      {selectedStudio === studio.key && (
+                        <div className="absolute top-2 right-2 w-3 h-3 bg-indigo-500 rounded-full border-2 border-gray-800 shadow-lg" />
+                      )}
                     </button>
                   ))}
                 </div>

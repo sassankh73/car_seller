@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const t = useTranslations("auth.login");
   const locale = useLocale();
-  const router = useRouter();
+  const { login, loading: authLoading, error: authError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,28 +22,17 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Store auth token in localStorage for MVP
-        localStorage.setItem("auth_token", data.access_token);
-        localStorage.setItem("user_email", data.email);
-        router.push(`/${locale}/dashboard`);
-      } else {
-        const data = await response.json();
-        setError(data.detail || "Login failed");
-      }
+      await login(email, password);
+      // AuthContext handles token storage, user state, and redirect
     } catch (err) {
       setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  const displayError = error || authError;
+  const isLoading = loading || authLoading;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col">
@@ -80,9 +69,9 @@ export default function LoginPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {error && (
+              {displayError && (
                 <div className="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg text-sm">
-                  {error}
+                  {displayError}
                 </div>
               )}
 
@@ -132,14 +121,14 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={isLoading}
                 className={`w-full py-3 rounded-lg font-semibold transition ${
-                  loading
+                  isLoading
                     ? "bg-gray-600 text-gray-400 cursor-not-allowed"
                     : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30"
                 }`}
               >
-                {loading ? (
+                {isLoading ? (
                   <span className="flex items-center justify-center">
                     <svg
                       className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"

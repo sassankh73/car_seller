@@ -3,28 +3,34 @@ const createNextIntlPlugin = require("next-intl/plugin");
 
 const withNextIntl = createNextIntlPlugin();
 
-const backendApiUrl =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+const backendHost = process.env.BACKEND_HOST || (process.env.NODE_ENV === "development" ? "localhost" : "backend");
+const backendPort = process.env.BACKEND_PORT || "8001";
 
 const nextConfig = {
+  output: "standalone",
+
   images: {
     remotePatterns: [
       {
         protocol: "http",
         hostname: "localhost",
-        port: "8002",
+        port: "8001",
         pathname: "/**",
       },
     ],
-    // Allow blob URLs for preview
+
     unoptimized: process.env.NODE_ENV === "development",
   },
-  // API proxy for development
+
   async rewrites() {
     return [
       {
         source: "/api/:path*",
-        destination: `${backendApiUrl}/api/:path*`,
+        destination: `http://${backendHost}:${backendPort}/api/:path*`,
+      },
+      {
+        source: "/static/:path*",
+        destination: `http://${backendHost}:${backendPort}/static/:path*`,
       },
     ];
   },

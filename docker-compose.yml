@@ -1,0 +1,21 @@
+services:
+  backend:
+    build: ./backend
+    container_name: car_backend
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./backend/.env
+    environment:
+      - ADMIN_PASSWORD=AdminPass123
+
+  frontend:
+    build: ./frontend
+    container_name: car_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - BACKEND_HOST=backend
+      - BACKEND_PORT=8001
+    depends_on:
+      - backend
