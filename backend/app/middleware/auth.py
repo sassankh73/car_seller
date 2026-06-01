@@ -8,7 +8,7 @@ from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from app.models import get_db, Role
+from app.models import SessionLocal, Role
 from app.services.auth import decode_access_token, get_user_by_email
 
 
@@ -27,10 +27,12 @@ async def authenticate_middleware(request: Request, call_next):
         "/api/auth/register",
         "/api/auth/forgot-password",
         "/api/auth/token",
+        "/api/auth/signup",
         "/docs",
         "/openapi.json",
         "/health",
         "/static",
+        "/api/studio",
     ]
 
     path = request.url.path
@@ -57,8 +59,8 @@ async def authenticate_middleware(request: Request, call_next):
 
     token = parts[1]
 
-    # Validate token
-    db: Session = next(get_db())
+    # Validate token with proper DB session management
+    db: Session = SessionLocal()
     try:
         payload = decode_access_token(token)
         if not payload or not payload.sub:
@@ -74,7 +76,7 @@ async def authenticate_middleware(request: Request, call_next):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={"detail": "User not found or inactive"},
             )
-        
+
         # Check if user is disabled
         if user.is_disabled:
             return JSONResponse(
@@ -82,11 +84,12 @@ async def authenticate_middleware(request: Request, call_next):
                 content={"detail": "Account is disabled. Please contact support."},
             )
 
-        # Add user to request state
+        # Add user and db session to request state
         request.state.current_user = user
         request.state.db = db
 
-        return await call_next(request)
+        response = await call_next(request)
+        return response
     finally:
         db.close()
 

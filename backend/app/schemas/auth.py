@@ -7,7 +7,7 @@ This module contains Pydantic models for authentication-related operations.
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, field_validator
 
 
 class TokenPayload(BaseModel):
@@ -22,16 +22,32 @@ class TokenPayload(BaseModel):
 class UserCreate(BaseModel):
     """Request model for user registration."""
 
-    email: EmailStr
+    email: str
     password: str
     name: Optional[str] = None
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v):
+        """Basic email validation that allows internal domains like .local."""
+        if not v or "@" not in v:
+            raise ValueError("Invalid email address")
+        return v.strip().lower()
 
 
 class UserLogin(BaseModel):
     """Request model for user login."""
 
-    email: EmailStr
+    email: str
     password: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v):
+        """Basic email validation that allows internal domains like .local."""
+        if not v or "@" not in v:
+            raise ValueError("Invalid email address")
+        return v.strip().lower()
 
 
 class TokenResponse(BaseModel):
@@ -49,6 +65,7 @@ class UserResponse(BaseModel):
     id: int
     email: str
     name: Optional[str] = None
+    role: str = "free"
     is_active: bool = True
 
     class Config:
@@ -58,7 +75,15 @@ class UserResponse(BaseModel):
 class ForgotPasswordRequest(BaseModel):
     """Request model for forgot password."""
 
-    email: EmailStr
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v):
+        """Basic email validation that allows internal domains like .local."""
+        if not v or "@" not in v:
+            raise ValueError("Invalid email address")
+        return v.strip().lower()
 
 
 class ResetPasswordRequest(BaseModel):

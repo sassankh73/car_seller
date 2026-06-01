@@ -8,6 +8,7 @@ This module contains SQLAlchemy models for:
 - Usage: Billing usage tracking
 """
 
+import os
 from datetime import datetime
 from enum import Enum
 from typing import Optional
@@ -26,8 +27,11 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
-# SQLAlchemy configuration
-SQLALCHEMY_DATABASE_URL = "postgresql://autostudio_user:autostudio@192.168.0.106:5432/autostudio"
+# SQLAlchemy configuration - read from environment variable (set via .env)
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://autostudio_user:autostudio@192.168.0.106:5432/autostudio"
+)
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

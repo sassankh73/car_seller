@@ -1,13 +1,14 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 interface User {
   id: number;
   email: string;
   name?: string;
+  role: string;
   is_active: boolean;
 }
 
@@ -24,6 +25,32 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Create an authenticated fetch wrapper that attaches the JWT Authorization header.
+ */
+export function authFetch(input: string, init?: RequestInit): Promise<Response> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string> || {}),
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return fetch(input, { ...init, headers });
+}
+
+/**
+ * Create an axios-compatible request config with auth headers.
+ */
+export function getAuthHeaders(): Record<string, string> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -31,38 +58,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+  const locale = useLocale();
   const t = useTranslations("auth");
+
+  // Fetch current user from /api/auth/me using a token
+  const fetchCurrentUser = useCallback(async (authToken: string): Promise<User | null> => {
+    try {
+      const response = await fetch("/api/auth/me", {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          id: data.id,
+          email: data.email,
+          name: data.name,
+          role: data.role || "free",
+          is_active: data.is_active ?? true,
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, []);
 
   // Check for existing auth on mount
   useEffect(() => {
     const storedToken = localStorage.getItem("auth_token");
-    const storedEmail = localStorage.getItem("user_email");
 
-    if (storedToken && storedEmail) {
-      // Verify token with backend
-      fetch("/api/auth/me", {
-        headers: { Authorization: `Bearer ${storedToken}` },
-      })
-        .then((res) => {
-          if (res.ok) {
-            return res.json();
+    if (storedToken) {
+      // Verify token with backend and get real user data
+      fetchCurrentUser(storedToken)
+        .then((userData) => {
+          if (userData) {
+            setUser(userData);
+            setToken(storedToken);
+          } else {
+            // Token invalid — clear it
+            localStorage.removeItem("auth_token");
           }
-          throw new Error("Invalid token");
-        })
-        .then((data) => {
-          setUser(data);
-          setToken(storedToken);
           setLoading(false);
         })
         .catch(() => {
           localStorage.removeItem("auth_token");
-          localStorage.removeItem("user_email");
           setLoading(false);
         });
     } else {
       setLoading(false);
     }
-  }, []);
+  }, [fetchCurrentUser]);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
@@ -77,11 +122,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        setToken(data.access_token);
-        setUser({ id: 1, email: data.email, name: data.name, is_active: true });
+        // Store token first
         localStorage.setItem("auth_token", data.access_token);
-        localStorage.setItem("user_email", data.email);
-        router.push("/dashboard");
+        setToken(data.access_token);
+
+        // Fetch real user data from /api/auth/me
+        const userData = await fetchCurrentUser(data.access_token);
+        if (userData) {
+          setUser(userData);
+        } else {
+          // Fallback: use what we have from the login response
+          setUser({
+            id: 0,
+            email: data.email,
+            name: data.name,
+            role: "free",
+            is_active: true,
+          });
+        }
+        router.push(`/${locale}/dashboard`);
       } else {
         const data = await response.json();
         setError(data.detail || t("loginFailed"));
@@ -106,11 +165,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        setToken(data.access_token);
-        setUser({ id: 1, email: data.email, name: data.name, is_active: true });
+        // Store token first
         localStorage.setItem("auth_token", data.access_token);
-        localStorage.setItem("user_email", data.email);
-        router.push("/dashboard");
+        setToken(data.access_token);
+
+        // Fetch real user data from /api/auth/me
+        const userData = await fetchCurrentUser(data.access_token);
+        if (userData) {
+          setUser(userData);
+        } else {
+          // Fallback: use what we have from the register response
+          setUser({
+            id: 0,
+            email: data.email,
+            name: data.name,
+            role: "free",
+            is_active: true,
+          });
+        }
+        router.push(`/${locale}/dashboard`);
       } else {
         const data = await response.json();
         setError(data.detail || t("registerFailed"));
@@ -122,14 +195,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     localStorage.removeItem("auth_token");
-    localStorage.removeItem("user_email");
     router.push("/");
     router.refresh();
-  };
+  }, [router]);
+
+  // Redirect unauthenticated users away from protected routes
+  useEffect(() => {
+    if (!loading && !user) {
+      const protectedPaths = ["/dashboard", "/admin"];
+      const currentPath = pathname || "";
+      if (protectedPaths.some((p) => currentPath.includes(p))) {
+        router.push(`/${locale}/auth/login`);
+      }
+    }
+  }, [user, loading, pathname, router, locale]);
 
   // Redirect authenticated users away from auth pages
   useEffect(() => {
@@ -141,10 +224,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         authPaths.some((p) => currentPath.includes(p)) &&
         !currentPath.includes("/dashboard")
       ) {
-        router.push("/dashboard");
+        router.push(`/${locale}/dashboard`);
       }
     }
-  }, [user, loading, pathname, router]);
+  }, [user, loading, pathname, router, locale]);
 
   return (
     <AuthContext.Provider

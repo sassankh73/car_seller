@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useAuth, authFetch } from "@/context/AuthContext";
 
 interface UserSearchResult {
   id: number;
@@ -34,6 +34,8 @@ interface UserDetail {
 export default function AdminUsers() {
   const t = useTranslations("admin");
   const commonT = useTranslations("common");
+  const locale = useLocale();
+  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const [users, setUsers] = useState<UserSearchResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,24 +46,25 @@ export default function AdminUsers() {
   const [userToDisable, setUserToDisable] = useState<number | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated || user?.role !== "admin") return;
     loadUsers();
-  }, []);
+  }, [authLoading, isAuthenticated, user]);
 
   const loadUsers = async () => {
     try {
       const params = new URLSearchParams();
       if (searchEmail) params.append("email", searchEmail);
       if (searchName) params.append("name", searchName);
-      
-      const response = await axios.get("/api/admin/users/search", {
-        params,
-        paramsSerializer: (p) => p.toString(),
-      });
-      setUsers(response.data);
+
+      const response = await authFetch(`/api/admin/users/search?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to load users");
+      const data = await response.json();
+      setUsers(data);
       setError(null);
     } catch (error: any) {
       console.error("Failed to load users:", error);
-      setError(error.response?.data?.detail || t("errors.loadUsers"));
+      setError(error.message || t("errors.loadUsers"));
     } finally {
       setLoading(false);
     }
@@ -74,60 +77,59 @@ export default function AdminUsers() {
 
   const handleViewUser = async (userId: number) => {
     try {
-      const response = await axios.get(`/api/admin/users/${userId}`);
-      setSelectedUser(response.data);
+      const response = await authFetch(`/api/admin/users/${userId}`);
+      if (!response.ok) throw new Error("Failed to load user details");
+      const data = await response.json();
+      setSelectedUser(data);
     } catch (error: any) {
       console.error("Failed to load user details:", error);
-      setError(error.response?.data?.detail || t("errors.loadUserDetails"));
+      setError(error.message || t("errors.loadUserDetails"));
     }
   };
 
   const handleDisableUser = async () => {
     if (userToDisable === null) return;
-
     try {
-      await axios.post(`/api/admin/users/${userToDisable}/disable`, {
-        disable: true,
+      const response = await authFetch(`/api/admin/users/${userToDisable}/disable`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ disable: true }),
       });
-      
-      // Reload users
+      if (!response.ok) throw new Error("Failed to disable user");
       loadUsers();
-      
-      // Close modal
       setSelectedUser(null);
       setShowDisableConfirm(false);
       setUserToDisable(null);
     } catch (error: any) {
       console.error("Failed to disable user:", error);
-      setError(error.response?.data?.detail || t("errors.disableUser"));
+      setError(error.message || t("errors.disableUser"));
     }
   };
 
   const handleEnableUser = async () => {
     if (userToDisable === null) return;
-
     try {
-      await axios.post(`/api/admin/users/${userToDisable}/disable`, {
-        disable: false,
+      const response = await authFetch(`/api/admin/users/${userToDisable}/disable`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ disable: false }),
       });
-      
-      // Reload users
+      if (!response.ok) throw new Error("Failed to enable user");
       loadUsers();
-      
-      // Close modal
       setSelectedUser(null);
       setShowDisableConfirm(false);
       setUserToDisable(null);
     } catch (error: any) {
       console.error("Failed to enable user:", error);
-      setError(error.response?.data?.detail || t("errors.enableUser"));
+      setError(error.message || t("errors.enableUser"));
     }
   };
 
   const handleViewProjects = async (userId: number) => {
     try {
-      const response = await axios.get(`/api/admin/users/${userId}/projects`);
-      const projects = response.data;
+      const response = await authFetch(`/api/admin/users/${userId}/projects`);
+      if (!response.ok) throw new Error("Failed to load projects");
+      const projects = await response.json();
       alert(
         projects.length > 0
           ? projects.map((p: any) => p.name).join(", ")
@@ -135,9 +137,38 @@ export default function AdminUsers() {
       );
     } catch (error: any) {
       console.error("Failed to load user projects:", error);
-      setError(error.response?.data?.detail || t("errors.loadProjects"));
+      setError(error.message || t("errors.loadProjects"));
     }
   };
+
+  // Auth guard
+  if (authLoading) {
+    return (
+      <main className="p-8 min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-gray-400">
+          <svg className="animate-spin h-8 w-8 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <p>{commonT("loading")}</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!isAuthenticated || user?.role !== "admin") {
+    return (
+      <main className="p-8 min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-400 mb-4">Access Denied</h1>
+          <p className="text-gray-400 mb-6">You need admin privileges to access this page.</p>
+          <Link href={`/${locale}/dashboard`} className="text-indigo-400 hover:text-indigo-300">
+            ← Back to Dashboard
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   if (loading && users.length === 0) {
     return (
@@ -145,24 +176,9 @@ export default function AdminUsers() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center py-12">
             <div className="text-gray-400">
-              <svg
-                className="animate-spin h-8 w-8 mx-auto mb-3"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
+              <svg className="animate-spin h-8 w-8 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
               <p>{commonT("loading")}</p>
             </div>
@@ -181,8 +197,9 @@ export default function AdminUsers() {
             <h1 className="text-2xl font-bold text-white">
               {commonT("appName")}
             </h1>
+            <span className="text-purple-400 font-medium text-sm">ADMIN</span>
             <Link
-              href="/[locale]/admin/dashboard"
+              href={`/${locale}/admin/dashboard`}
               className="text-gray-400 hover:text-white transition"
             >
               {t("dashboard")}
@@ -190,11 +207,15 @@ export default function AdminUsers() {
           </div>
           <div className="flex items-center space-x-4">
             <LanguageSwitcher />
+            <span className="text-gray-400 text-sm">{user?.email}</span>
+            <button onClick={logout} className="text-red-400 hover:text-red-300 transition text-sm">
+              Logout
+            </button>
             <Link
-              href="/[locale]/dashboard"
+              href={`/${locale}/dashboard`}
               className="text-indigo-400 hover:text-indigo-300 transition"
             >
-              ← {commonT("backToHome")}
+              ← {t("backToDashboard")}
             </Link>
           </div>
         </nav>
@@ -295,70 +316,68 @@ export default function AdminUsers() {
                     </td>
                   </tr>
                 ) : (
-                  users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-750">
+                  users.map((u) => (
+                    <tr key={u.id} className="hover:bg-gray-750">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                        {user.email}
+                        {u.email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {user.name || "-"}
+                        {u.name || "-"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`px-2 py-1 text-xs rounded-full font-medium ${
-                            user.role === "admin"
+                            u.role === "admin"
                               ? "bg-purple-500/20 text-purple-400"
-                              : user.role === "premium"
+                              : u.role === "premium"
                               ? "bg-blue-500/20 text-blue-400"
                               : "bg-gray-500/20 text-gray-400"
                           }`}
                         >
-                          {user.role}
+                          {u.role}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center space-x-2">
-                          <span
-                            className={`px-2 py-1 text-xs rounded-full ${
-                              user.is_active && !user.is_disabled
-                                ? "bg-green-500/20 text-green-400"
-                                : "bg-red-500/20 text-red-400"
-                            }`}
-                          >
-                            {user.is_disabled
-                              ? t("disabled")
-                              : user.is_active
-                              ? t("active")
-                              : t("inactive")}
-                          </span>
-                        </div>
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            u.is_active && !u.is_disabled
+                              ? "bg-green-500/20 text-green-400"
+                              : "bg-red-500/20 text-red-400"
+                          }`}
+                        >
+                          {u.is_disabled
+                            ? t("disabled")
+                            : u.is_active
+                            ? t("active")
+                            : t("inactive")}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {user.project_count}
+                        {u.project_count}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
                           <button
-                            onClick={() => handleViewUser(user.id)}
+                            onClick={() => handleViewUser(u.id)}
                             className="text-indigo-400 hover:text-indigo-300"
                           >
                             {t("view")}
                           </button>
-                          {user.role !== "admin" && (
+                          {u.role !== "admin" && (
                             <button
                               onClick={() => {
-                                setUserToDisable(user.id);
+                                setUserToDisable(u.id);
                                 setShowDisableConfirm(true);
                               }}
                               className={`${
-                                user.is_disabled ? "text-green-400 hover:text-green-300" : "text-red-400 hover:text-red-300"
+                                u.is_disabled ? "text-green-400 hover:text-green-300" : "text-red-400 hover:text-red-300"
                               }`}
                             >
-                              {user.is_disabled ? t("enable") : t("disable")}
+                              {u.is_disabled ? t("enable") : t("disable")}
                             </button>
                           )}
                           <button
-                            onClick={() => handleViewProjects(user.id)}
+                            onClick={() => handleViewProjects(u.id)}
                             className="text-gray-400 hover:text-gray-300"
                           >
                             {t("projects")}
@@ -385,22 +404,11 @@ export default function AdminUsers() {
                   onClick={() => setSelectedUser(null)}
                   className="text-gray-400 hover:text-white"
                 >
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
-
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -418,11 +426,7 @@ export default function AdminUsers() {
                   <div>
                     <span className="text-gray-400 text-sm">{t("status")}</span>
                     <p className="text-white">
-                      {selectedUser.is_disabled
-                        ? t("disabled")
-                        : selectedUser.is_active
-                        ? t("active")
-                        : t("inactive")}
+                      {selectedUser.is_disabled ? t("disabled") : selectedUser.is_active ? t("active") : t("inactive")}
                     </p>
                   </div>
                   <div>
@@ -434,22 +438,15 @@ export default function AdminUsers() {
                     <p className="text-white">{selectedUser.project_count}</p>
                   </div>
                 </div>
-
                 <div>
                   <span className="text-gray-400 text-sm">{t("createdAt")}</span>
-                  <p className="text-gray-300 text-sm">
-                    {new Date(selectedUser.created_at).toLocaleString()}
-                  </p>
+                  <p className="text-gray-300 text-sm">{new Date(selectedUser.created_at).toLocaleString()}</p>
                 </div>
-
                 <div>
                   <span className="text-gray-400 text-sm">{t("updatedAt")}</span>
-                  <p className="text-gray-300 text-sm">
-                    {new Date(selectedUser.updated_at).toLocaleString()}
-                  </p>
+                  <p className="text-gray-300 text-sm">{new Date(selectedUser.updated_at).toLocaleString()}</p>
                 </div>
               </div>
-
               <div className="p-6 border-t border-gray-700">
                 <div className="flex justify-end space-x-3">
                   <button
@@ -491,14 +488,10 @@ export default function AdminUsers() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-gray-800 rounded-xl max-w-md w-full p-6">
               <h3 className="text-lg font-semibold text-white mb-2">
-                {selectedUser?.is_disabled
-                  ? t("enableUser")
-                  : t("disableUserConfirm")}
+                {selectedUser?.is_disabled ? t("enableUser") : t("disableUserConfirm")}
               </h3>
               <p className="text-gray-400 mb-4">
-                {selectedUser?.is_disabled
-                  ? t("enableUserConfirmMessage")
-                  : t("disableUserConfirmMessage")}
+                {selectedUser?.is_disabled ? t("enableUserConfirmMessage") : t("disableUserConfirmMessage")}
               </p>
               <div className="flex justify-end space-x-3">
                 <button

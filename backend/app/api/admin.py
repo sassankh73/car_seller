@@ -8,8 +8,8 @@ This module contains admin-only endpoints for:
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,14 @@ router = APIRouter()
 
 
 # Request/Response Models
+class RecentRegistration(BaseModel):
+    """Recent user registration."""
+    user_id: int
+    email: str
+    name: Optional[str]
+    registered_at: datetime
+
+
 class DashboardStats(BaseModel):
     """Dashboard statistics response."""
     total_users: int
@@ -28,15 +36,7 @@ class DashboardStats(BaseModel):
     total_revenue: float
     revenue_last_30_days: float
     revenue_last_7_days: float
-    recent_registrations: List["RecentRegistration"]
-
-
-class RecentRegistration(BaseModel):
-    """Recent user registration."""
-    user_id: int
-    email: str
-    name: Optional[str]
-    registered_at: datetime
+    recent_registrations: List[RecentRegistration]
 
 
 class UserSearchResult(BaseModel):
@@ -77,9 +77,9 @@ class DisableUserRequest(BaseModel):
 # Dashboard endpoints
 @router.get("/admin/dashboard/stats", response_model=DashboardStats)
 async def get_dashboard_stats(
-    request,
+    request: Request,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin),
+    current_user=Depends(get_current_admin),
 ):
     """Get dashboard statistics."""
     # Total users
@@ -95,16 +95,13 @@ async def get_dashboard_stats(
     total_projects = db.query(func.count(Project.id)).scalar()
     
     # Total revenue (sum of all subscription amounts)
-    # Note: In production, this would query Stripe or the actual payment records
-    total_revenue = 0.0  # Placeholder - would calculate from subscriptions
+    total_revenue = 0.0  # Placeholder
     
     # Revenue_last_30_days
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    revenue_last_30_days = 0.0  # Placeholder - would calculate from recent subscriptions
+    revenue_last_30_days = 0.0  # Placeholder
     
     # Revenue_last_7_days
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
-    revenue_last_7_days = 0.0  # Placeholder - would calculate from recent subscriptions
+    revenue_last_7_days = 0.0  # Placeholder
     
     # Recent registrations (last 10 users)
     recent_registrations = db.query(User).order_by(User.created_at.desc()).limit(10).all()
@@ -132,9 +129,9 @@ async def get_dashboard_stats(
 # User management endpoints
 @router.get("/admin/users/search", response_model=List[UserSearchResult])
 async def search_users(
-    request,
+    request: Request,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin),
+    current_user=Depends(get_current_admin),
     email: Optional[str] = Query(None, description="Email to search"),
     name: Optional[str] = Query(None, description="Name to search"),
     role: Optional[str] = Query(None, description="Role to filter by"),
@@ -155,22 +152,22 @@ async def search_users(
     users = query.limit(limit).all()
     
     results = []
-    for user in users:
+    for u in users:
         # Get subscription plan
-        subscription = db.query(Subscription).filter(Subscription.user_id == user.id).first()
+        subscription = db.query(Subscription).filter(Subscription.user_id == u.id).first()
         subscription_plan = subscription.plan_tier.value if subscription else None
         
         # Count projects
-        project_count = db.query(func.count(Project.id)).filter(Project.user_id == user.id).scalar()
+        project_count = db.query(func.count(Project.id)).filter(Project.user_id == u.id).scalar()
         
         results.append(UserSearchResult(
-            id=user.id,
-            email=user.email,
-            name=user.name,
-            role=user.role.value,
-            is_active=user.is_active,
-            is_disabled=user.is_disabled,
-            created_at=user.created_at,
+            id=u.id,
+            email=u.email,
+            name=u.name,
+            role=u.role.value,
+            is_active=u.is_active,
+            is_disabled=u.is_disabled,
+            created_at=u.created_at,
             subscription_plan=subscription_plan,
             project_count=project_count or 0
         ))
@@ -180,32 +177,32 @@ async def search_users(
 
 @router.get("/admin/users/{user_id}", response_model=UserDetail)
 async def get_user_details(
-    request,
+    request: Request,
     user_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin),
+    current_user=Depends(get_current_admin),
 ):
     """Get detailed information about a specific user."""
-    user = db.query(User).filter(User.id == user_id).first()
+    u = db.query(User).filter(User.id == user_id).first()
     
-    if not user:
+    if not u:
         raise HTTPException(status_code=404, detail="User not found")
     
     # Get subscription info
-    subscription = db.query(Subscription).filter(Subscription.user_id == user.id).first()
+    subscription = db.query(Subscription).filter(Subscription.user_id == u.id).first()
     
     # Count projects
-    project_count = db.query(func.count(Project.id)).filter(Project.user_id == user.id).scalar()
+    project_count = db.query(func.count(Project.id)).filter(Project.user_id == u.id).scalar()
     
     return UserDetail(
-        id=user.id,
-        email=user.email,
-        name=user.name,
-        role=user.role.value,
-        is_active=user.is_active,
-        is_disabled=user.is_disabled,
-        created_at=user.created_at,
-        updated_at=user.updated_at,
+        id=u.id,
+        email=u.email,
+        name=u.name,
+        role=u.role.value,
+        is_active=u.is_active,
+        is_disabled=u.is_disabled,
+        created_at=u.created_at,
+        updated_at=u.updated_at,
         project_count=project_count or 0,
         subscription_plan=subscription.plan_tier.value if subscription else None,
         subscription_status=subscription.status if subscription else None,
@@ -215,20 +212,20 @@ async def get_user_details(
 
 @router.post("/admin/users/{user_id}/disable", response_model=UserDetail)
 async def disable_user(
-    request,
+    request: Request,
     user_id: int,
     disable_request: DisableUserRequest,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin),
+    current_user=Depends(get_current_admin),
 ):
     """Disable or enable a user account."""
-    user = db.query(User).filter(User.id == user_id).first()
+    u = db.query(User).filter(User.id == user_id).first()
     
-    if not user:
+    if not u:
         raise HTTPException(status_code=404, detail="User not found")
     
     # Don't allow disabling yourself if you're the only admin
-    if disable_request.disable and user.role == Role.ADMIN:
+    if disable_request.disable and u.role == Role.ADMIN:
         admin_count = db.query(func.count(User.id)).filter(
             User.role == Role.ADMIN,
             User.is_disabled == False
@@ -240,25 +237,25 @@ async def disable_user(
                 detail="Cannot disable the only admin user. Create another admin first."
             )
     
-    user.is_disabled = disable_request.disable
+    u.is_disabled = disable_request.disable
     db.commit()
-    db.refresh(user)
+    db.refresh(u)
     
     # Get subscription info
-    subscription = db.query(Subscription).filter(Subscription.user_id == user.id).first()
+    subscription = db.query(Subscription).filter(Subscription.user_id == u.id).first()
     
     # Count projects
-    project_count = db.query(func.count(Project.id)).filter(Project.user_id == user.id).scalar()
+    project_count = db.query(func.count(Project.id)).filter(Project.user_id == u.id).scalar()
     
     return UserDetail(
-        id=user.id,
-        email=user.email,
-        name=user.name,
-        role=user.role.value,
-        is_active=user.is_active,
-        is_disabled=user.is_disabled,
-        created_at=user.created_at,
-        updated_at=user.updated_at,
+        id=u.id,
+        email=u.email,
+        name=u.name,
+        role=u.role.value,
+        is_active=u.is_active,
+        is_disabled=u.is_disabled,
+        created_at=u.created_at,
+        updated_at=u.updated_at,
         project_count=project_count or 0,
         subscription_plan=subscription.plan_tier.value if subscription else None,
         subscription_status=subscription.status if subscription else None,
@@ -268,18 +265,18 @@ async def disable_user(
 
 @router.get("/admin/users/{user_id}/projects", response_model=List[dict])
 async def get_user_projects(
-    request,
+    request: Request,
     user_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin),
+    current_user=Depends(get_current_admin),
 ):
     """Get all projects for a specific user."""
-    user = db.query(User).filter(User.id == user_id).first()
+    u = db.query(User).filter(User.id == user_id).first()
     
-    if not user:
+    if not u:
         raise HTTPException(status_code=404, detail="User not found")
     
-    projects = db.query(Project).filter(Project.user_id == user.id).all()
+    projects = db.query(Project).filter(Project.user_id == u.id).all()
     
     return [
         {

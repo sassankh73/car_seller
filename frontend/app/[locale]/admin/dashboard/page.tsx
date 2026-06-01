@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useAuth, authFetch } from "@/context/AuthContext";
 
 interface DashboardStats {
   total_users: number;
@@ -26,25 +26,61 @@ interface RecentRegistration {
 export default function AdminDashboard() {
   const t = useTranslations("admin");
   const commonT = useTranslations("common");
+  const locale = useLocale();
+  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated || user?.role !== "admin") return;
+
     const loadStats = async () => {
       try {
-        const response = await axios.get("/api/admin/dashboard/stats");
-        setStats(response.data);
+        const response = await authFetch("/api/admin/dashboard/stats");
+        if (!response.ok) throw new Error("Failed to load stats");
+        const data = await response.json();
+        setStats(data);
         setError(null);
       } catch (error: any) {
         console.error("Failed to load stats:", error);
-        setError(error.response?.data?.detail || t("errors.loadStats"));
+        setError(error.message || t("errors.loadStats"));
       } finally {
         setLoading(false);
       }
     };
     loadStats();
-  }, []);
+  }, [authLoading, isAuthenticated, user, t]);
+
+  // Auth guard
+  if (authLoading) {
+    return (
+      <main className="p-8 min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-gray-400">
+          <svg className="animate-spin h-8 w-8 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <p>{commonT("loading")}</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!isAuthenticated || user?.role !== "admin") {
+    return (
+      <main className="p-8 min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-400 mb-4">Access Denied</h1>
+          <p className="text-gray-400 mb-6">You need admin privileges to access this page.</p>
+          <Link href={`/${locale}/dashboard`} className="text-indigo-400 hover:text-indigo-300">
+            ← Back to Dashboard
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   if (loading) {
     return (
@@ -52,24 +88,9 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center py-12">
             <div className="text-gray-400">
-              <svg
-                className="animate-spin h-8 w-8 mx-auto mb-3"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
+              <svg className="animate-spin h-8 w-8 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
               <p>{commonT("loading")}</p>
             </div>
@@ -103,8 +124,9 @@ export default function AdminDashboard() {
             <h1 className="text-2xl font-bold text-white">
               {commonT("appName")}
             </h1>
+            <span className="text-purple-400 font-medium text-sm">ADMIN</span>
             <Link
-              href="/[locale]/admin/users"
+              href={`/${locale}/admin/users`}
               className="text-gray-400 hover:text-white transition"
             >
               {t("users")}
@@ -112,8 +134,12 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center space-x-4">
             <LanguageSwitcher />
+            <span className="text-gray-400 text-sm">{user?.email}</span>
+            <button onClick={logout} className="text-red-400 hover:text-red-300 transition text-sm">
+              Logout
+            </button>
             <Link
-              href="/[locale]/dashboard"
+              href={`/${locale}/dashboard`}
               className="text-indigo-400 hover:text-indigo-300 transition"
             >
               ← {t("backToDashboard")}
