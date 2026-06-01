@@ -29,11 +29,11 @@ export default function StudioShowcaseSection() {
 
   if (studios.length === 0) {
     return (
-      <section className="py-24 bg-gray-900">
-        <div className="container mx-auto px-4">
+      <section className="py-32 md:py-40 bg-white">
+        <div className="container mx-auto px-6">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 mx-auto mb-4 border-b-2 border-indigo-500"></div>
-            <p className="text-gray-400">Loading studio templates...</p>
+            <div className="animate-spin rounded-full h-10 w-10 mx-auto mb-4 border-b-2 border-graphite-800"></div>
+            <p className="text-graphite-400 text-sm tracking-wide">Loading studio templates...</p>
           </div>
         </div>
       </section>
@@ -68,55 +68,59 @@ export default function StudioShowcaseSection() {
   };
 
   return (
-    <section className="py-24 bg-gray-900">
-      <div className="container mx-auto px-4">
+    <section className="py-32 md:py-40 lg:py-48 bg-white">
+      <div className="container mx-auto px-6">
+        {/* Section header */}
         <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
+          className="mb-20 md:mb-24"
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.8 }}
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            {t("title")}
-          </h2>
-          <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+          <p className="text-sm tracking-[0.3em] uppercase text-graphite-400 mb-4">
             {t("subtitle")}
           </p>
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold text-graphite-800 leading-tight">
+            {t("title")}
+          </h2>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        {/* Editorial grid - varied sizes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {studios.map((studio, index) => {
             const label = studioLabels[studio.key] || { name: studio.name, description: "" };
+            const isLarge = index === 0 || index === 3;
             return (
               <motion.div
                 key={studio.key}
-                className="group relative overflow-hidden rounded-2xl cursor-pointer"
+                className={`group relative overflow-hidden cursor-pointer ${isLarge ? 'md:col-span-2 lg:col-span-2' : ''}`}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
+                transition={{ duration: 0.5, delay: index * 0.08 }}
               >
-                <div className="aspect-[4/3] overflow-hidden">
+                <div className={`relative ${isLarge ? 'aspect-[16/9]' : 'aspect-[4/3]'} overflow-hidden bg-graphite-100`}>
                   <img
                     src={studio.preview_image_url}
                     alt={studio.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     onError={(e) => {
                       const target = e.currentTarget as HTMLElement;
                       target.style.backgroundImage =
-                        "linear-gradient(135deg, #1f2937 0%, #374151 100%)";
+                        "linear-gradient(135deg, #f5f5f5 0%, #e5e7eb 100%)";
                     }}
                   />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                  <h3 className="text-xl font-semibold text-white mb-2">
-                    {label.name}
-                  </h3>
-                  <p className="text-gray-300 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
-                    {label.description}
-                  </p>
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-500" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
+                    <h3 className="text-white text-lg font-semibold mb-1">
+                      {label.name}
+                    </h3>
+                    <p className="text-white/70 text-sm">
+                      {label.description}
+                    </p>
+                  </div>
                 </div>
               </motion.div>
             );

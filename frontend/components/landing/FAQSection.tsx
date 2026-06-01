@@ -36,7 +36,7 @@ export default function FAQSection() {
   ];
 
   return (
-    <section className="py-24 bg-black">
+    <section className="py-24 md:py-32 bg-surface-warm">
       <div className="container mx-auto px-4">
         <motion.div
           className="text-center mb-16"
@@ -45,16 +45,17 @@ export default function FAQSection() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-graphite-800 mb-4">
             {t("title")}
           </h2>
+          <div className="section-divider mt-6" />
         </motion.div>
 
-        <div className="max-w-3xl mx-auto space-y-4">
+        <div className="max-w-3xl mx-auto space-y-3">
           {faqs.map((faq, index) => (
             <motion.div
               key={index}
-              className="bg-gray-900/50 rounded-xl border border-gray-800 overflow-hidden"
+              className="bg-white rounded-xl border border-graphite-200 overflow-hidden shadow-card"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -62,13 +63,13 @@ export default function FAQSection() {
             >
               <button
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-gray-800/50 transition-colors"
+                className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-graphite-50 transition-colors duration-200"
               >
-                <span className="text-white font-medium pr-4">
+                <span className="text-graphite-800 font-medium pr-4">
                   {faq.question}
                 </span>
                 <motion.svg
-                  className="w-5 h-5 text-gray-400 flex-shrink-0"
+                  className="w-5 h-5 text-primary-500 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -92,7 +93,7 @@ export default function FAQSection() {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <p className="px-6 pb-5 text-gray-400 leading-relaxed">
+                    <p className="px-6 pb-5 text-graphite-500 leading-relaxed">
                       {faq.answer}
                     </p>
                   </motion.div>
