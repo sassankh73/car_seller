@@ -1,10 +1,32 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from .api import auth, projects, studio
 from .api.billing import routes as billing_routes
 
-app = FastAPI(title="AutoStudio AI Backend")
+
+class TrailingSlashMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to normalize paths by adding trailing slashes for API routes.
+    This prevents FastAPI from issuing redirects that leak internal hostnames.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.scope.get("path", "")
+        # Only normalize API routes that don't already have trailing slash
+        if path.startswith("/api/") and not path.endswith("/"):
+            # Check if path with trailing slash would match a route
+            normalized_path = path + "/"
+            request.scope["path"] = normalized_path
+        response = await call_next(request)
+        return response
+
+
+app = FastAPI(title="AutoStudio AI Backend", redirect_slashes=False)
+
+# Add trailing slash middleware BEFORE CORS
+app.add_middleware(TrailingSlashMiddleware)
 
 # CORS configuration to allow frontend requests
 app.add_middleware(
