@@ -13,32 +13,38 @@ router = APIRouter()
 studios = {
     "luxury_showroom": {
         "name": "Luxury Showroom",
-        "image_url": "/static/studios/luxury_showroom.jpg",
+        "image_url": "/static/studios/luxury_showroom.png",
+        "preview_image_url": "/static/studios/luxury_showroom_preview.png",
         "floor_color": "#2a2a2a",
     },
     "white_minimal": {
         "name": "White Minimal Studio",
-        "image_url": "/static/studios/white_minimal.jpg",
+        "image_url": "/static/studios/white_minimal.png",
+        "preview_image_url": "/static/studios/white_minimal_preview.png",
         "floor_color": "#f5f5f5",
     },
     "cinematic_dark": {
         "name": "Cinematic Dark Studio",
-        "image_url": "/static/studios/cinematic_dark.jpg",
+        "image_url": "/static/studios/cinematic_dark.png",
+        "preview_image_url": "/static/studios/cinematic_dark_preview.png",
         "floor_color": "#0a0a0a",
     },
     "black_showroom": {
         "name": "Black Automotive Showroom",
-        "image_url": "/static/studios/black_showroom.jpg",
+        "image_url": "/static/studios/black_showroom.png",
+        "preview_image_url": "/static/studios/black_showroom_preview.png",
         "floor_color": "#1a1a1a",
     },
     "luxury_exhibition": {
         "name": "Luxury Exhibition Hall",
-        "image_url": "/static/studios/luxury_exhibition.jpg",
+        "image_url": "/static/studios/luxury_exhibition.png",
+        "preview_image_url": "/static/studios/luxury_exhibition_preview.png",
         "floor_color": "#3a3a3a",
     },
     "glossy_reflective": {
         "name": "Glossy Reflective Floor Studio",
-        "image_url": "/static/studios/glossy_reflective.jpg",
+        "image_url": "/static/studios/glossy_reflective.png",
+        "preview_image_url": "/static/studios/glossy_reflective_preview.png",
         "floor_color": "#252525",
     },
 }
@@ -48,6 +54,7 @@ class StudioOut(BaseModel):
     key: str
     name: str
     image_url: str
+    preview_image_url: str
 
 
 class ProcessRequest(BaseModel):

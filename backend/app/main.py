@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from .api import auth, projects, studio
@@ -24,6 +25,9 @@ class TrailingSlashMiddleware(BaseHTTPMiddleware):
 
 
 app = FastAPI(title="AutoStudio AI Backend", redirect_slashes=False)
+
+# Serve static files
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Add trailing slash middleware BEFORE CORS
 app.add_middleware(TrailingSlashMiddleware)

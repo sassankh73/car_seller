@@ -19,6 +19,7 @@ interface Studio {
   key: string;
   name: string;
   image_url: string;
+  preview_image_url: string;
 }
 
 export default function Dashboard() {
@@ -273,23 +274,57 @@ export default function Dashboard() {
                 <h2 className="text-xl font-semibold text-white mb-4">
                   {t("studio.title")}
                 </h2>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   {studios.map((studio) => (
                     <button
                       key={studio.key}
                       onClick={() => setSelectedStudio(studio.key)}
-                      className={`p-3 rounded-lg border-2 transition ${
+                      className={`relative rounded-xl overflow-hidden border-2 transition group ${
                         selectedStudio === studio.key
-                          ? "border-indigo-500 bg-indigo-500/20"
+                          ? "border-indigo-500 ring-2 ring-indigo-500/50"
                           : "border-gray-600 hover:border-gray-500"
                       }`}
                     >
-                      <div className="text-xs text-gray-300 mb-1">
-                        {studioTranslations[studio.key] || studio.name}
+                      {/* Preview Image with graceful fallback */}
+                      <div className="aspect-[4/3] bg-gray-900 relative overflow-hidden">
+                        <div
+                          className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                          style={{
+                            backgroundImage: `url(${studio.preview_image_url})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }}
+                          onError={(e) => {
+                            // Fallback when image fails to load
+                            const target = e.currentTarget as HTMLElement;
+                            target.style.backgroundImage =
+                              "linear-gradient(135deg, #1f2937 0%, #374151 100%)";
+                          }}
+                        >
+                          {/* Loading state placeholder */}
+                          <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
+                            Loading preview...
+                          </div>
+                        </div>
+                        
+                        {/* Overlay gradient for readability */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                       </div>
-                      <div className="text-xs text-gray-500 capitalize">
-                        {studio.key.replace("_", " ")}
+                      
+                      {/* Studio info overlay */}
+                      <div className="p-3 bg-gray-800">
+                        <div className="text-sm font-medium text-white truncate">
+                          {studioTranslations[studio.key] || studio.name}
+                        </div>
+                        <div className="text-xs text-gray-400 capitalize mt-0.5">
+                          {studio.key.replace("_", " ")}
+                        </div>
                       </div>
+                      
+                      {/* Selection indicator */}
+                      {selectedStudio === studio.key && (
+                        <div className="absolute top-2 right-2 w-3 h-3 bg-indigo-500 rounded-full border-2 border-gray-800 shadow-lg" />
+                      )}
                     </button>
                   ))}
                 </div>

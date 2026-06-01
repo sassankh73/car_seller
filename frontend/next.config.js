@@ -28,6 +28,10 @@ const nextConfig = {
         source: "/api/:path*",
         destination: "http://backend:8001/api/:path*",
       },
+      {
+        source: "/static/:path*",
+        destination: "http://backend:8001/static/:path*",
+      },
     ];
   },
 };
