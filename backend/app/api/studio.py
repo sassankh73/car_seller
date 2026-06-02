@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 # Storage directory for preserving original and transparent images
 STORAGE_DIR = Path(__file__).parent.parent / "storage"
 
+# Static studios directory
+STUDIOS_DIR = Path(__file__).parent.parent / "static" / "studios"
+
 router = APIRouter()
 
 # Simple studio catalog - Indoor luxury automotive studios only
@@ -73,6 +76,55 @@ class ProcessRequest(BaseModel):
     export_quality: str = "hd"  # hd or 4k
 
 
+def load_studio_background(studio_key: str) -> Optional[Image.Image]:
+    """Load a studio background image from the filesystem.
+
+    Tries the full-size image first, then falls back to the preview image.
+    Returns None if neither is available (caller should use solid color fallback).
+
+    Args:
+        studio_key: Studio template key (e.g. 'luxury_showroom')
+
+    Returns:
+        PIL Image (RGBA) or None
+    """
+    # Try full-size studio image first
+    full_path = STUDIOS_DIR / f"{studio_key}.png"
+    if not full_path.exists():
+        # Try JPG variant
+        full_path = STUDIOS_DIR / f"{studio_key}.jpg"
+
+    if not full_path.exists():
+        # Fall back to preview image
+        preview_path = STUDIOS_DIR / f"{studio_key}_preview.png"
+        if not preview_path.exists():
+            preview_path = STUDIOS_DIR / f"{studio_key}_preview.jpg"
+
+        if preview_path.exists():
+            full_path = preview_path
+            logger.info(
+                "Full studio image not found, using preview: %s", preview_path
+            )
+        else:
+            logger.warning(
+                "No studio background image found for key '%s' "
+                "(checked %s and preview variants)",
+                studio_key,
+                STUDIOS_DIR,
+            )
+            return None
+
+    try:
+        bg = Image.open(full_path).convert("RGBA")
+        logger.info(
+            "Loaded studio background: %s (%dx%d)", full_path, bg.size[0], bg.size[1]
+        )
+        return bg
+    except Exception as e:
+        logger.error("Failed to load studio background %s: %s", full_path, e)
+        return None
+
+
 @router.post("/process")
 async def process_image(
     file: UploadFile = File(..., description="Car image to process"),
@@ -86,13 +138,11 @@ async def process_image(
 
     Steps:
     1. Remove background using AI
-    2. Apply perspective correction
-    3. Apply lighting correction
-    4. Preserve wheel details
-    5. Enhance paint reflections
-    6. Generate realistic shadow
-    7. Generate floor reflection
-    8. Composite with studio background
+    2. Scale vehicle to studio proportions
+    3. [Optional] Apply lighting correction (feature-flagged)
+    4. [Optional] Enhance wheels and paint (feature-flagged)
+    5. Generate contact shadow
+    6. Composite with studio background
     """
     # Validate studio
     if studio_key not in studios:
@@ -134,10 +184,8 @@ async def process_image(
         compositing_service.studio_width = 1920
         compositing_service.studio_height = 1080
 
-    # Load studio background if available
-    studio_background = None
-    # In production, load from file system or S3
-    # studio_background = Image.open(f"app/static/studios/{studio_key}.jpg")
+    # Load studio background image from filesystem
+    studio_background = load_studio_background(studio_key)
 
     # Process through AI pipeline
     try:
