@@ -27,58 +27,91 @@ export default function TestimonialsSection() {
     },
   ];
 
+  const metrics = [
+    { value: "10,000+", label: t("metrics.photosProcessed") },
+    { value: "500+", label: t("metrics.dealerships") },
+    { value: "99.8%", label: t("metrics.satisfaction") },
+    { value: "<2s", label: t("metrics.avgProcessing") },
+  ];
+
   return (
-    <section className="py-24 bg-gray-900">
-      <div className="container mx-auto px-4">
+    <section className="py-32 md:py-40 lg:py-48 bg-surface-warm">
+      <div className="container mx-auto px-6">
+        {/* Trust metrics row */}
         <motion.div
-          className="text-center mb-16"
+          className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-24 md:mb-32"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            {t("title")}
-          </h2>
-          <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-            {t("subtitle")}
-          </p>
-        </motion.div>
-
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {testimonials.map((testimonial, index) => (
+          {metrics.map((metric, index) => (
             <motion.div
               key={index}
-              className="p-8 bg-black/50 rounded-2xl border border-gray-800"
-              initial={{ opacity: 0, y: 30 }}
+              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              <div className="flex mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <svg
-                    key={i}
-                    className="w-5 h-5 text-yellow-400"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                ))}
+              <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-graphite-800 mb-2">
+                {metric.value}
               </div>
-              <p className="text-gray-300 mb-6 leading-relaxed italic">
-                &ldquo;{testimonial.quote}&rdquo;
+              <div className="text-sm text-graphite-400 tracking-wide">
+                {metric.label}
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Divider */}
+        <div className="border-t border-graphite-200 mb-20 md:mb-24" />
+
+        {/* Section header */}
+        <motion.div
+          className="mb-16 md:mb-20"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+        >
+          <p className="text-sm tracking-[0.3em] uppercase text-graphite-400 mb-4">
+            {t("title")}
+          </p>
+          <h2 className="text-3xl md:text-4xl font-bold text-graphite-800 leading-tight max-w-xl">
+            {t("subtitle")}
+          </h2>
+        </motion.div>
+
+        {/* Testimonials - clean, editorial layout */}
+        <div className="grid md:grid-cols-3 gap-12 md:gap-16">
+          {testimonials.map((testimonial, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: index * 0.15 }}
+            >
+              {/* Large quotation mark */}
+              <div className="text-5xl font-serif text-graphite-200 leading-none mb-6 select-none">
+                &ldquo;
+              </div>
+
+              <p className="text-graphite-600 leading-relaxed mb-8 text-base">
+                {testimonial.quote}
               </p>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                  {testimonial.author.charAt(0)}
-                </div>
-                <div>
-                  <p className="text-white font-medium">{testimonial.author}</p>
-                  <p className="text-gray-500 text-sm">{testimonial.role}</p>
-                  <p className="text-gray-600 text-xs">{testimonial.location}</p>
-                </div>
+
+              <div>
+                <p className="font-semibold text-graphite-800">
+                  {testimonial.author}
+                </p>
+                <p className="text-sm text-graphite-400 mt-1">
+                  {testimonial.role}
+                </p>
+                <p className="text-sm text-graphite-400 mt-0.5">
+                  {testimonial.location}
+                </p>
               </div>
             </motion.div>
           ))}

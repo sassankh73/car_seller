@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "AutoStudio AI",
+    "appName": "AutoStudio",
     "getStarted": "Get Started",
     "backToHome": "Back to Home",
     "loading": "Loading...",
@@ -17,8 +17,8 @@
   },
   "landing": {
     "hero": {
-      "headline": "Turn Mobile Car Photos into Professional Studio Images with AI",
-      "subheadline": "Transform your mobile car photos into premium studio shots instantly. Perfect for dealerships, car sellers, and automotive professionals.",
+      "headline": "Transform Ordinary Car Photos into Professional Showroom Images",
+      "subheadline": "Turn everyday car photos into stunning showroom-quality images in seconds. Sell more cars with professional listings that stand out.",
       "startFreeTrial": "Start Free Trial",
       "uploadPhoto": "Upload Your First Car Photo",
       "trustedBy": "Trusted by 500+ dealerships worldwide"
@@ -41,40 +41,70 @@
         }
       }
     },
-    "beforeAfter": {
-      "title": "See the Magic",
-      "subtitle": "Watch ordinary photos transform into extraordinary studio shots",
-      "before": "Original Photo",
-      "after": "AI Studio Result",
-      "dragSlider": "Drag the slider to compare"
-    },
-    "features": {
-      "title": "Powerful Features",
-      "subtitle": "Everything you need for professional automotive photography",
+    "valueProp": {
+      "eyebrow": "How It Works",
+      "title": "Professional car photography, made simple",
       "items": {
-        "aiRemoval": {
-          "title": "AI Background Removal",
-          "description": "Advanced AI automatically removes backgrounds with pixel-perfect precision"
+        "upload": {
+          "title": "Upload Your Photo",
+          "description": "Take a photo with any phone and upload it to our platform. No special equipment or skills needed."
         },
-        "virtualStudios": {
-          "title": "Professional Virtual Studios",
-          "description": "Choose from 20+ premium studio environments designed for cars"
+        "studios": {
+          "title": "Choose a Studio",
+          "description": "Select from our collection of premium showroom environments designed specifically for automotive photography."
+        },
+        "download": {
+          "title": "Get Your Result",
+          "description": "Download your professional studio image in HD or 4K quality, ready for any listing platform."
+        },
+        "backgroundRemoval": {
+          "title": "Instant Background Removal",
+          "description": "Automatically remove backgrounds with pixel-perfect precision — no editing skills needed"
         },
         "realisticShadows": {
           "title": "Realistic Shadows & Reflections",
-          "description": "AI-generated shadows and reflections that look completely natural"
+          "description": "Natural shadows and reflections that make every car look like it's in a professional studio"
         },
         "hdExport": {
-          "title": "HD / 4K Export",
-          "description": "Export in stunning high definition or ultra HD 4K resolution"
+          "title": "HD & 4K Export",
+          "description": "Export in stunning high definition or ultra HD 4K — ready for any listing platform"
+        }
+      }
+    },
+    "beforeAfter": {
+      "title": "See the Difference",
+      "subtitle": "Watch ordinary photos transform into professional showroom images",
+      "before": "Original Photo",
+      "after": "Showroom Result",
+      "dragSlider": "Drag the slider to compare"
+    },
+    "features": {
+      "title": "Everything You Need to Sell More Cars",
+      "subtitle": "Professional tools designed for automotive dealers and sellers",
+      "items": {
+        "aiRemoval": {
+          "title": "Instant Background Removal",
+          "description": "Automatically remove backgrounds with pixel-perfect precision — no editing skills needed"
+        },
+        "virtualStudios": {
+          "title": "Professional Showroom Studios",
+          "description": "Choose from 20+ premium showroom environments designed for cars"
+        },
+        "realisticShadows": {
+          "title": "Realistic Shadows & Reflections",
+          "description": "Natural shadows and reflections that make every car look like it's in a professional studio"
+        },
+        "hdExport": {
+          "title": "HD & 4K Export",
+          "description": "Export in stunning high definition or ultra HD 4K — ready for any listing platform"
         },
         "logoBranding": {
-          "title": "Logo Branding",
-          "description": "Add your dealership logo automatically to every image"
+          "title": "Dealership Logo Branding",
+          "description": "Add your dealership logo automatically to every image — build brand trust"
         },
         "fastGeneration": {
-          "title": "Fast Generation",
-          "description": "Get results in seconds, not hours. Process multiple images simultaneously"
+          "title": "Results in Seconds",
+          "description": "Get professional results in seconds, not hours. Process multiple images at once"
         }
       }
     },
@@ -173,10 +203,16 @@
     },
     "testimonials": {
       "title": "Trusted by Dealerships",
-      "subtitle": "See what automotive professionals say about AutoStudio AI",
+      "subtitle": "See what automotive professionals say about AutoStudio",
+      "metrics": {
+        "photosProcessed": "Photos Processed",
+        "dealerships": "Dealerships Worldwide",
+        "satisfaction": "Satisfaction Rate",
+        "avgProcessing": "Avg. Processing Time"
+      },
       "items": {
         "first": {
-          "quote": "AutoStudio AI has transformed our listing photos. We've seen a 40% increase in engagement since using this platform.",
+          "quote": "AutoStudio has transformed our listing photos. We've seen a 40% increase in engagement since using this platform.",
           "author": "Michael Anderson",
           "role": "Owner, Anderson Auto Group",
           "location": "Stockholm, Sweden"
@@ -204,11 +240,11 @@
         },
         "phonePhotos": {
           "question": "Can I upload phone photos?",
-          "answer": "Absolutely! AutoStudio AI is specifically designed for mobile photos. iPhone, Android, any smartphone camera works perfectly."
+          "answer": "Absolutely! AutoStudio is specifically designed for mobile photos. iPhone, Android, any smartphone camera works perfectly."
         },
         "colorAccuracy": {
-          "question": "Does AI preserve original car color?",
-          "answer": "Yes, our AI is trained to preserve exact color accuracy. The original paint color, reflections, and details are maintained with 99.9% accuracy."
+          "question": "Does it preserve the original car color?",
+          "answer": "Yes, our technology preserves exact color accuracy. The original paint color, reflections, and details are maintained with 99.9% accuracy."
         },
         "logoBranding": {
           "question": "Can I add my dealership logo?",
@@ -226,7 +262,7 @@
     },
     "cta": {
       "title": "Ready to Transform Your Car Photos?",
-      "subtitle": "Join 500+ dealerships using AutoStudio AI today",
+      "subtitle": "Join 500+ dealerships using AutoStudio today",
       "button": "Start Your Free Trial",
       "noCreditCard": "No credit card required"
     }
@@ -238,7 +274,7 @@
     "after": "After"
   },
   "dashboard": {
-    "title": "AutoStudio AI Dashboard",
+    "title": "AutoStudio Dashboard",
     "subtitle": "Transform your car photos into professional studio shots",
     "navigation": {
       "projects": "Projects",
@@ -272,7 +308,15 @@
     },
     "generate": {
       "button": "Generate Studio Shot",
-      "processing": "Processing..."
+      "processing": "Processing...",
+      "status": {
+        "idle": "",
+        "uploading": "Uploading image...",
+        "preparing": "Preparing vehicle...",
+        "applying": "Applying studio...",
+        "finalizing": "Finalizing image...",
+        "completed": "Completed"
+      }
     },
     "preview": {
       "title": "Preview & Results",
@@ -440,7 +484,7 @@
     },
     "watermark": {
       "title": "Watermark",
-      "description": "Free users have AutoStudio AI watermark on all images",
+      "description": "Free users have AutoStudio watermark on all images",
       "removeWithPro": "Remove watermark with Professional plan"
     },
     "logoPlacement": {

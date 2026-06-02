@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "AutoStudio AI",
+    "appName": "AutoStudio",
     "getStarted": "Kom igång",
     "backToHome": "Tillbaka till startsidan",
     "loading": "Laddar...",
@@ -17,8 +17,8 @@
   },
   "landing": {
     "hero": {
-      "headline": "Omvandla mobilbilder av bilar till professionella studiofoton med AI",
-      "subheadline": "Transformera dina mobilbilder av bilar till premium studiofoton direkt. Perfekt för bilhandlare, bilsäljare och fordonsproffs.",
+      "headline": "Omvandla vanliga bilfoton till professionella showroombilder",
+      "subheadline": "Förvandla vardagliga bilfoton till fantastiska showroombilder på sekunder. Sälj fler bilar med professionella annonser som utmärker sig.",
       "startFreeTrial": "Starta gratis provperiod",
       "uploadPhoto": "Ladda upp ditt första bilfoto",
       "trustedBy": "Litad på av 500+ bilhandlare världen över"
@@ -41,40 +41,70 @@
         }
       }
     },
-    "beforeAfter": {
-      "title": "Se magin",
-      "subtitle": "Se vanliga foton förvandlas till extraordinära studiofoton",
-      "before": "Originalfoto",
-      "after": "AI Studio-resultat",
-      "dragSlider": "Dra reglaget för att jämföra"
-    },
-    "features": {
-      "title": "Kraftfulla funktioner",
-      "subtitle": "Allt du behöver för professionell fordonsfotografering",
+    "valueProp": {
+      "eyebrow": "Så funkar det",
+      "title": "Professionell bilfotografi, förenklad",
       "items": {
-        "aiRemoval": {
-          "title": "AI-bakgrundsborttagning",
-          "description": "Avancerad AI tar automatiskt bort bakgrunder med pixelperfekt precision"
+        "upload": {
+          "title": "Ladda upp ditt foto",
+          "description": "Ta ett foto med vilken telefon som helst och ladda upp det till vår plattform. Ingen speciell utrustning eller kunskap krävs."
         },
-        "virtualStudios": {
-          "title": "Professionella virtuella studior",
-          "description": "Välj från 20+ premium-studiomiljöer designade för bilar"
+        "studios": {
+          "title": "Välj en studio",
+          "description": "Välj från vår samling av premium-showroom-miljöer designade specifikt för bilfotografi."
+        },
+        "download": {
+          "title": "Få ditt resultat",
+          "description": "Ladda ner din professionella studiobild i HD eller 4K-kvalitet, redo för alla annonsplattformar."
+        },
+        "backgroundRemoval": {
+          "title": "Omedelbar bakgrundsborttagning",
+          "description": "Ta bort bakgrunder automatiskt med pixelperfekt precision — inga redigeringskunskaper krävs"
         },
         "realisticShadows": {
           "title": "Realistiska skuggor och reflektioner",
-          "description": "AI-genererade skuggor och reflektioner som ser helt naturliga ut"
+          "description": "Naturliga skuggor och reflektioner som gör att varje bil ser ut att vara i en professionell studio"
         },
         "hdExport": {
-          "title": "HD / 4K export",
-          "description": "Exportera i fantastisk högupplöst eller ultra HD 4K-kvalitet"
+          "title": "HD & 4K-export",
+          "description": "Exportera i fantastisk högupplöst eller ultra HD 4K — redo för alla annonsplattformar"
+        }
+      }
+    },
+    "beforeAfter": {
+      "title": "Se skillnaden",
+      "subtitle": "Se vanliga foton förvandlas till professionella showroombilder",
+      "before": "Originalfoto",
+      "after": "Showroom-resultat",
+      "dragSlider": "Dra reglaget för att jämföra"
+    },
+    "features": {
+      "title": "Allt du behöver för att sälja fler bilar",
+      "subtitle": "Professionella verktyg designade för bilhandlare och säljare",
+      "items": {
+        "aiRemoval": {
+          "title": "Omedelbar bakgrundsborttagning",
+          "description": "Ta bort bakgrunder automatiskt med pixelperfekt precision — inga redigeringskunskaper krävs"
+        },
+        "virtualStudios": {
+          "title": "Professionella showroom-studior",
+          "description": "Välj från 20+ premium-showroommiljöer designade för bilar"
+        },
+        "realisticShadows": {
+          "title": "Realistiska skuggor och reflektioner",
+          "description": "Naturliga skuggor och reflektioner som gör att varje bil ser ut att vara i en professionell studio"
+        },
+        "hdExport": {
+          "title": "HD & 4K-export",
+          "description": "Exportera i fantastisk högupplöst eller ultra HD 4K — redo för alla annonsplattformar"
         },
         "logoBranding": {
-          "title": "Logotyp-branding",
-          "description": "Lägg till din bilhandlares logotyp automatiskt på varje bild"
+          "title": "Bilhandlar-logotyp",
+          "description": "Lägg till din bilhandlares logotyp automatiskt på varje bild — bygg varumärkesförtroende"
         },
         "fastGeneration": {
-          "title": "Snabb generering",
-          "description": "Få resultat på sekunder, inte timmar. Bearbeta flera bilder samtidigt"
+          "title": "Resultat på sekunder",
+          "description": "Få professionella resultat på sekunder, inte timmar. Bearbeta flera bilder samtidigt"
         }
       }
     },
@@ -173,10 +203,16 @@
     },
     "testimonials": {
       "title": "Litad på av bilhandlare",
-      "subtitle": "Se vad fordonsproffs säger om AutoStudio AI",
+      "subtitle": "Se vad fordonsproffs säger om AutoStudio",
+      "metrics": {
+        "photosProcessed": "Fotografier bearbetade",
+        "dealerships": "Bilhandlare världen över",
+        "satisfaction": "Nöjdhetsgrad",
+        "avgProcessing": "Snitt bearbetningstid"
+      },
       "items": {
         "first": {
-          "quote": "AutoStudio AI har transformerat våra annonsfoton. Vi har sett en 40% ökning i engagemang sedan vi började använda denna plattform.",
+          "quote": "AutoStudio har transformerat våra annonsfoton. Vi har sett en 40% ökning i engagemang sedan vi började använda denna plattform.",
           "author": "Michael Anderson",
           "role": "Ägare, Anderson Auto Group",
           "location": "Stockholm, Sverige"
@@ -204,11 +240,11 @@
         },
         "phonePhotos": {
           "question": "Kan jag ladda upp telefonfoton?",
-          "answer": "Absolut! AutoStudio AI är specifikt designat för mobilfoton. iPhone, Android, alla smartphone-kameror fungerar perfekt."
+          "answer": "Absolut! AutoStudio är specifikt designat för mobilfoton. iPhone, Android, alla smartphone-kameror fungerar perfekt."
         },
         "colorAccuracy": {
-          "question": "Bevarar AI:n originalbilens färg?",
-          "answer": "Ja, vår AI är tränad för att bevara exakt färgnoggrannhet. Originalfärgen, reflektioner och detaljer bevaras med 99,9% noggrannhet."
+          "question": "Bevaras originalbilens färg?",
+          "answer": "Ja, vår teknik bevarar exakt färgnoggrannhet. Originalfärgen, reflektioner och detaljer bevaras med 99,9% noggrannhet."
         },
         "logoBranding": {
           "question": "Kan jag lägga till min bilhandlares logotyp?",
@@ -226,7 +262,7 @@
     },
     "cta": {
       "title": "Redo att transformera dina bilfoton?",
-      "subtitle": "Gå med 500+ bilhandlare som använder AutoStudio AI idag",
+      "subtitle": "Gå med 500+ bilhandlare som använder AutoStudio idag",
       "button": "Starta din gratis provperiod",
       "noCreditCard": "Inget kreditkort krävs"
     }
@@ -238,7 +274,7 @@
     "after": "Efter"
   },
   "dashboard": {
-    "title": "AutoStudio AI Dashboard",
+    "title": "AutoStudio Dashboard",
     "subtitle": "Omvandla dina bilfoton till professionella studiofoton",
     "navigation": {
       "projects": "Projekt",
@@ -271,8 +307,16 @@
       "fourK": "4K (3840x2160)"
     },
     "generate": {
-      "button": "Generera Studiofoto",
-      "processing": "Bearbetar..."
+      "button": "Generera studiotillverkning",
+      "processing": "Bearbetar...",
+      "status": {
+        "idle": "",
+        "uploading": "Laddar upp bild...",
+        "preparing": "Förbereder fordon...",
+        "applying": "Applicerar studio...",
+        "finalizing": "Färdigställer bild...",
+        "completed": "Klar"
+      }
     },
     "preview": {
       "title": "Förhandsvisning & Resultat",
@@ -438,7 +482,7 @@
     },
     "watermark": {
       "title": "Vattenstämpel",
-      "description": "Free-användare har AutoStudio AI vattenstämpel på alla bilder",
+      "description": "Free-användare har AutoStudio vattenstämpel på alla bilder",
       "removeWithPro": "Ta bort vattenstämpel med Professional-planen"
     },
     "logoPlacement": {

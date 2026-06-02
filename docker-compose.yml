@@ -1,4 +1,12 @@
 services:
+  rembg:
+    image: danielgatis/rembg:latest
+    container_name: car_rembg
+    ports:
+      - "7000:7000"
+    command: ["s"]
+    restart: unless-stopped
+
   backend:
     build: ./backend
     container_name: car_backend
@@ -8,6 +16,11 @@ services:
       - ./backend/.env
     environment:
       - ADMIN_PASSWORD=AdminPass123
+      - ENABLE_REMBG=true
+      - BG_REMOVAL_ENGINE=rembg
+      - REMBG_SERVICE_URL=http://rembg:7000
+    depends_on:
+      - rembg
 
   frontend:
     build: ./frontend

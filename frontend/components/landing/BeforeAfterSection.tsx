@@ -37,96 +37,99 @@ export default function BeforeAfterSection() {
   };
 
   return (
-    <section className="py-24 bg-gradient-to-b from-gray-900 to-black">
-      <div className="container mx-auto px-4">
+    <section className="py-32 md:py-40 lg:py-48 bg-surface-warm">
+      <div className="container mx-auto px-6">
+        {/* Section header */}
         <motion.div
-          className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
+          className="mb-20 md:mb-24"
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.8 }}
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <p className="text-sm tracking-[0.3em] uppercase text-graphite-400 mb-4">
+            {t("before")}
+          </p>
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold text-graphite-800 leading-tight">
             {t("title")}
           </h2>
-          <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-4">
-            {t("subtitle")}
-          </p>
-          <p className="text-sm text-gray-500">{t("dragSlider")}</p>
         </motion.div>
 
         <motion.div
-          ref={containerRef}
-          className="relative w-full max-w-4xl mx-auto aspect-video rounded-2xl overflow-hidden shadow-2xl shadow-indigo-500/10 cursor-ew-resize"
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
+          className="max-w-5xl mx-auto"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onMouseMove={handleMouseMove}
-          onTouchMove={handleTouchMove}
+          transition={{ duration: 0.8, delay: 0.2 }}
         >
-          {/* After Image (Background - AI Result - Professional Studio) */}
-          <div className="absolute inset-0">
-            <img
-              src="https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=1200&q=80"
-              alt={t("after")}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-sm px-4 py-2 rounded-lg">
-              <span className="text-white font-medium">{t("after")}</span>
-            </div>
-          </div>
-
-          {/* Before Image (Clipped - Original - Same car, different background) */}
+          {/* Comparison container - clean, no card wrapper */}
           <div
-            className="absolute inset-0 overflow-hidden"
-            style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
+            ref={containerRef}
+            className="relative w-full h-[300px] md:h-[500px] lg:h-[600px] cursor-col-resize select-none"
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            onTouchStart={handleMouseDown}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleMouseUp}
           >
-            <img
-              src="https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=1200&q=80"
-              alt={t("before")}
-              className="w-full h-full object-cover"
-              style={{
-                filter: "grayscale(20%) brightness(0.9) contrast(0.9)",
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-              }}
-            />
-            {/* Overlay to simulate amateur photo quality */}
+            {/* After image (background) */}
+            <div className="absolute inset-0 bg-graphite-900">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <svg className="w-16 h-16 text-white/10 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-white/20 text-sm font-medium tracking-wider uppercase">{t("after")}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Before image (clipped) */}
             <div
-              className="absolute inset-0 bg-gradient-to-br from-gray-400/20 to-transparent"
+              className="absolute inset-0"
               style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
-            />
-            <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm px-4 py-2 rounded-lg">
-              <span className="text-white font-medium">{t("before")}</span>
+            >
+              <img
+                src="/demo-before.jpg"
+                alt="Before - original car photo"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
+              <div className="absolute inset-0 bg-graphite-800/20" />
+            </div>
+
+            {/* Slider line */}
+            <div
+              className="absolute top-0 bottom-0 w-[2px] bg-white z-20"
+              style={{ left: `${sliderPosition}%`, transform: "translateX(-50%)" }}
+            >
+              {/* Slider handle */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center">
+                <div className="flex gap-[2px]">
+                  <div className="w-[2px] h-4 bg-graphite-800 rounded-full" />
+                  <div className="w-[2px] h-4 bg-graphite-800 rounded-full" />
+                </div>
+              </div>
+            </div>
+
+            {/* Labels */}
+            <div className="absolute top-6 left-6 z-30 px-4 py-2 bg-white/95 text-graphite-800 text-xs font-medium tracking-widest uppercase">
+              {t("before")}
+            </div>
+            <div className="absolute top-6 right-6 z-30 px-4 py-2 bg-graphite-900/90 text-white text-xs font-medium tracking-widest uppercase">
+              {t("after")}
             </div>
           </div>
 
-          {/* Slider Handle */}
-          <div
-            className="absolute top-0 bottom-0 w-1 bg-white cursor-ew-resize"
-            style={{ left: `${sliderPosition}%` }}
-          >
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-gray-800"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 9l4-4 4 4m0 6l-4 4-4-4"
-                />
-              </svg>
-            </div>
-          </div>
+          {/* Slider instruction */}
+          <p className="text-center text-graphite-400 text-sm mt-8 tracking-wide">
+            {t("dragSlider")}
+          </p>
         </motion.div>
       </div>
     </section>

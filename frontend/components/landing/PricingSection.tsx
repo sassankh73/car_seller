@@ -63,7 +63,7 @@ export default function PricingSection() {
   ];
 
   return (
-    <section className="py-24 bg-black">
+    <section className="py-24 md:py-32 bg-white">
       <div className="container mx-auto px-4">
         <motion.div
           className="text-center mb-12"
@@ -72,37 +72,37 @@ export default function PricingSection() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-graphite-800 mb-4">
             {t("title")}
           </h2>
-          <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-8">
+          <p className="text-lg text-graphite-500 max-w-2xl mx-auto mb-8">
             {t("subtitle")}
           </p>
 
           {/* Billing Cycle Toggle */}
-          <div className="inline-flex items-center gap-4 bg-gray-900 rounded-full p-1.5">
+          <div className="inline-flex items-center gap-3 bg-surface-muted rounded-full p-1.5 border border-graphite-200">
             <button
               onClick={() => setBillingCycle("monthly")}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                 billingCycle === "monthly"
-                  ? "bg-white text-gray-900"
-                  : "text-gray-400 hover:text-white"
+                  ? "bg-white text-graphite-800 shadow-card"
+                  : "text-graphite-400 hover:text-graphite-600"
               }`}
             >
               {t("billingCycle.monthly")}
             </button>
             <button
               onClick={() => setBillingCycle("yearly")}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                 billingCycle === "yearly"
-                  ? "bg-white text-gray-900"
-                  : "text-gray-400 hover:text-white"
+                  ? "bg-white text-graphite-800 shadow-card"
+                  : "text-graphite-400 hover:text-graphite-600"
               }`}
             >
               {t("billingCycle.yearly")}
             </button>
             {billingCycle === "yearly" && (
-              <span className="text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded-full">
+              <span className="text-xs bg-secondary-50 text-secondary-600 px-3 py-1 rounded-full font-medium border border-secondary-200">
                 {t("billingCycle.savePercent")}
               </span>
             )}
@@ -113,10 +113,10 @@ export default function PricingSection() {
           {plans.map((plan, index) => (
             <motion.div
               key={plan.key}
-              className={`relative p-8 rounded-2xl border transition-all duration-300 ${
+              className={`relative p-8 rounded-2xl border transition-all duration-300 card-premium ${
                 plan.popular
-                  ? "bg-gradient-to-b from-indigo-900/50 to-purple-900/50 border-indigo-500 shadow-lg shadow-indigo-500/20"
-                  : "bg-gray-900/50 border-gray-800 hover:border-gray-700"
+                  ? "bg-white border-primary-500 shadow-premium ring-1 ring-primary-100"
+                  : "bg-white border-graphite-200 hover:border-graphite-300 shadow-card"
               }`}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -125,20 +125,20 @@ export default function PricingSection() {
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-indigo-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full">
+                  <span className="bg-warm-gradient text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-md">
                     {t("plans.professional.mostPopular")}
                   </span>
                 </div>
               )}
 
               <div className="text-center mb-6">
-                <h3 className="text-xl font-semibold text-white mb-2">
+                <h3 className="text-xl font-semibold text-graphite-800 mb-2">
                   {plan.name}
                 </h3>
-                <p className="text-gray-400 text-sm mb-4">{plan.description}</p>
+                <p className="text-graphite-400 text-sm mb-4">{plan.description}</p>
                 <div className="flex items-baseline justify-center">
-                  <span className="text-4xl font-bold text-white">{plan.price}</span>
-                  <span className="text-gray-400 ml-1">{plan.period}</span>
+                  <span className={`text-4xl font-bold ${plan.popular ? "text-primary-500" : "text-graphite-800"}`}>{plan.price}</span>
+                  <span className="text-graphite-400 ml-1">{plan.period}</span>
                 </div>
               </div>
 
@@ -146,7 +146,7 @@ export default function PricingSection() {
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <svg
-                      className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0"
+                      className={`w-5 h-5 mt-0.5 flex-shrink-0 ${plan.popular ? "text-primary-500" : "text-secondary-500"}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -158,24 +158,24 @@ export default function PricingSection() {
                         d="M5 13l4 4L19 7"
                       />
                     </svg>
-                    <span className="text-gray-300">{feature}</span>
+                    <span className="text-graphite-600">{feature}</span>
                   </li>
                 ))}
               </ul>
 
               <Link
                 href="/dashboard"
-                className={`block w-full py-3 px-6 text-center rounded-lg font-semibold transition-all ${
+                className={`block w-full py-3 px-6 text-center rounded-lg font-semibold transition-all duration-300 ${
                   plan.popular
-                    ? "bg-white text-gray-900 hover:bg-gray-100"
-                    : "bg-gray-800 text-white hover:bg-gray-700"
+                    ? "bg-primary-500 text-white hover:bg-primary-600 btn-glow"
+                    : "bg-surface-muted text-graphite-700 hover:bg-graphite-200 border border-graphite-200"
                 }`}
               >
                 {plan.cta}
               </Link>
 
               {plan.trial && (
-                <p className="text-center text-xs text-gray-500 mt-3">{plan.trial}</p>
+                <p className="text-center text-xs text-graphite-400 mt-3">{plan.trial}</p>
               )}
             </motion.div>
           ))}
@@ -189,14 +189,14 @@ export default function PricingSection() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h3 className="text-xl font-semibold text-white mb-2">
+          <h3 className="text-xl font-semibold text-graphite-800 mb-2">
             {t("extraCharges.title")}
           </h3>
-          <p className="text-gray-400 mb-6">{t("extraCharges.subtitle")}</p>
+          <p className="text-graphite-400 mb-6">{t("extraCharges.subtitle")}</p>
           <div className="flex flex-wrap justify-center gap-6 text-sm">
-            <span className="text-gray-500">{t("extraCharges.extraImage")}</span>
-            <span className="text-gray-500">{t("extraCharges.extraStudio")}</span>
-            <span className="text-gray-500">{t("extraCharges.fourKExport")}</span>
+            <span className="text-graphite-500 bg-surface-muted px-4 py-2 rounded-full border border-graphite-200">{t("extraCharges.extraImage")}</span>
+            <span className="text-graphite-500 bg-surface-muted px-4 py-2 rounded-full border border-graphite-200">{t("extraCharges.extraStudio")}</span>
+            <span className="text-graphite-500 bg-surface-muted px-4 py-2 rounded-full border border-graphite-200">{t("extraCharges.fourKExport")}</span>
           </div>
         </motion.div>
       </div>

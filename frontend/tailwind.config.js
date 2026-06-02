@@ -4,29 +4,54 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        luxury: {
-          50: "#fafafa",
-          100: "#f4f4f5",
-          200: "#e4e4e7",
-          300: "#d4d4d8",
-          400: "#a1a1aa",
-          500: "#71717a",
-          600: "#52525b",
-          700: "#3f3f46",
-          800: "#27272a",
-          900: "#18181b",
-          950: "#0a0a0a",
+        primary: {
+          50: "#f5f5f5",
+          100: "#e8e8e8",
+          200: "#d1d1d1",
+          300: "#b0b0b0",
+          400: "#888888",
+          500: "#1F2937",
+          600: "#1a2332",
+          700: "#151c29",
+          800: "#111827",
+          900: "#0A0F1A",
+          950: "#05080D",
+        },
+        secondary: {
+          50: "#fff7ed",
+          100: "#ffedd5",
+          200: "#fed7aa",
+          300: "#fdba74",
+          400: "#fb923c",
+          500: "#F97316",
+          600: "#EA580C",
+          700: "#C2410C",
+          800: "#9A3412",
+          900: "#7C2D12",
         },
         accent: {
-          gold: "#d4af37",
-          silver: "#c0c0c0",
-          chrome: "#e8e8e8",
+          gold: "#C8A96E",
+          goldLight: "#F5E6B8",
+          silver: "#94A3B8",
         },
-        indigo: {
-          600: "#d4af37",
-          500: "#c0c0c0",
-          400: "#e8e8e8",
-          700: "#a67c00",
+        graphite: {
+          50: "#F9FAFB",
+          100: "#F3F4F6",
+          200: "#E5E7EB",
+          300: "#D1D5DB",
+          400: "#9CA3AF",
+          500: "#6B7280",
+          600: "#4B5563",
+          700: "#374151",
+          800: "#1F2937",
+          900: "#111827",
+          950: "#0A0F1A",
+        },
+        surface: {
+          white: "#FFFFFF",
+          warm: "#FAFAFA",
+          muted: "#F5F5F5",
+          subtle: "#EFEFEA",
         },
       },
       animation: {
@@ -36,7 +61,6 @@ module.exports = {
         "slide-in-left": "slideInLeft 0.6s ease-out",
         "slide-in-right": "slideInRight 0.6s ease-out",
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        "bounce-slow": "bounce 3s infinite",
       },
       keyframes: {
         fadeIn: {
@@ -87,7 +111,12 @@ module.exports = {
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
         "hero-gradient":
-          "linear-gradient(to bottom, rgba(0,0,0,0.7), rgba(0,0,0,0.5), rgba(10,10,10,1))",
+          "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%)",
+      },
+      boxShadow: {
+        "card": "0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)",
+        "card-hover": "0 10px 25px rgba(0,0,0,0.06), 0 4px 10px rgba(0,0,0,0.02)",
+        "premium": "0 4px 14px rgba(0,0,0,0.06)",
       },
     },
   },
