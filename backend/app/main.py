@@ -4,6 +4,7 @@ load_dotenv()
 
 import os
 import logging
+import traceback
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -78,6 +79,13 @@ class TrailingSlashMiddleware(BaseHTTPMiddleware):
 
 
 app = FastAPI(title="AutoStudio AI Backend", redirect_slashes=False)
+
+# Configure logging to show full tracebacks at DEBUG level
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)s %(name)s %(filename)s:%(lineno)d %(funcName)s: %(message)s",
+    force=True,
+)
 
 
 # Add authenticate middleware

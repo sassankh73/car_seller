@@ -308,7 +308,15 @@
     },
     "generate": {
       "button": "Generate Studio Shot",
-      "processing": "Processing..."
+      "processing": "Processing...",
+      "status": {
+        "idle": "",
+        "uploading": "Uploading image...",
+        "preparing": "Preparing vehicle...",
+        "applying": "Applying studio...",
+        "finalizing": "Finalizing image...",
+        "completed": "Completed"
+      }
     },
     "preview": {
       "title": "Preview & Results",

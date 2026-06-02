@@ -10,12 +10,15 @@ Implements realistic AI compositing pipeline:
 - Paint reflection enhancement
 """
 
+import logging
 import random
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # Interface for AI Background Removers (External API wrapper)
@@ -169,6 +172,10 @@ class ReflectionGenerator:
         Returns:
             Reflection image to composite below the car
         """
+        # Defensive: ensure image has alpha channel
+        if "A" not in car_image.getbands():
+            car_image = car_image.convert("RGBA")
+
         w, h = car_image.size
 
         # Extract alpha channel for reflection mask
@@ -226,7 +233,14 @@ class LightingCorrector:
         self.sharpen = sharpen
 
     def correct(self, image: Image.Image) -> Image.Image:
-        """Apply professional lighting corrections."""
+        """Apply professional lighting corrections while preserving alpha channel."""
+        # Extract alpha channel before RGB processing
+        if "A" in image.getbands():
+            alpha = image.split()[3]
+        else:
+            alpha = Image.new("L", image.size, 255)
+
+        # Process RGB channels only
         img = image.convert("RGB")
 
         # Color balance adjustment (warm/cool tone)
@@ -244,7 +258,9 @@ class LightingCorrector:
         if self.sharpen > 0:
             img = ImageEnhance.Sharpness(img).enhance(1 + self.sharpen)
 
-        return img
+        # Reattach original alpha channel
+        result = Image.merge("RGBA", img.split() + (alpha,))
+        return result
 
 
 # ============================================================================
@@ -362,7 +378,14 @@ class PaintReflectionEnhancer:
         self.smoothness = smoothness
 
     def enhance(self, image: Image.Image) -> Image.Image:
-        """Enhance paint reflections for premium look."""
+        """Enhance paint reflections for premium look while preserving alpha channel."""
+        # Extract alpha channel before RGB processing
+        if "A" in image.getbands():
+            alpha = image.split()[3]
+        else:
+            alpha = Image.new("L", image.size, 255)
+
+        # Process RGB channels only
         img = image.convert("RGB")
         img_array = np.array(img, dtype=np.float32) / 255.0
 
@@ -394,7 +417,9 @@ class PaintReflectionEnhancer:
             )
             enhanced_img = ImageEnhance.Sharpness(enhanced_img).enhance(1.2)
 
-        return enhanced_img
+        # Reattach original alpha channel
+        result = Image.merge("RGBA", enhanced_img.split() + (alpha,))
+        return result
 
 
 # ============================================================================
@@ -412,6 +437,8 @@ class AICompositingService:
         studio_height: int = 800,
     ):
         self.background_remover = background_remover or MockRemover()
+        self.rembg_used = False  # Track whether real bg removal was used
+        self.transparent_image = None  # Store transparent vehicle image for preservation
         self.studio_width = studio_width
         self.studio_height = studio_height
 
@@ -462,20 +489,47 @@ class AICompositingService:
         """
         # 1. Remove background
         car_no_bg = self.background_remover.remove_background(car_image)
+        logger.debug(
+            "BackgroundRemover output mode=%s size=%s",
+            car_no_bg.mode,
+            car_no_bg.size,
+        )
+        # Store for preservation (avoid re-calling remove_background)
+        self.transparent_image = car_no_bg.copy()
 
         # 2. Perspective correction
         car_corrected = self.perspective_corrector.correct(
             car_no_bg, (self.studio_width, self.studio_height)
         )
+        logger.debug(
+            "PerspectiveCorrector output mode=%s size=%s",
+            car_corrected.mode,
+            car_corrected.size,
+        )
 
         # 3. Lighting correction
         car_lit = self.lighting_corrector.correct(car_corrected)
+        logger.debug(
+            "LightingCorrector output mode=%s size=%s",
+            car_lit.mode,
+            car_lit.size,
+        )
 
         # 4. Wheel preservation (merge details from original if available)
         car_wheel = self.wheel_preserver.preserve(car_lit, original_image)
+        logger.debug(
+            "WheelPreserver output mode=%s size=%s",
+            car_wheel.mode,
+            car_wheel.size,
+        )
 
         # 5. Paint reflection enhancement
         car_final = self.paint_enhancer.enhance(car_wheel)
+        logger.debug(
+            "PaintEnhancer output mode=%s size=%s",
+            car_final.mode,
+            car_final.size,
+        )
 
         # 6. Generate realistic shadow
         shadow = self.shadow_gen.generate(
@@ -484,6 +538,11 @@ class AICompositingService:
 
         # 7. Generate floor reflection
         reflection = self.reflection_gen.generate(car_final, studio_color)
+        logger.debug(
+            "ReflectionGenerator output mode=%s size=%s",
+            reflection.mode,
+            reflection.size,
+        )
 
         # 8. Create final composite
         # Base canvas with studio background
@@ -500,7 +559,8 @@ class AICompositingService:
 
         # Composite: shadow first
         shadow_rgba = shadow.convert("RGBA")
-        shadow_rgba.putalpha(np.array(shadow).astype(float) * 0.3)
+        shadow_alpha_array = (np.array(shadow).astype(np.float32) * 0.3).astype(np.uint8)
+        shadow_rgba.putalpha(Image.fromarray(shadow_alpha_array, mode="L"))
         canvas.alpha_composite(shadow_rgba, dest=(0, self.studio_height - 100))
 
         # Floor reflection (on top of shadow)
@@ -523,5 +583,23 @@ class AICompositingService:
 
 
 def get_compositing_service() -> AICompositingService:
-    """Get singleton compositing service instance."""
-    return AICompositingService()
+    """Get compositing service instance with configured background remover.
+
+    Uses get_background_remover() from rembg_service to select the
+    appropriate BackgroundRemover implementation based on:
+    - ENABLE_REMBG feature flag
+    - BG_REMOVAL_ENGINE configuration (rembg, bria, birefnet)
+
+    Falls back to MockRemover if background removal is disabled or
+    the configured engine is unavailable.
+    """
+    from .rembg_service import get_background_remover
+
+    background_remover = get_background_remover()
+    service = AICompositingService(background_remover=background_remover)
+
+    # Track whether a real bg removal engine is being used
+    from .rembg_service import RembgRemover
+    service.rembg_used = isinstance(background_remover, RembgRemover)
+
+    return service

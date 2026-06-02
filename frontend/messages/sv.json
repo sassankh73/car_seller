@@ -307,8 +307,16 @@
       "fourK": "4K (3840x2160)"
     },
     "generate": {
-      "button": "Generera Studiofoto",
-      "processing": "Bearbetar..."
+      "button": "Generera studiotillverkning",
+      "processing": "Bearbetar...",
+      "status": {
+        "idle": "",
+        "uploading": "Laddar upp bild...",
+        "preparing": "Förbereder fordon...",
+        "applying": "Applicerar studio...",
+        "finalizing": "Färdigställer bild...",
+        "completed": "Klar"
+      }
     },
     "preview": {
       "title": "Förhandsvisning & Resultat",

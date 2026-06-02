@@ -42,6 +42,7 @@ export default function Dashboard() {
   const [exportQuality, setExportQuality] = useState<"hd" | "4k">("hd");
   const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [processingStatus, setProcessingStatus] = useState<string>("idle");
 
   useEffect(() => {
     // Wait for auth to be ready
@@ -89,10 +90,14 @@ export default function Dashboard() {
     }
   };
 
+  // Status message progression for processing states
+  const statusSteps = ["uploading", "preparing", "applying", "finalizing"] as const;
+
   const handleGenerate = async () => {
     if (!file) return;
     setProcessing(true);
     setResultImage(null);
+    setProcessingStatus("uploading");
 
     const formData = new FormData();
     formData.append("file", file);
@@ -100,6 +105,13 @@ export default function Dashboard() {
     formData.append("enhance_wheels", enhanceWheels.toString());
     formData.append("enhance_paint", enhancePaint.toString());
     formData.append("export_quality", exportQuality);
+
+    // Progress through status messages at timed intervals
+    let stepIndex = 0;
+    const statusInterval = setInterval(() => {
+      stepIndex = Math.min(stepIndex + 1, statusSteps.length - 1);
+      setProcessingStatus(statusSteps[stepIndex]);
+    }, 3000);
 
     try {
       const authHeaders = getAuthHeaders();
@@ -127,12 +139,15 @@ export default function Dashboard() {
         result_image: imageUrl,
       };
       setProjects((prev) => [newProject, ...prev]);
+      setProcessingStatus("completed");
     } catch (error: any) {
       console.error("Processing failed:", error);
       const errorMessage =
         error.message || notificationT("generationError");
       setApiError(errorMessage);
+      setProcessingStatus("idle");
     } finally {
+      clearInterval(statusInterval);
       setProcessing(false);
     }
   };
@@ -477,7 +492,7 @@ export default function Dashboard() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       />
                     </svg>
-                    {t("generate.processing")}
+                    {t(`generate.status.${processingStatus}`)}
                   </span>
                 ) : (
                   t("generate.button")

@@ -1,4 +1,8 @@
 import io
+import logging
+import os
+import uuid
+from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -6,6 +10,11 @@ from PIL import Image
 from pydantic import BaseModel
 
 from ..services.image_processing import AICompositingService, get_compositing_service
+
+logger = logging.getLogger(__name__)
+
+# Storage directory for preserving original and transparent images
+STORAGE_DIR = Path(__file__).parent.parent / "storage"
 
 router = APIRouter()
 
@@ -92,12 +101,24 @@ async def process_image(
             detail=f"Invalid studio key. Available: {list(studios.keys())}",
         )
 
+    # Generate unique ID for this generation
+    generation_id = str(uuid.uuid4())
+
     # Read uploaded image
     try:
         contents = await file.read()
         original_image = Image.open(io.BytesIO(contents))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read image: {str(e)}")
+
+    # Preserve original uploaded image to filesystem
+    try:
+        gen_dir = STORAGE_DIR / generation_id
+        gen_dir.mkdir(parents=True, exist_ok=True)
+        original_image.save(gen_dir / "original.png", format="PNG")
+        logger.info("Saved original image to %s", gen_dir / "original.png")
+    except Exception as e:
+        logger.warning("Failed to save original image: %s (non-fatal, continuing)", e)
 
     # Get studio config
     studio_config = studios[studio_key]
@@ -127,12 +148,29 @@ async def process_image(
             original_image=original_image if enhance_wheels else None,
         )
     except Exception as e:
+        logger.exception("Processing failed for studio %s, generation %s", studio_key, generation_id)
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+
+    # Preserve transparent vehicle image (background-removed) to filesystem
+    # Uses the cached transparent_image from the pipeline (avoids double rembg call)
+    try:
+        transparent_img = compositing_service.transparent_image
+        if transparent_img is not None:
+            gen_dir = STORAGE_DIR / generation_id
+            transparent_img.save(gen_dir / "transparent.png", format="PNG")
+            logger.info("Saved transparent vehicle image to %s", gen_dir / "transparent.png")
+        else:
+            logger.warning("No transparent image available from pipeline (skipping save)")
+    except Exception as e:
+        logger.warning("Failed to save transparent image: %s (non-fatal, continuing)", e)
 
     # Save result to buffer
     output_buffer = io.BytesIO()
     result_image.save(output_buffer, format="PNG", quality=95)
     output_buffer.seek(0)
+
+    # Track whether rembg was actually used
+    rembg_used = compositing_service.rembg_used
 
     # Return as file response
     from fastapi.responses import StreamingResponse
@@ -144,6 +182,8 @@ async def process_image(
             "Content-Disposition": f'attachment; filename="autostudio_{studio_key}.png"',
             "X-Studio-Key": studio_key,
             "X-Export-Quality": export_quality,
+            "X-Generation-Id": generation_id,
+            "X-Rembg-Used": str(rembg_used).lower(),
         },
     )
 
