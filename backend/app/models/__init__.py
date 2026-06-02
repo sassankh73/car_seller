@@ -28,10 +28,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
 # SQLAlchemy configuration - read from environment variable (set via .env)
-SQLALCHEMY_DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://autostudio_user:autostudio@192.168.0.106:5432/autostudio"
-)
+# DATABASE_URL MUST be set in the environment; no hardcoded fallback.
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+if not SQLALCHEMY_DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL environment variable is required but not set. "
+        "Copy backend/.env.example to backend/.env and configure it."
+    )
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

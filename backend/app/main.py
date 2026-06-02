@@ -15,7 +15,7 @@ from .api import auth, projects, studio
 from .api.billing import routes as billing_routes
 from .api.admin import router as admin_router
 from .middleware.auth import authenticate_middleware, get_current_user
-from .models import init_db, SessionLocal, Role, User
+from .models import init_db, SessionLocal, Role, User, engine
 from .api.studio import StudioOut
 from .schemas.auth import UserResponse
 from .services.auth import hash_password, get_user_by_email
@@ -97,8 +97,62 @@ async def add_auth_middleware(request: Request, call_next):
 @app.on_event("startup")
 async def on_startup():
     """Initialize database on startup and ensure admin user exists."""
+    # --- Startup validation: log config (excluding secrets) ---
+    db_url = os.getenv("DATABASE_URL", "")
+    db_host = "unknown"
+    if db_url:
+        # Parse host from DATABASE_URL for logging (mask password)
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(db_url)
+            db_host = f"{parsed.hostname}:{parsed.port}"
+            # Mask password in log output
+            masked_url = db_url.replace(parsed.password or "", "***") if parsed.password else db_url
+        except Exception:
+            masked_url = "***parse error***"
+            db_host = "parse_error"
+    else:
+        masked_url = "NOT SET"
+
+    logger.info("=" * 60)
+    logger.info("AutoStudio AI Backend - Starting Up")
+    logger.info("=" * 60)
+    logger.info(f"  DATABASE_URL : {masked_url}")
+    logger.info(f"  DB Host      : {db_host}")
+    logger.info(f"  APP_NAME     : {os.getenv('APP_NAME', 'NOT SET')}")
+    logger.info(f"  APP_URL      : {os.getenv('APP_URL', 'NOT SET')}")
+    logger.info(f"  FRONTEND_URL : {os.getenv('FRONTEND_URL', 'NOT SET')}")
+    logger.info(f"  ENABLE_REMBG : {os.getenv('ENABLE_REMBG', 'NOT SET')}")
+    logger.info(f"  REMBG_SERVICE_URL: {os.getenv('REMBG_SERVICE_URL', 'NOT SET')}")
+    logger.info(f"  ADMIN_PASSWORD: {'***SET***' if os.getenv('ADMIN_PASSWORD') else 'NOT SET'}")
+    logger.info("=" * 60)
+
+    # --- Validate required config ---
+    if not os.getenv("DATABASE_URL"):
+        logger.critical(
+            "FATAL: DATABASE_URL is not set. "
+            "Copy backend/.env.example to backend/.env and configure it."
+        )
+        raise RuntimeError("DATABASE_URL environment variable is required but not set.")
+
+    # --- Test database connectivity ---
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logger.info(f"Database connection verified: {db_host}")
+    except Exception as e:
+        logger.critical(f"FATAL: Cannot connect to database at {db_host}: {e}")
+        logger.critical(
+            "Ensure PostgreSQL is running and DATABASE_URL is correct. "
+            "If using Docker, the 'postgres' service must be healthy."
+        )
+        raise
+
+    # --- Initialize DB and admin ---
     init_db()
     ensure_admin_user()
+    logger.info("Startup complete - AutoStudio AI Backend is ready.")
 
 
 # Serve static files
