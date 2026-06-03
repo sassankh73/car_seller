@@ -1,22 +1,4 @@
 services:
-  postgres:
-    image: postgres:16
-    container_name: car_postgres
-    environment:
-      POSTGRES_USER: autostudio_user
-      POSTGRES_PASSWORD: autostudio
-      POSTGRES_DB: autostudio
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U autostudio_user -d autostudio"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
   rembg:
     image: danielgatis/rembg:latest
     container_name: car_rembg
@@ -44,8 +26,6 @@ services:
       - BG_REMOVAL_ENGINE=rembg
       - REMBG_SERVICE_URL=http://rembg:7000
     depends_on:
-      postgres:
-        condition: service_healthy
       rembg:
         condition: service_started
     healthcheck:
@@ -68,6 +48,3 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
-
-volumes:
-  postgres_data:

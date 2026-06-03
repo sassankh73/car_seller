@@ -27,8 +27,8 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className="dark">
-      <body className="bg-gray-900 min-h-screen flex flex-col">
+    <html lang={locale}>
+      <body className="bg-white min-h-screen flex flex-col">
         <NextIntlClientProvider messages={messages}>
           <AuthProviderWrapper>
             {children}

@@ -2,33 +2,33 @@ import { Metadata } from "next";
 import {
   Navbar,
   HeroSection,
-  ValuePropositionSection,
-  BeforeAfterSection,
+  FeaturesBentoSection,
   StudioShowcaseSection,
-  TestimonialsSection,
+  HowItWorksSection,
+  TrustSection,
   CTASection,
   Footer,
 } from "@/components/landing";
 
 export const metadata: Metadata = {
-  title: "AutoStudio - Professional Car Photography for Dealerships",
+  title: "AutoStudio — Professional Vehicle Photography for Modern Dealerships",
   description:
-    "Transform ordinary car photos into professional showroom images in seconds. Perfect for car dealerships and sellers. Features background removal, virtual studios, HD/4K export, and logo branding.",
+    "Transform ordinary vehicle photos into professional dealership-ready images in minutes. Premium virtual studios, HD/4K export, and batch processing for car dealers.",
   keywords: [
-    "car photography",
-    "car dealership photo editor",
-    "virtual car studio",
-    "automotive showroom",
-    "car photo background removal",
-    "professional car photos",
-    "showroom images",
+    "vehicle photography",
+    "car dealership photography",
+    "virtual car showroom",
+    "automotive studio",
+    "car photo background replacement",
+    "professional vehicle images",
+    "dealership photography platform",
     "car image enhancement",
   ],
   authors: [{ name: "AutoStudio" }],
   openGraph: {
-    title: "AutoStudio - Professional Car Photography for Dealerships",
+    title: "AutoStudio — Professional Vehicle Photography",
     description:
-      "Transform ordinary car photos into professional showroom images in seconds.",
+      "Transform ordinary vehicle photos into professional dealership-ready images in minutes.",
     type: "website",
   },
 };
@@ -37,31 +37,12 @@ export default function LandingPage() {
   return (
     <>
       <Navbar />
-      <main>
-        {/* Section 1: Full-screen Hero */}
+      <main className="bg-white">
         <HeroSection />
-
-        {/* Section 2: Value Proposition */}
-        <div id="value-proposition">
-          <ValuePropositionSection />
-        </div>
-
-        {/* Section 3: Before / After Comparison */}
-        <div id="comparison">
-          <BeforeAfterSection />
-        </div>
-
-        {/* Section 4: Studio Collection */}
-        <div id="studios">
-          <StudioShowcaseSection />
-        </div>
-
-        {/* Section 5: Trust Metrics & Testimonials */}
-        <div id="testimonials">
-          <TestimonialsSection />
-        </div>
-
-        {/* Section 6: Final CTA */}
+        <FeaturesBentoSection />
+        <StudioShowcaseSection />
+        <HowItWorksSection />
+        <TrustSection />
         <CTASection />
       </main>
       <Footer />

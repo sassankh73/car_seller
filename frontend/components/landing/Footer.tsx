@@ -1,63 +1,98 @@
 "use client";
 
-import Link from "next/link";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 
 export default function Footer() {
-  const t = useTranslations("footer");
-  const currentYear = new Date().getFullYear();
+  const t = useTranslations("landing.footer");
 
   return (
-    <footer className="bg-white border-t border-graphite-200">
-      <div className="container mx-auto px-6 py-16 md:py-20">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12">
+    <footer className="relative bg-charcoal-900 text-white/80 pt-16 lg:pt-20 pb-8">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
+        {/* Top row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-16 mb-12 lg:mb-16">
           {/* Brand */}
-          <Link href="/" className="text-xl font-bold text-graphite-800 tracking-tight">
-            Auto<span className="text-graphite-400">Studio</span>
-          </Link>
+          <div className="sm:col-span-2 lg:col-span-1">
+            <div className="flex items-center gap-0 mb-4">
+              <span className="text-xl font-bold tracking-tight text-white">
+                Auto
+              </span>
+              <span className="text-xl font-bold tracking-tight text-red-500">
+                Studio
+              </span>
+            </div>
+            <p className="text-sm text-white/50 leading-relaxed max-w-[260px]">
+              {t("tagline")}
+            </p>
+          </div>
 
-          {/* Minimal nav links */}
-          <div className="flex flex-wrap gap-8">
-            <Link
-              href="#how-it-works"
-              className="text-graphite-400 hover:text-graphite-800 text-sm transition-colors duration-200 tracking-wide"
+          {/* Product */}
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-4 tracking-wide">
+              {t("product")}
+            </h4>
+            <ul className="space-y-3">
+              <li>
+                <a href="#features" className="text-sm text-white/50 hover:text-white/80 transition-colors">
+                  {t("dashboard")}
+                </a>
+              </li>
+              <li>
+                <a href="#studios" className="text-sm text-white/50 hover:text-white/80 transition-colors">
+                  Studios
+                </a>
+              </li>
+              <li>
+                <a href="#pricing" className="text-sm text-white/50 hover:text-white/80 transition-colors">
+                  Pricing
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Company */}
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-4 tracking-wide">
+              {t("company")}
+            </h4>
+            <ul className="space-y-3">
+              <li>
+                <Link href="/about" className="text-sm text-white/50 hover:text-white/80 transition-colors">
+                  {t("about")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="text-sm text-white/50 hover:text-white/80 transition-colors">
+                  {t("privacy")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="text-sm text-white/50 hover:text-white/80 transition-colors">
+                  {t("terms")}
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Get Started */}
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-4 tracking-wide">
+              {t("getStarted")}
+            </h4>
+            <a
+              href="/register"
+              className="inline-flex items-center justify-center px-5 py-2.5 bg-red-500 text-white text-sm font-medium rounded-xl hover:bg-red-600 transition-colors"
             >
-              How It Works
-            </Link>
-            <Link
-              href="#studios"
-              className="text-graphite-400 hover:text-graphite-800 text-sm transition-colors duration-200 tracking-wide"
-            >
-              Studios
-            </Link>
-            <Link
-              href="#"
-              className="text-graphite-400 hover:text-graphite-800 text-sm transition-colors duration-200 tracking-wide"
-            >
-              {t("contactUs")}
-            </Link>
+              Start Free Trial
+            </a>
           </div>
         </div>
 
-        {/* Divider */}
-        <div className="border-t border-graphite-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-graphite-300 text-xs tracking-wide">
-            © {currentYear} AutoStudio. {t("allRightsReserved")}
+        {/* Bottom row */}
+        <div className="border-t border-white/[0.06] pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-white/40">
+            © {new Date().getFullYear()} AutoStudio. {t("rights")}
           </p>
-          <div className="flex gap-6">
-            <Link
-              href="#"
-              className="text-graphite-300 hover:text-graphite-600 text-xs transition-colors duration-200 tracking-wide"
-            >
-              {t("termsOfService")}
-            </Link>
-            <Link
-              href="#"
-              className="text-graphite-300 hover:text-graphite-600 text-xs transition-colors duration-200 tracking-wide"
-            >
-              {t("privacyPolicy")}
-            </Link>
-          </div>
         </div>
       </div>
     </footer>

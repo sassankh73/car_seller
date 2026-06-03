@@ -2,93 +2,175 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ============================================================================
+   Warm Scandinavian Theme — AutoStudio
+   ============================================================================ */
+
+:root {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #FAF8F5;
+  --bg-warm: #F7F4EF;
+  --text-primary: #1A1A1A;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --accent-red: #D62828;
+  --accent-coral: #E76F51;
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.10);
+  --shadow-card: 0 4px 6px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-card-lg: 0 10px 25px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.03);
+}
+
 html {
-    scroll-behavior: smooth;
+  scroll-behavior: smooth;
 }
 
 html,
 body {
-    height: 100%;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    background-color: #FFFFFF;
-    color: #1F2937;
+  height: 100%;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  background-color: #FFFFFF;
+  color: #1A1A1A;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar - Minimal */
+/* Selection — warm red tint */
+::selection {
+  background: rgba(214, 40, 40, 0.15);
+  color: #1A1A1A;
+}
+
+/* Scrollbar — clean & minimal */
 ::-webkit-scrollbar {
-    width: 6px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #FFFFFF;
+  background: #FFFFFF;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #D1D5DB;
-    border-radius: 3px;
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #9CA3AF;
+  background: rgba(0, 0, 0, 0.22);
 }
 
-/* Smooth fade-in */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+/* ============================================================================
+   Utility Classes
+   ============================================================================ */
+
+/* Gradient text — charcoal to red accent */
+.text-gradient-red {
+  background: linear-gradient(135deg, #1A1A1A 0%, #D62828 50%, #E76F51 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.animate-fadeInUp {
-    animation: fadeInUp 0.6s ease-out;
-}
-
-/* Minimal hover transitions */
+/* Premium card base */
 .card-premium {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .card-premium:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06), 0 4px 10px rgba(0, 0, 0, 0.03);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.07), 0 6px 12px rgba(0, 0, 0, 0.04);
 }
 
-/* Minimal link transitions */
-.link-premium {
-    transition: color 0.2s ease, transform 0.2s ease;
+/* Primary button — red */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 32px;
+  background: #D62828;
+  color: #FFFFFF;
+  font-weight: 500;
+  font-size: 0.9375rem;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  letter-spacing: -0.01em;
 }
 
-.link-premium:hover {
-    color: #1F2937;
+.btn-primary:hover {
+  background: #B71C1C;
+  box-shadow: 0 0 30px rgba(214, 40, 40, 0.2);
+  transform: translateY(-1px);
 }
 
-/* Subtle CTA hover */
-.btn-subtle {
-    transition: all 0.25s ease;
+/* Outlined button — charcoal on white */
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 32px;
+  background: transparent;
+  color: #1A1A1A;
+  font-weight: 500;
+  font-size: 0.9375rem;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  letter-spacing: -0.01em;
 }
 
-.btn-subtle:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    transform: translateY(-1px);
+.btn-outline:hover {
+  background: rgba(214, 40, 40, 0.04);
+  border-color: rgba(214, 40, 40, 0.30);
+  color: #D62828;
+  transform: translateY(-1px);
 }
 
-/* Gradient text for headings - monochrome */
-.text-gradient {
-    background: linear-gradient(135deg, #1F2937 0%, #374151 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+/* Section label — uppercase with red accent */
+.section-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #D62828;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-/* Section divider - minimal */
-.section-divider {
-    width: 48px;
-    height: 2px;
-    background: #1F2937;
-    margin: 0 auto;
+.section-label::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #D62828;
+}
+
+/* Warm dot pattern background */
+.bg-dot-warm {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.04) 0.5px, transparent 0.5px);
+  background-size: 24px 24px;
+}
+
+/* Fade-in animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+/* Subtle red glow for key elements */
+.red-glow-hover:hover {
+  box-shadow: 0 0 20px rgba(214, 40, 40, 0.12), 0 0 40px rgba(214, 40, 40, 0.04);
 }

@@ -45,19 +45,12 @@ export default function Dashboard() {
   const [processingStatus, setProcessingStatus] = useState<string>("idle");
 
   useEffect(() => {
-    // Wait for auth to be ready
     if (authLoading) return;
-
-    if (!isAuthenticated) {
-      // AuthContext will handle redirect
-      return;
-    }
+    if (!isAuthenticated) return;
 
     const loadData = async () => {
       try {
-        // Studios are public (no auth needed)
         const studiosRes = await fetch("/api/studio");
-        // Projects require auth
         const projectsRes = await authFetch("/api/projects");
 
         if (!studiosRes.ok || !projectsRes.ok) {
@@ -90,7 +83,6 @@ export default function Dashboard() {
     }
   };
 
-  // Status message progression for processing states
   const statusSteps = ["uploading", "preparing", "applying", "finalizing"] as const;
 
   const handleGenerate = async () => {
@@ -106,7 +98,6 @@ export default function Dashboard() {
     formData.append("enhance_paint", enhancePaint.toString());
     formData.append("export_quality", exportQuality);
 
-    // Progress through status messages at timed intervals
     let stepIndex = 0;
     const statusInterval = setInterval(() => {
       stepIndex = Math.min(stepIndex + 1, statusSteps.length - 1);
@@ -127,11 +118,9 @@ export default function Dashboard() {
       }
 
       const blob = await response.blob();
-      // Create preview URL from blob
       const imageUrl = URL.createObjectURL(blob);
       setResultImage(imageUrl);
 
-      // Create a new project entry
       const newProject: Project = {
         id: Date.now().toString(),
         name: file.name,
@@ -142,8 +131,7 @@ export default function Dashboard() {
       setProcessingStatus("completed");
     } catch (error: any) {
       console.error("Processing failed:", error);
-      const errorMessage =
-        error.message || notificationT("generationError");
+      const errorMessage = error.message || notificationT("generationError");
       setApiError(errorMessage);
       setProcessingStatus("idle");
     } finally {
@@ -162,11 +150,10 @@ export default function Dashboard() {
     document.body.removeChild(link);
   };
 
-  // Show loading while auth is being verified
   if (authLoading) {
     return (
-      <main className="p-8 min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-gray-400">
+      <main className="min-h-screen bg-warm-cream flex items-center justify-center">
+        <div className="text-charcoal-400">
           <svg className="animate-spin h-8 w-8 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -177,7 +164,6 @@ export default function Dashboard() {
     );
   }
 
-  // Studio translations mapping - Automotive corner studios
   const studioTranslations: Record<string, string> = {
     white_corner_light_epoxy: t("studio.studios.white_corner_light_epoxy"),
     white_corner_ceramic_tile: t("studio.studios.white_corner_ceramic_tile"),
@@ -190,122 +176,149 @@ export default function Dashboard() {
   };
 
   return (
-    <main className="p-8 min-h-screen bg-gray-900">
-      <div className="max-w-7xl mx-auto">
-        {/* Navigation */}
-        <nav className="flex items-center justify-between mb-8 pb-6 border-b border-gray-700">
-          <div className="flex items-center space-x-8">
-            <h1 className="text-2xl font-bold text-white">
-              {commonT("appName")}
-            </h1>
-            <Link
-              href={`/${locale}/dashboard`}
-              className="text-gray-400 hover:text-white transition"
-            >
-              {t("navigation.projects")}
-            </Link>
-            <Link
-              href={`/${locale}/dashboard/billing`}
-              className="text-gray-400 hover:text-white transition"
-            >
-              {t("navigation.billing")}
-            </Link>
-            {user?.role === "admin" && (
-              <Link
-                href={`/${locale}/admin/dashboard`}
-                className="text-indigo-400 hover:text-indigo-300 transition"
-              >
-                Admin
+    <main className="min-h-screen bg-warm-cream">
+      {/* Dashboard Navigation */}
+      <nav className="bg-white border-b border-charcoal-200/50 sticky top-0 z-40">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-6">
+              <Link href={`/${locale}`} className="flex items-center gap-0">
+                <span className="text-xl font-bold tracking-tight text-charcoal-900">Auto</span>
+                <span className="text-xl font-bold tracking-tight text-red-500">Studio</span>
               </Link>
-            )}
+              <div className="hidden sm:flex items-center gap-1">
+                <Link
+                  href={`/${locale}/dashboard`}
+                  className="text-sm font-medium text-white bg-red-500 hover:bg-red-600 px-4 py-1.5 rounded-full transition-colors"
+                >
+                  {t("navigation.projects")}
+                </Link>
+                <Link
+                  href={`/${locale}/dashboard/billing`}
+                  className="text-sm font-medium text-charcoal-500 hover:text-red-500 px-4 py-1.5 rounded-full transition-colors"
+                >
+                  {t("navigation.billing")}
+                </Link>
+                {user?.role === "admin" && (
+                  <Link
+                    href={`/${locale}/admin/dashboard`}
+                    className="text-sm font-medium text-accent-coral hover:text-accent-terracotta px-4 py-1.5 rounded-full transition-colors"
+                  >
+                    Admin
+                  </Link>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <LanguageSwitcher />
+              {user && (
+                <span className="hidden md:block text-sm text-charcoal-400">
+                  {user.email}
+                </span>
+              )}
+              <button
+                onClick={logout}
+                className="text-sm text-charcoal-400 hover:text-red-500 transition-colors"
+              >
+                {t("navigation.logout")}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <LanguageSwitcher />
-            {user && (
-              <span className="text-gray-400 text-sm">
-                {user.email}
-              </span>
-            )}
-            <button
-              onClick={logout}
-              className="text-red-400 hover:text-red-300 transition text-sm"
-            >
-              Logout
-            </button>
-            <Link
-              href={`/${locale}`}
-              className="text-indigo-400 hover:text-indigo-300 transition"
-            >
-              ← {commonT("backToHome")}
-            </Link>
-          </div>
-        </nav>
+        </div>
+      </nav>
 
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-8">
+        {/* Header */}
         <header className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">{t("title")}</h1>
-          <p className="text-gray-400">{t("subtitle")}</p>
+          <h1 className="text-2xl lg:text-3xl font-bold text-charcoal-900 tracking-[-0.02em] mb-1">
+            {t("title")}
+          </h1>
+          <p className="text-charcoal-500">{t("subtitle")}</p>
         </header>
 
+        {/* Quick Action Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {/* Upload Card */}
+          <div className="bg-white rounded-2xl border border-black/[0.06] p-5 shadow-card hover:shadow-card-hover transition-shadow">
+            <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center mb-3">
+              <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-charcoal-900 mb-1">{t("cards.uploadPhoto.title")}</h3>
+            <p className="text-xs text-charcoal-400 leading-relaxed">{t("cards.uploadPhoto.description")}</p>
+          </div>
+
+          {/* Select Studio Card */}
+          <div className="bg-white rounded-2xl border border-black/[0.06] p-5 shadow-card hover:shadow-card-hover transition-shadow">
+            <div className="w-10 h-10 rounded-xl bg-warm-beige/60 flex items-center justify-center mb-3">
+              <svg className="w-5 h-5 text-accent-terracotta" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205l3 1m1.5.5l-1.5-.5M6.75 7.364V3h-3v18m3-13.636l10.5-3.819" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-charcoal-900 mb-1">{t("cards.selectStudio.title")}</h3>
+            <p className="text-xs text-charcoal-400 leading-relaxed">{t("cards.selectStudio.description")}</p>
+          </div>
+
+          {/* Recent Projects Card */}
+          <div className="bg-white rounded-2xl border border-black/[0.06] p-5 shadow-card hover:shadow-card-hover transition-shadow">
+            <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center mb-3">
+              <svg className="w-5 h-5 text-accent-coral" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-charcoal-900 mb-1">{t("cards.recentProjects.title")}</h3>
+            <p className="text-xs text-charcoal-400 leading-relaxed">
+              {projects.length > 0
+                ? `${projects.length} ${t("cards.recentProjects.title").toLowerCase()}`
+                : t("cards.recentProjects.noProjects")}
+            </p>
+          </div>
+
+          {/* Subscription Card */}
+          <div className="bg-white rounded-2xl border border-black/[0.06] p-5 shadow-card hover:shadow-card-hover transition-shadow">
+            <div className="w-10 h-10 rounded-xl bg-warm-cream flex items-center justify-center mb-3">
+              <svg className="w-5 h-5 text-accent-gold" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-charcoal-900 mb-1">{t("cards.subscription.title")}</h3>
+            <p className="text-xs text-charcoal-400 leading-relaxed">{t("cards.subscription.freePlan")}</p>
+          </div>
+        </div>
+
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-gray-400">
-              <svg
-                className="animate-spin h-8 w-8 mx-auto mb-3"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
+          <div className="flex items-center justify-center py-16">
+            <div className="text-charcoal-400">
+              <svg className="animate-spin h-8 w-8 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
               <p>{commonT("loading")}</p>
             </div>
           </div>
         ) : apiError ? (
-          <div className="bg-red-500/10 border border-red-500 rounded-xl p-4 mb-6">
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-6">
             <div className="flex items-start">
-              <svg
-                className="w-5 h-5 text-red-400 mt-0.5 mr-3"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
+              <svg className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
               <div>
-                <h3 className="text-red-400 font-medium">
-                  API Connection Error
-                </h3>
-                <p className="text-red-300 text-sm mt-1">{apiError}</p>
-                <p className="text-red-400 text-xs mt-2">
-                  Make sure the backend server is running on port 8001
-                </p>
+                <h3 className="text-red-600 font-medium">API Connection Error</h3>
+                <p className="text-red-500 text-sm mt-1">{apiError}</p>
               </div>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Upload & Studio Selection */}
-            <div className="lg:col-span-1 space-y-6">
+            <div className="lg:col-span-1 space-y-5">
               {/* Upload Section */}
-              <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                <h2 className="text-xl font-semibold text-white mb-4">
+              <div className="bg-white rounded-2xl border border-black/[0.06] p-6 shadow-card">
+                <h2 className="text-base font-semibold text-charcoal-900 mb-4">
                   {t("upload.title")}
                 </h2>
-                <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-indigo-500 transition">
+                <div className="border-2 border-dashed border-charcoal-200 rounded-xl p-6 text-center hover:border-red-300 transition-colors cursor-pointer">
                   <input
                     type="file"
                     accept="image/*"
@@ -323,21 +336,11 @@ export default function Dashboard() {
                         className="rounded-lg mx-auto object-cover"
                       />
                     ) : (
-                      <div className="text-gray-400">
-                        <svg
-                          className="w-12 h-12 mx-auto mb-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
+                      <div className="text-charcoal-400">
+                        <svg className="w-10 h-10 mx-auto mb-2 text-charcoal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                         </svg>
-                        <span>{t("upload.clickToUpload")}</span>
+                        <span className="text-sm">{t("upload.clickToUpload")}</span>
                       </div>
                     )}
                   </label>
@@ -345,23 +348,22 @@ export default function Dashboard() {
               </div>
 
               {/* Studio Selection */}
-              <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                <h2 className="text-xl font-semibold text-white mb-4">
+              <div className="bg-white rounded-2xl border border-black/[0.06] p-6 shadow-card">
+                <h2 className="text-base font-semibold text-charcoal-900 mb-4">
                   {t("studio.title")}
                 </h2>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   {studios.map((studio) => (
                     <button
                       key={studio.key}
                       onClick={() => setSelectedStudio(studio.key)}
-                      className={`relative rounded-xl overflow-hidden border-2 transition group ${
+                      className={`relative rounded-xl overflow-hidden border-2 transition-all group ${
                         selectedStudio === studio.key
-                          ? "border-indigo-500 ring-2 ring-indigo-500/50"
-                          : "border-gray-600 hover:border-gray-500"
+                          ? "border-red-500 ring-2 ring-red-500/20"
+                          : "border-charcoal-200/50 hover:border-charcoal-300"
                       }`}
                     >
-                      {/* Preview Image with graceful fallback */}
-                      <div className="aspect-[4/3] bg-gray-900 relative overflow-hidden">
+                      <div className="aspect-[4/3] bg-warm-cream relative overflow-hidden">
                         <div
                           className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
                           style={{
@@ -370,35 +372,19 @@ export default function Dashboard() {
                             backgroundPosition: "center",
                           }}
                           onError={(e) => {
-                            // Fallback when image fails to load
                             const target = e.currentTarget as HTMLElement;
-                            target.style.backgroundImage =
-                              "linear-gradient(135deg, #1f2937 0%, #374151 100%)";
+                            target.style.backgroundImage = "linear-gradient(135deg, #F7F4EF 0%, #E5E0DA 100%)";
                           }}
-                        >
-                          {/* Loading state placeholder */}
-                          <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
-                            Loading preview...
-                          </div>
-                        </div>
-                        
-                        {/* Overlay gradient for readability */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                       </div>
-                      
-                      {/* Studio info overlay */}
-                      <div className="p-3 bg-gray-800">
-                        <div className="text-sm font-medium text-white truncate">
+                      <div className="p-2.5 bg-white">
+                        <div className="text-xs font-medium text-charcoal-900 truncate">
                           {studioTranslations[studio.key] || studio.name}
                         </div>
-                        <div className="text-xs text-gray-400 capitalize mt-0.5">
-                          {studio.key.replace("_", " ")}
-                        </div>
                       </div>
-                      
-                      {/* Selection indicator */}
                       {selectedStudio === studio.key && (
-                        <div className="absolute top-2 right-2 w-3 h-3 bg-indigo-500 rounded-full border-2 border-gray-800 shadow-lg" />
+                        <div className="absolute top-2 right-2 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white shadow-sm" />
                       )}
                     </button>
                   ))}
@@ -406,8 +392,8 @@ export default function Dashboard() {
               </div>
 
               {/* Options */}
-              <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                <h2 className="text-xl font-semibold text-white mb-4">
+              <div className="bg-white rounded-2xl border border-black/[0.06] p-6 shadow-card">
+                <h2 className="text-base font-semibold text-charcoal-900 mb-4">
                   {t("options.title")}
                 </h2>
                 <div className="space-y-3">
@@ -416,9 +402,9 @@ export default function Dashboard() {
                       type="checkbox"
                       checked={enhanceWheels}
                       onChange={(e) => setEnhanceWheels(e.target.checked)}
-                      className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-indigo-500 focus:ring-indigo-500"
+                      className="w-4 h-4 rounded border-charcoal-300 text-red-500 focus:ring-red-500"
                     />
-                    <span className="text-gray-300">
+                    <span className="text-sm text-charcoal-600">
                       {t("options.enhanceWheels")}
                     </span>
                   </label>
@@ -427,33 +413,33 @@ export default function Dashboard() {
                       type="checkbox"
                       checked={enhancePaint}
                       onChange={(e) => setEnhancePaint(e.target.checked)}
-                      className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-indigo-500 focus:ring-indigo-500"
+                      className="w-4 h-4 rounded border-charcoal-300 text-red-500 focus:ring-red-500"
                     />
-                    <span className="text-gray-300">
+                    <span className="text-sm text-charcoal-600">
                       {t("options.enhancePaint")}
                     </span>
                   </label>
                   <div>
-                    <span className="text-gray-300 block mb-2">
+                    <span className="text-sm text-charcoal-600 block mb-2">
                       {t("options.exportQuality")}
                     </span>
-                    <div className="flex space-x-2">
+                    <div className="flex gap-2">
                       <button
                         onClick={() => setExportQuality("hd")}
-                        className={`px-3 py-1 rounded text-sm ${
+                        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                           exportQuality === "hd"
-                            ? "bg-indigo-500 text-white"
-                            : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                            ? "bg-red-500 text-white"
+                            : "bg-warm-cream text-charcoal-600 hover:bg-warm-beige"
                         }`}
                       >
                         {t("options.hd")}
                       </button>
                       <button
                         onClick={() => setExportQuality("4k")}
-                        className={`px-3 py-1 rounded text-sm ${
+                        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                           exportQuality === "4k"
-                            ? "bg-indigo-500 text-white"
-                            : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                            ? "bg-red-500 text-white"
+                            : "bg-warm-cream text-charcoal-600 hover:bg-warm-beige"
                         }`}
                       >
                         {t("options.fourK")}
@@ -467,32 +453,17 @@ export default function Dashboard() {
               <button
                 onClick={handleGenerate}
                 disabled={!file || processing}
-                className={`w-full py-4 rounded-xl font-semibold text-lg transition ${
+                className={`w-full py-3.5 rounded-xl font-semibold text-base transition-all ${
                   !file || processing
-                    ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                    : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30"
+                    ? "bg-charcoal-200 text-charcoal-400 cursor-not-allowed"
+                    : "bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 hover:shadow-red-500/30"
                 }`}
               >
                 {processing ? (
                   <span className="flex items-center justify-center">
-                    <svg
-                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
                     {t(`generate.status.${processingStatus}`)}
                   </span>
@@ -504,14 +475,14 @@ export default function Dashboard() {
 
             {/* Preview & Results */}
             <div className="lg:col-span-2">
-              <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 h-full">
-                <h2 className="text-xl font-semibold text-white mb-4">
+              <div className="bg-white rounded-2xl border border-black/[0.06] p-6 shadow-card h-full">
+                <h2 className="text-base font-semibold text-charcoal-900 mb-4">
                   {t("preview.title")}
                 </h2>
 
                 {resultImage ? (
                   <div className="space-y-4">
-                    <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden">
+                    <div className="relative aspect-video bg-warm-cream rounded-xl overflow-hidden">
                       <Image
                         src={resultImage}
                         alt="Generated result"
@@ -519,23 +490,23 @@ export default function Dashboard() {
                         className="object-contain"
                       />
                     </div>
-                    <div className="flex space-x-4">
+                    <div className="flex gap-3">
                       <button
                         onClick={handleDownload}
-                        className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition"
+                        className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors"
                       >
                         {t("preview.downloadImage")}
                       </button>
                       <button
                         onClick={() => setResultImage(null)}
-                        className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition"
+                        className="px-6 py-3 bg-warm-cream hover:bg-warm-beige text-charcoal-600 rounded-xl font-medium transition-colors"
                       >
                         {t("preview.newGeneration")}
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-96 bg-gray-900 rounded-lg">
+                  <div className="flex items-center justify-center h-96 bg-warm-cream/50 rounded-xl border border-dashed border-charcoal-200">
                     {previewUrl ? (
                       <div className="text-center">
                         <Image
@@ -545,26 +516,16 @@ export default function Dashboard() {
                           height={300}
                           className="rounded-lg mx-auto mb-4 object-cover"
                         />
-                        <p className="text-gray-400">
+                        <p className="text-charcoal-400 text-sm">
                           {t("preview.selectStudio")}
                         </p>
                       </div>
                     ) : (
-                      <div className="text-center text-gray-500">
-                        <svg
-                          className="w-16 h-16 mx-auto mb-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
+                      <div className="text-center text-charcoal-300">
+                        <svg className="w-14 h-14 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
                         </svg>
-                        <p>{t("preview.uploadToStart")}</p>
+                        <p className="text-charcoal-400">{t("preview.uploadToStart")}</p>
                       </div>
                     )}
                   </div>
@@ -576,15 +537,15 @@ export default function Dashboard() {
 
         {/* Recent Projects */}
         {!isLoading && !apiError && projects.length > 0 && (
-          <section className="mt-12">
-            <h2 className="text-2xl font-semibold text-white mb-6">
+          <section className="mt-10">
+            <h2 className="text-lg font-semibold text-charcoal-900 mb-5">
               {t("projects.title")}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {projects.map((project) => (
                 <div
                   key={project.id}
-                  className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700"
+                  className="bg-white rounded-2xl overflow-hidden border border-black/[0.06] shadow-card hover:shadow-card-hover transition-shadow"
                 >
                   {project.result_image ? (
                     <div className="relative aspect-video">
@@ -596,20 +557,18 @@ export default function Dashboard() {
                       />
                     </div>
                   ) : (
-                    <div className="aspect-video bg-gray-700 flex items-center justify-center">
-                      <span className="text-gray-500">
+                    <div className="aspect-video bg-warm-cream flex items-center justify-center">
+                      <span className="text-charcoal-300 text-sm">
                         {t("projects.noPreview")}
                       </span>
                     </div>
                   )}
                   <div className="p-4">
-                    <h3 className="text-white font-medium truncate">
+                    <h3 className="text-charcoal-900 font-medium truncate text-sm">
                       {project.name}
                     </h3>
-                    <p className="text-gray-400 text-sm mt-1">
-                      {t("projects.studio")}:{" "}
-                      {studioTranslations[project.background] ||
-                        project.background}
+                    <p className="text-charcoal-400 text-xs mt-1">
+                      {t("projects.studio")}: {studioTranslations[project.background] || project.background}
                     </p>
                   </div>
                 </div>

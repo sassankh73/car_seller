@@ -16,263 +16,158 @@
     "no": "No"
   },
   "landing": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "studios": "Studios",
+      "pricing": "Pricing",
+      "about": "About"
+    },
     "hero": {
-      "headline": "Transform Ordinary Car Photos into Professional Showroom Images",
-      "subheadline": "Turn everyday car photos into stunning showroom-quality images in seconds. Sell more cars with professional listings that stand out.",
+      "eyebrow": "Professional Vehicle Photography",
+      "headlineLine1": "Professional Vehicle Photography",
+      "headlineLine2": "For Modern Dealerships",
+      "subheadline": "Transform ordinary vehicle photos into professional dealership-ready images in minutes.",
       "startFreeTrial": "Start Free Trial",
-      "uploadPhoto": "Upload Your First Car Photo",
-      "trustedBy": "Trusted by 500+ dealerships worldwide"
-    },
-    "howItWorks": {
-      "title": "How It Works",
-      "subtitle": "Three simple steps to professional car photography",
-      "steps": {
-        "upload": {
-          "title": "Upload Car Photo",
-          "description": "Take a photo with your phone and upload it to our platform"
-        },
-        "choose": {
-          "title": "Choose Virtual Studio",
-          "description": "Select from our premium collection of virtual studio backgrounds"
-        },
-        "download": {
-          "title": "Download Professional Image",
-          "description": "Get your AI-enhanced studio image in HD or 4K quality"
-        }
-      }
-    },
-    "valueProp": {
-      "eyebrow": "How It Works",
-      "title": "Professional car photography, made simple",
-      "items": {
-        "upload": {
-          "title": "Upload Your Photo",
-          "description": "Take a photo with any phone and upload it to our platform. No special equipment or skills needed."
-        },
-        "studios": {
-          "title": "Choose a Studio",
-          "description": "Select from our collection of premium showroom environments designed specifically for automotive photography."
-        },
-        "download": {
-          "title": "Get Your Result",
-          "description": "Download your professional studio image in HD or 4K quality, ready for any listing platform."
-        },
-        "backgroundRemoval": {
-          "title": "Instant Background Removal",
-          "description": "Automatically remove backgrounds with pixel-perfect precision — no editing skills needed"
-        },
-        "realisticShadows": {
-          "title": "Realistic Shadows & Reflections",
-          "description": "Natural shadows and reflections that make every car look like it's in a professional studio"
-        },
-        "hdExport": {
-          "title": "HD & 4K Export",
-          "description": "Export in stunning high definition or ultra HD 4K — ready for any listing platform"
-        }
-      }
-    },
-    "beforeAfter": {
-      "title": "See the Difference",
-      "subtitle": "Watch ordinary photos transform into professional showroom images",
-      "before": "Original Photo",
-      "after": "Showroom Result",
-      "dragSlider": "Drag the slider to compare"
+      "viewDemo": "View Demo",
+      "trustedBy": "Trusted by 1,200+ dealerships worldwide"
     },
     "features": {
-      "title": "Everything You Need to Sell More Cars",
-      "subtitle": "Professional tools designed for automotive dealers and sellers",
+      "label": "Features",
+      "title": "Everything you need to present vehicles at their best",
+      "description": "Purpose-built tools for automotive professionals who demand quality and speed.",
       "items": {
-        "aiRemoval": {
-          "title": "Instant Background Removal",
-          "description": "Automatically remove backgrounds with pixel-perfect precision — no editing skills needed"
+        "backgroundReplacement": {
+          "title": "Background Replacement",
+          "description": "Transform outdoor photos into professional showroom images with one click."
         },
-        "virtualStudios": {
-          "title": "Professional Showroom Studios",
-          "description": "Choose from 20+ premium showroom environments designed for cars"
+        "professionalStudios": {
+          "title": "Premium Automotive Studios",
+          "description": "Choose from multiple dealership-ready environments designed for vehicle photography."
         },
-        "realisticShadows": {
-          "title": "Realistic Shadows & Reflections",
-          "description": "Natural shadows and reflections that make every car look like it's in a professional studio"
+        "instantProcessing": {
+          "title": "Instant Processing",
+          "description": "Generate studio-quality photos within seconds, not hours."
         },
-        "hdExport": {
-          "title": "HD & 4K Export",
-          "description": "Export in stunning high definition or ultra HD 4K — ready for any listing platform"
+        "batchProcessing": {
+          "title": "Batch Processing",
+          "description": "Process multiple vehicle photos at once. From one to your entire inventory."
         },
-        "logoBranding": {
-          "title": "Dealership Logo Branding",
-          "description": "Add your dealership logo automatically to every image — build brand trust"
+        "naturalShadows": {
+          "title": "Shadow & Ground Alignment",
+          "description": "Natural wheel contact and realistic positioning for authentic results."
         },
-        "fastGeneration": {
-          "title": "Results in Seconds",
-          "description": "Get professional results in seconds, not hours. Process multiple images at once"
+        "multiLanguage": {
+          "title": "Multi-Language Support",
+          "description": "Designed for international dealerships with multi-language interfaces."
+        },
+        "cloudBased": {
+          "title": "Cloud Based",
+          "description": "No software installation required. Access from any device, anywhere."
+        },
+        "dealerReady": {
+          "title": "Dealer Ready Exports",
+          "description": "Optimized for websites, marketplaces and advertising platforms."
         }
       }
     },
     "studios": {
-      "title": "Corner Studios",
-      "subtitle": "Realistic automotive corner studios with depth and perspective",
-      "studios": {
-        "whiteCornerLightEpoxy": {
-          "name": "White Corner — Light Gray Epoxy",
-          "description": "Bright white corner studio with light gray epoxy floor, clean and professional"
-        },
-        "whiteCornerCeramicTile": {
-          "name": "White Corner — Ceramic Tile",
-          "description": "White corner studio with elegant ceramic tile floor, dealership style"
-        },
-        "lightGrayCornerMediumEpoxy": {
-          "name": "Light Gray Corner — Medium Epoxy",
-          "description": "Soft gray corner studio with medium gray epoxy, balanced and versatile"
-        },
-        "darkGrayCornerConcrete": {
-          "name": "Dark Gray Corner — Concrete",
-          "description": "Dark gray corner with concrete floor, modern industrial feel"
-        },
-        "blackCornerDarkEpoxy": {
-          "name": "Black Corner — Dark Epoxy",
-          "description": "Black corner studio with dark epoxy floor, dramatic and premium"
-        },
-        "commercialShowroomTile": {
-          "name": "Commercial Showroom — Tile",
-          "description": "Professional commercial showroom with tile floor, dealer standard"
-        },
-        "industrialConcrete": {
-          "name": "Industrial — Concrete Floor",
-          "description": "Industrial automotive studio with textured concrete floor"
-        },
-        "matteBlackAutomotive": {
-          "name": "Matte Black Automotive",
-          "description": "Full matte black environment for sleek, high-end presentation"
-        }
-      }
-    },
-    "pricing": {
-      "title": "Simple, Transparent Pricing",
-      "subtitle": "Choose the plan that fits your business needs",
-      "billingCycle": {
-        "monthly": "Monthly",
-        "yearly": "Yearly",
-        "savePercent": "Save 17%"
-      },
-      "plans": {
-        "basic": {
-          "name": "Basic",
-          "price": "$29",
-          "period": "/month",
-          "description": "Perfect for small dealerships",
-          "features": {
-            "images": "50 images/month",
-            "studios": "5 studios included",
-            "branding": "Logo branding",
-            "export": "HD export",
-            "support": "Email support"
-          },
-          "cta": "Start Free Trial",
-          "trial": "14-day free trial"
-        },
-        "professional": {
-          "name": "Professional",
-          "price": "$79",
-          "period": "/month",
-          "description": "Best for growing businesses",
-          "mostPopular": "Most Popular",
-          "features": {
-            "images": "200 images/month",
-            "studios": "All 20+ studios",
-            "branding": "Logo branding",
-            "export": "HD + 4K export",
-            "support": "Priority support"
-          },
-          "cta": "Start Free Trial",
-          "trial": "14-day free trial"
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "price": "$199",
-          "period": "/month",
-          "description": "For large dealership groups",
-          "features": {
-            "images": "Unlimited images",
-            "studios": "All studios + custom",
-            "branding": "Custom branding",
-            "export": "4K + RAW export",
-            "support": "Dedicated support"
-          },
-          "cta": "Contact Sales"
-        }
-      },
-      "extraCharges": {
-        "title": "Need More?",
-        "subtitle": "Flexible pay-as-you-go pricing for extra usage",
-        "extraImage": "$0.50 per extra image",
-        "extraStudio": "$2 per extra studio template",
-        "fourKExport": "$1 per 4K export (Basic plan)"
-      }
-    },
-    "testimonials": {
-      "title": "Trusted by Dealerships",
-      "subtitle": "See what automotive professionals say about AutoStudio",
-      "metrics": {
-        "photosProcessed": "Photos Processed",
-        "dealerships": "Dealerships Worldwide",
-        "satisfaction": "Satisfaction Rate",
-        "avgProcessing": "Avg. Processing Time"
-      },
+      "label": "Studio Collection",
+      "title": "Premium Automotive Studios",
+      "description": "Professionally designed virtual environments for every brand and style.",
       "items": {
-        "first": {
-          "quote": "AutoStudio has transformed our listing photos. We've seen a 40% increase in engagement since using this platform.",
-          "author": "Michael Anderson",
-          "role": "Owner, Anderson Auto Group",
-          "location": "Stockholm, Sweden"
+        "whiteEpoxy": {
+          "name": "White Epoxy Studio",
+          "description": "Clean bright environment ideal for premium listings."
         },
-        "second": {
-          "quote": "The quality is incredible. Our customers think we hire professional photographers. Best investment we've made.",
-          "author": "Sarah Lindberg",
-          "role": "Marketing Director, Nordic Cars",
-          "location": "Gothenburg, Sweden"
+        "commercial": {
+          "name": "Commercial Showroom",
+          "description": "Modern dealership presentation with realistic depth."
         },
-        "third": {
-          "quote": "Fast, reliable, and the results speak for themselves. Our inventory looks premium without the premium cost.",
-          "author": "Erik Johansson",
-          "role": "CEO, Premium Motors",
-          "location": "Malmö, Sweden"
+        "darkStudio": {
+          "name": "Dark Automotive Studio",
+          "description": "Luxury presentation for premium and sports vehicles."
+        },
+        "concrete": {
+          "name": "Concrete Studio",
+          "description": "Industrial look for utility and commercial vehicles."
+        },
+        "ceramicTile": {
+          "name": "Ceramic Tile Studio",
+          "description": "Bright and reflective surface for clean presentations."
+        },
+        "premiumGray": {
+          "name": "Premium Gray Studio",
+          "description": "Sophisticated neutral tone for versatile vehicle display."
+        }
+      },
+      "viewAll": "View all studios"
+    },
+    "howItWorks": {
+      "label": "How It Works",
+      "title": "Three steps to showroom quality",
+      "description": "From phone photo to professional dealership image in seconds.",
+      "steps": {
+        "upload": {
+          "title": "Upload Your Vehicle Photo",
+          "description": "Upload any dealership or smartphone vehicle image."
+        },
+        "chooseStudio": {
+          "title": "Choose Your Studio",
+          "description": "Select from professional automotive showroom environments."
+        },
+        "download": {
+          "title": "Download The Result",
+          "description": "Receive a dealership-ready image with realistic shadows and placement."
         }
       }
     },
-    "faq": {
-      "title": "Frequently Asked Questions",
-      "items": {
-        "generationTime": {
-          "question": "How long does generation take?",
-          "answer": "Most images are processed in 5-15 seconds. Complex images with detailed reflections may take up to 30 seconds. You can process multiple images simultaneously."
+    "trust": {
+      "label": "Trusted Worldwide",
+      "title": "Proven at scale",
+      "description": "Trusted by automotive professionals across the globe.",
+      "stats": {
+        "imagesGenerated": "Images Generated",
+        "dealersServed": "Dealers Served",
+        "processingSpeed": "Avg. Processing Time",
+        "studioTemplates": "Studio Templates"
+      },
+      "benefits": {
+        "saveHours": {
+          "title": "Save Hours Per Vehicle",
+          "description": "No more scheduling photographers or waiting for edited photos."
         },
-        "phonePhotos": {
-          "question": "Can I upload phone photos?",
-          "answer": "Absolutely! AutoStudio is specifically designed for mobile photos. iPhone, Android, any smartphone camera works perfectly."
+        "noPhotographer": {
+          "title": "No Photographer Required",
+          "description": "Anyone on your team can create professional images instantly."
         },
-        "colorAccuracy": {
-          "question": "Does it preserve the original car color?",
-          "answer": "Yes, our technology preserves exact color accuracy. The original paint color, reflections, and details are maintained with 99.9% accuracy."
+        "consistent": {
+          "title": "Consistent Inventory Presentation",
+          "description": "Every vehicle looks its best with uniform, professional imagery."
         },
-        "logoBranding": {
-          "question": "Can I add my dealership logo?",
-          "answer": "Yes! All plans include logo branding. Upload your logo once and it will be automatically added to all your generated images."
-        },
-        "cancelSubscription": {
-          "question": "Can I cancel anytime?",
-          "answer": "Yes, you can cancel your subscription at any time. No long-term contracts or hidden fees."
-        },
-        "commercialUse": {
-          "question": "Can I use images commercially?",
-          "answer": "Yes, all generated images are yours to use commercially. Use them on your website, listings, social media, and advertisements."
+        "marketplaceReady": {
+          "title": "Ready For Marketplace Listings",
+          "description": "Export images optimized for any platform or marketplace."
         }
       }
     },
     "cta": {
-      "title": "Ready to Transform Your Car Photos?",
-      "subtitle": "Join 500+ dealerships using AutoStudio today",
-      "button": "Start Your Free Trial",
-      "noCreditCard": "No credit card required"
+      "label": "Get Started",
+      "title": "Ready to transform your vehicle photography?",
+      "description": "Join thousands of dealerships already using AutoStudio to create stunning showroom images.",
+      "startFreeTrial": "Start Free Trial",
+      "bookDemo": "Book a Demo",
+      "noCC": "No credit card required. 14-day free trial."
+    },
+    "footer": {
+      "tagline": "Professional vehicle photography for modern dealerships. Turn any car photo into a studio-quality image in seconds.",
+      "rights": "All rights reserved.",
+      "product": "Product",
+      "company": "Company",
+      "getStarted": "Get Started",
+      "dashboard": "Dashboard",
+      "about": "About",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service"
     }
   },
   "home": {
@@ -290,13 +185,47 @@
       "settings": "Settings",
       "logout": "Logout"
     },
+    "cards": {
+      "uploadPhoto": {
+        "title": "Upload Vehicle Photo",
+        "description": "Start by uploading a vehicle image from your phone or computer."
+      },
+      "selectStudio": {
+        "title": "Select Studio",
+        "description": "Choose a professional automotive environment for your vehicle."
+      },
+      "recentProjects": {
+        "title": "Recent Projects",
+        "description": "View your latest generated images and projects.",
+        "noProjects": "No projects yet. Upload a photo to get started."
+      },
+      "downloads": {
+        "title": "Downloads",
+        "description": "Access your exported images in HD and 4K quality."
+      },
+      "accountUsage": {
+        "title": "Account Usage",
+        "description": "Track your monthly generation count and limits.",
+        "generationsUsed": "Generations used",
+        "of": "of",
+        "unlimited": "Unlimited"
+      },
+      "subscription": {
+        "title": "Subscription Status",
+        "description": "Manage your plan and billing preferences.",
+        "freePlan": "Free Plan",
+        "proPlan": "Professional Plan",
+        "enterprisePlan": "Enterprise Plan",
+        "upgrade": "Upgrade Plan"
+      }
+    },
     "upload": {
-      "title": "1. Upload Car Photo",
-      "clickToUpload": "Click to upload",
+      "title": "Upload Vehicle Photo",
+      "clickToUpload": "Click to upload or drag and drop",
       "dropImage": "Drop your image here"
     },
     "studio": {
-      "title": "2. Select Studio",
+      "title": "Select Studio",
       "studios": {
         "white_corner_light_epoxy": "White Corner — Light Gray Epoxy",
         "white_corner_ceramic_tile": "White Corner — Ceramic Tile",
@@ -309,7 +238,7 @@
       }
     },
     "options": {
-      "title": "3. Enhancement Options",
+      "title": "Enhancement Options",
       "enhanceWheels": "Enhance Wheel Details",
       "enhancePaint": "Enhance Paint Reflections",
       "exportQuality": "Export Quality",
