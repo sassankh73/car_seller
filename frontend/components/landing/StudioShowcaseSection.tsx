@@ -41,29 +41,37 @@ export default function StudioShowcaseSection() {
   }
 
   const studioLabels: Record<string, { name: string; description: string }> = {
-    luxury_showroom: {
-      name: t("studios.luxuryShowroom.name"),
-      description: t("studios.luxuryShowroom.description"),
+    white_corner_light_epoxy: {
+      name: t("studios.whiteCornerLightEpoxy.name"),
+      description: t("studios.whiteCornerLightEpoxy.description"),
     },
-    white_minimal: {
-      name: t("studios.whiteMinimal.name"),
-      description: t("studios.whiteMinimal.description"),
+    white_corner_ceramic_tile: {
+      name: t("studios.whiteCornerCeramicTile.name"),
+      description: t("studios.whiteCornerCeramicTile.description"),
     },
-    cinematic_dark: {
-      name: t("studios.cinematicDark.name"),
-      description: t("studios.cinematicDark.description"),
+    light_gray_corner_medium_epoxy: {
+      name: t("studios.lightGrayCornerMediumEpoxy.name"),
+      description: t("studios.lightGrayCornerMediumEpoxy.description"),
     },
-    black_showroom: {
-      name: t("studios.blackShowroom.name"),
-      description: t("studios.blackShowroom.description"),
+    dark_gray_corner_concrete: {
+      name: t("studios.darkGrayCornerConcrete.name"),
+      description: t("studios.darkGrayCornerConcrete.description"),
     },
-    luxury_exhibition: {
-      name: t("studios.luxuryExhibition.name"),
-      description: t("studios.luxuryExhibition.description"),
+    black_corner_dark_epoxy: {
+      name: t("studios.blackCornerDarkEpoxy.name"),
+      description: t("studios.blackCornerDarkEpoxy.description"),
     },
-    glossy_reflective: {
-      name: t("studios.glossyReflective.name"),
-      description: t("studios.glossyReflective.description"),
+    commercial_showroom_tile: {
+      name: t("studios.commercialShowroomTile.name"),
+      description: t("studios.commercialShowroomTile.description"),
+    },
+    industrial_concrete: {
+      name: t("studios.industrialConcrete.name"),
+      description: t("studios.industrialConcrete.description"),
+    },
+    matte_black_automotive: {
+      name: t("studios.matteBlackAutomotive.name"),
+      description: t("studios.matteBlackAutomotive.description"),
     },
   };
 

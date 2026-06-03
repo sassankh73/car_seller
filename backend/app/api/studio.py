@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from PIL import Image
 from pydantic import BaseModel
 
-from ..services.image_processing import AICompositingService, get_compositing_service
+from ..services.image_processing import AICompositingService, StudioShadowProfile, get_compositing_service
 
 logger = logging.getLogger(__name__)
 
@@ -21,43 +21,155 @@ STUDIOS_DIR = Path(__file__).parent.parent / "static" / "studios"
 
 router = APIRouter()
 
-# Simple studio catalog - Indoor luxury automotive studios only
+# Studio catalog — Automotive corner studios with 3D perspective
+# Realistic indoor photo studio rooms with visible rear wall, left wall, right wall, ceiling, floor
+# Sharp 90° corners — no cyclorama, no curved transitions, no infinity walls
+# Each studio includes a shadow profile tuned for corner perspective grounding
+# floor_y=0.78: vehicle wheels sit on the foreground floor in corner perspective
 studios = {
-    "luxury_showroom": {
-        "name": "Luxury Showroom",
-        "image_url": "/static/studios/luxury_showroom.png",
-        "preview_image_url": "/static/studios/luxury_showroom_preview.png",
-        "floor_color": "#2a2a2a",
+    "white_corner_light_epoxy": {
+        "name": "White Corner Studio — Light Gray Epoxy",
+        "image_url": "/static/studios/white_corner_light_epoxy.png",
+        "preview_image_url": "/static/studios/white_corner_light_epoxy_preview.png",
+        "floor_color": "#D8D8D8",
+        "shadow_profile": StudioShadowProfile(
+            floor_y=0.78,
+            shadow_direction="center",
+            shadow_blur=32,
+            shadow_opacity=0.26,
+            shadow_length=0.9,
+            tire_shadow_blur=13,
+            tire_shadow_opacity=0.48,
+            ao_shadow_opacity=0.32,
+            ao_shadow_width=1.0,
+            ao_shadow_height=0.04,
+        ),
     },
-    "white_minimal": {
-        "name": "White Minimal Studio",
-        "image_url": "/static/studios/white_minimal.png",
-        "preview_image_url": "/static/studios/white_minimal_preview.png",
-        "floor_color": "#f5f5f5",
+    "white_corner_ceramic_tile": {
+        "name": "White Corner Studio — Ceramic Tile",
+        "image_url": "/static/studios/white_corner_ceramic_tile.png",
+        "preview_image_url": "/static/studios/white_corner_ceramic_tile_preview.png",
+        "floor_color": "#D0D0D0",
+        "shadow_profile": StudioShadowProfile(
+            floor_y=0.78,
+            shadow_direction="center",
+            shadow_blur=32,
+            shadow_opacity=0.26,
+            shadow_length=0.9,
+            tire_shadow_blur=13,
+            tire_shadow_opacity=0.48,
+            ao_shadow_opacity=0.32,
+            ao_shadow_width=1.0,
+            ao_shadow_height=0.04,
+        ),
     },
-    "cinematic_dark": {
-        "name": "Cinematic Dark Studio",
-        "image_url": "/static/studios/cinematic_dark.png",
-        "preview_image_url": "/static/studios/cinematic_dark_preview.png",
-        "floor_color": "#0a0a0a",
+    "light_gray_corner_medium_epoxy": {
+        "name": "Light Gray Corner Studio — Medium Gray Epoxy",
+        "image_url": "/static/studios/light_gray_corner_medium_epoxy.png",
+        "preview_image_url": "/static/studios/light_gray_corner_medium_epoxy_preview.png",
+        "floor_color": "#909090",
+        "shadow_profile": StudioShadowProfile(
+            floor_y=0.78,
+            shadow_direction="center",
+            shadow_blur=34,
+            shadow_opacity=0.28,
+            shadow_length=1.0,
+            tire_shadow_blur=14,
+            tire_shadow_opacity=0.52,
+            ao_shadow_opacity=0.34,
+            ao_shadow_width=1.0,
+            ao_shadow_height=0.04,
+        ),
     },
-    "black_showroom": {
-        "name": "Black Automotive Showroom",
-        "image_url": "/static/studios/black_showroom.png",
-        "preview_image_url": "/static/studios/black_showroom_preview.png",
-        "floor_color": "#1a1a1a",
+    "dark_gray_corner_concrete": {
+        "name": "Dark Gray Corner Studio — Concrete Floor",
+        "image_url": "/static/studios/dark_gray_corner_concrete.png",
+        "preview_image_url": "/static/studios/dark_gray_corner_concrete_preview.png",
+        "floor_color": "#555555",
+        "shadow_profile": StudioShadowProfile(
+            floor_y=0.78,
+            shadow_direction="center",
+            shadow_blur=36,
+            shadow_opacity=0.28,
+            shadow_length=1.0,
+            tire_shadow_blur=15,
+            tire_shadow_opacity=0.50,
+            ao_shadow_opacity=0.35,
+            ao_shadow_width=1.0,
+            ao_shadow_height=0.04,
+        ),
     },
-    "luxury_exhibition": {
-        "name": "Luxury Exhibition Hall",
-        "image_url": "/static/studios/luxury_exhibition.png",
-        "preview_image_url": "/static/studios/luxury_exhibition_preview.png",
-        "floor_color": "#3a3a3a",
+    "black_corner_dark_epoxy": {
+        "name": "Black Corner Studio — Dark Epoxy Floor",
+        "image_url": "/static/studios/black_corner_dark_epoxy.png",
+        "preview_image_url": "/static/studios/black_corner_dark_epoxy_preview.png",
+        "floor_color": "#353535",
+        "shadow_profile": StudioShadowProfile(
+            floor_y=0.78,
+            shadow_direction="center",
+            shadow_blur=38,
+            shadow_opacity=0.22,
+            shadow_length=1.1,
+            tire_shadow_blur=16,
+            tire_shadow_opacity=0.45,
+            ao_shadow_opacity=0.30,
+            ao_shadow_width=1.0,
+            ao_shadow_height=0.04,
+        ),
     },
-    "glossy_reflective": {
-        "name": "Glossy Reflective Floor Studio",
-        "image_url": "/static/studios/glossy_reflective.png",
-        "preview_image_url": "/static/studios/glossy_reflective_preview.png",
-        "floor_color": "#252525",
+    "commercial_showroom_tile": {
+        "name": "Commercial Showroom — Tile Floor",
+        "image_url": "/static/studios/commercial_showroom_tile.png",
+        "preview_image_url": "/static/studios/commercial_showroom_tile_preview.png",
+        "floor_color": "#A0A0A0",
+        "shadow_profile": StudioShadowProfile(
+            floor_y=0.78,
+            shadow_direction="center",
+            shadow_blur=34,
+            shadow_opacity=0.28,
+            shadow_length=1.0,
+            tire_shadow_blur=14,
+            tire_shadow_opacity=0.52,
+            ao_shadow_opacity=0.34,
+            ao_shadow_width=1.0,
+            ao_shadow_height=0.04,
+        ),
+    },
+    "industrial_concrete": {
+        "name": "Industrial Automotive Studio — Concrete Floor",
+        "image_url": "/static/studios/industrial_concrete.png",
+        "preview_image_url": "/static/studios/industrial_concrete_preview.png",
+        "floor_color": "#484848",
+        "shadow_profile": StudioShadowProfile(
+            floor_y=0.78,
+            shadow_direction="center",
+            shadow_blur=36,
+            shadow_opacity=0.26,
+            shadow_length=1.0,
+            tire_shadow_blur=15,
+            tire_shadow_opacity=0.48,
+            ao_shadow_opacity=0.33,
+            ao_shadow_width=1.0,
+            ao_shadow_height=0.04,
+        ),
+    },
+    "matte_black_automotive": {
+        "name": "Matte Black Automotive Studio",
+        "image_url": "/static/studios/matte_black_automotive.png",
+        "preview_image_url": "/static/studios/matte_black_automotive_preview.png",
+        "floor_color": "#151515",
+        "shadow_profile": StudioShadowProfile(
+            floor_y=0.78,
+            shadow_direction="center",
+            shadow_blur=40,
+            shadow_opacity=0.20,
+            shadow_length=1.1,
+            tire_shadow_blur=16,
+            tire_shadow_opacity=0.42,
+            ao_shadow_opacity=0.28,
+            ao_shadow_width=1.0,
+            ao_shadow_height=0.04,
+        ),
     },
 }
 
@@ -83,7 +195,7 @@ def load_studio_background(studio_key: str) -> Optional[Image.Image]:
     Returns None if neither is available (caller should use solid color fallback).
 
     Args:
-        studio_key: Studio template key (e.g. 'luxury_showroom')
+        studio_key: Studio template key (e.g. 'white_corner_light_epoxy')
 
     Returns:
         PIL Image (RGBA) or None
@@ -128,7 +240,7 @@ def load_studio_background(studio_key: str) -> Optional[Image.Image]:
 @router.post("/process")
 async def process_image(
     file: UploadFile = File(..., description="Car image to process"),
-    studio_key: str = Form("luxury_showroom", description="Studio template key"),
+    studio_key: str = Form("white_corner_light_epoxy", description="Studio template key"),
     enhance_wheels: bool = Form(True, description="Enhance wheel details"),
     enhance_paint: bool = Form(True, description="Enhance paint reflections"),
     export_quality: str = Form("hd", description="Export quality: hd or 4k"),
@@ -138,11 +250,13 @@ async def process_image(
 
     Steps:
     1. Remove background using AI
-    2. Scale vehicle to studio proportions
-    3. [Optional] Apply lighting correction (feature-flagged)
-    4. [Optional] Enhance wheels and paint (feature-flagged)
-    5. Generate contact shadow
-    6. Composite with studio background
+    2. Classify vehicle type (SUV/sedan/coupe/wagon/hatchback)
+    3. Scale vehicle to studio proportions based on type
+    4. Detect wheel contact points for floor anchoring
+    5. [Optional] Apply lighting correction (feature-flagged)
+    6. [Optional] Enhance wheels and paint (feature-flagged)
+    7. Generate AO shadow + tire contact shadows + body floor shadow
+    8. Composite with studio background using wheel contact anchoring
     """
     # Validate studio
     if studio_key not in studios:
@@ -187,6 +301,9 @@ async def process_image(
     # Load studio background image from filesystem
     studio_background = load_studio_background(studio_key)
 
+    # Get studio-specific shadow profile
+    shadow_profile = studio_config.get("shadow_profile", StudioShadowProfile())
+
     # Process through AI pipeline
     try:
         result_image = compositing_service.process(
@@ -194,6 +311,7 @@ async def process_image(
             studio_background=studio_background,
             studio_color=studio_config["floor_color"],
             original_image=original_image if enhance_wheels else None,
+            shadow_profile=shadow_profile,
         )
     except Exception as e:
         logger.exception("Processing failed for studio %s, generation %s", studio_key, generation_id)
@@ -239,7 +357,15 @@ async def process_image(
 @router.get("/", response_model=List[StudioOut])
 def list_studios():
     """List all available studio templates."""
-    return [StudioOut(key=k, **v) for k, v in studios.items()]
+    result = []
+    for k, v in studios.items():
+        result.append(StudioOut(
+            key=k,
+            name=v["name"],
+            image_url=v["image_url"],
+            preview_image_url=v["preview_image_url"],
+        ))
+    return result
 
 
 @router.get("/{studio_key}")
@@ -247,4 +373,25 @@ def get_studio(studio_key: str):
     """Get details for a specific studio template."""
     if studio_key not in studios:
         raise HTTPException(status_code=404, detail="Studio not found")
-    return {"key": studio_key, **studios[studio_key]}
+    config = studios[studio_key]
+    # Return studio details, converting shadow_profile to dict for JSON serialization
+    result = {
+        "key": studio_key,
+        "name": config["name"],
+        "image_url": config["image_url"],
+        "preview_image_url": config["preview_image_url"],
+        "floor_color": config["floor_color"],
+        "shadow_profile": {
+            "floor_y": config["shadow_profile"].floor_y,
+            "shadow_direction": config["shadow_profile"].shadow_direction,
+            "shadow_blur": config["shadow_profile"].shadow_blur,
+            "shadow_opacity": config["shadow_profile"].shadow_opacity,
+            "shadow_length": config["shadow_profile"].shadow_length,
+            "tire_shadow_blur": config["shadow_profile"].tire_shadow_blur,
+            "tire_shadow_opacity": config["shadow_profile"].tire_shadow_opacity,
+            "ao_shadow_opacity": config["shadow_profile"].ao_shadow_opacity,
+            "ao_shadow_width": config["shadow_profile"].ao_shadow_width,
+            "ao_shadow_height": config["shadow_profile"].ao_shadow_height,
+        },
+    }
+    return result

@@ -109,32 +109,40 @@
       }
     },
     "studios": {
-      "title": "Studio Templates",
-      "subtitle": "Choose from our collection of premium virtual studios",
+      "title": "Corner Studios",
+      "subtitle": "Realistic automotive corner studios with depth and perspective",
       "studios": {
-        "luxuryShowroom": {
-          "name": "Luxury Showroom",
-          "description": "Premium dealership environment with elegant lighting"
+        "whiteCornerLightEpoxy": {
+          "name": "White Corner — Light Gray Epoxy",
+          "description": "Bright white corner studio with light gray epoxy floor, clean and professional"
         },
-        "whiteMinimal": {
-          "name": "White Minimal Studio",
-          "description": "Clean, professional white background for any vehicle"
+        "whiteCornerCeramicTile": {
+          "name": "White Corner — Ceramic Tile",
+          "description": "White corner studio with elegant ceramic tile floor, dealership style"
         },
-        "cinematicDark": {
-          "name": "Cinematic Dark Studio",
-          "description": "Dramatic dark environment with moody atmosphere"
+        "lightGrayCornerMediumEpoxy": {
+          "name": "Light Gray Corner — Medium Epoxy",
+          "description": "Soft gray corner studio with medium gray epoxy, balanced and versatile"
         },
-        "blackShowroom": {
-          "name": "Black Automotive Showroom",
-          "description": "Elegant black showroom with professional studio lighting"
+        "darkGrayCornerConcrete": {
+          "name": "Dark Gray Corner — Concrete",
+          "description": "Dark gray corner with concrete floor, modern industrial feel"
         },
-        "luxuryExhibition": {
-          "name": "Luxury Exhibition Hall",
-          "description": "Premium exhibition environment with exclusive design"
+        "blackCornerDarkEpoxy": {
+          "name": "Black Corner — Dark Epoxy",
+          "description": "Black corner studio with dark epoxy floor, dramatic and premium"
         },
-        "glossyReflective": {
-          "name": "Glossy Reflective Floor Studio",
-          "description": "Professional studio with glossy reflective flooring"
+        "commercialShowroomTile": {
+          "name": "Commercial Showroom — Tile",
+          "description": "Professional commercial showroom with tile floor, dealer standard"
+        },
+        "industrialConcrete": {
+          "name": "Industrial — Concrete Floor",
+          "description": "Industrial automotive studio with textured concrete floor"
+        },
+        "matteBlackAutomotive": {
+          "name": "Matte Black Automotive",
+          "description": "Full matte black environment for sleek, high-end presentation"
         }
       }
     },
@@ -290,12 +298,14 @@
     "studio": {
       "title": "2. Select Studio",
       "studios": {
-        "luxury_showroom": "Luxury Showroom",
-        "white_minimal": "White Minimal Studio",
-        "cinematic_dark": "Cinematic Dark Studio",
-        "black_showroom": "Black Automotive Showroom",
-        "luxury_exhibition": "Luxury Exhibition Hall",
-        "glossy_reflective": "Glossy Reflective Floor Studio"
+        "white_corner_light_epoxy": "White Corner — Light Gray Epoxy",
+        "white_corner_ceramic_tile": "White Corner — Ceramic Tile",
+        "light_gray_corner_medium_epoxy": "Light Gray Corner — Medium Epoxy",
+        "dark_gray_corner_concrete": "Dark Gray Corner — Concrete",
+        "black_corner_dark_epoxy": "Black Corner — Dark Epoxy",
+        "commercial_showroom_tile": "Commercial Showroom — Tile",
+        "industrial_concrete": "Industrial — Concrete Floor",
+        "matte_black_automotive": "Matte Black Automotive"
       }
     },
     "options": {

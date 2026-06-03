@@ -109,32 +109,40 @@
       }
     },
     "studios": {
-      "title": "Studio-mallar",
-      "subtitle": "Välj från vår samling av premium virtuella studior",
+      "title": "Hörnstudior",
+      "subtitle": "Realistiska bilhorustudior med djup och perspektiv",
       "studios": {
-        "luxuryShowroom": {
-          "name": "Lyxig Showroom",
-          "description": "Premium bilhandlarmiljö med elegant belysning"
+        "whiteCornerLightEpoxy": {
+          "name": "Vit hörna — Ljusgrå epoxigolv",
+          "description": "Ljus vit hörnstudio med ljusgrått epoxigolv, rent och professionellt"
         },
-        "whiteMinimal": {
-          "name": "Vit Minimal Studio",
-          "description": "Ren, professionell vit bakgrund för alla fordon"
+        "whiteCornerCeramicTile": {
+          "name": "Vit hörna — Keramiskt kakel",
+          "description": "Vit hörnstudio med elegant keramiskt kakelgolv, bilhandlarstil"
         },
-        "cinematicDark": {
-          "name": "Cinematisk Mörk Studio",
-          "description": "Dramatisk mörk miljö med stämningsfull atmosfär"
+        "lightGrayCornerMediumEpoxy": {
+          "name": "Ljusgrå hörna — Mellangrå epoxi",
+          "description": "Mjuk grå hörnstudio med mellangrått epoxigolv, balanserad och mångsidig"
         },
-        "blackShowroom": {
-          "name": "Svart Bilshowroom",
-          "description": "Elegant svart showroom med professionell studiobelysning"
+        "darkGrayCornerConcrete": {
+          "name": "Mörkgrå hörna — Betonggolv",
+          "description": "Mörkgrå hörn med betonggolv, modern industriell känsla"
         },
-        "luxuryExhibition": {
-          "name": "Lyxig Utställningshall",
-          "description": "Premium utställningsmiljö med exklusiv design"
+        "blackCornerDarkEpoxy": {
+          "name": "Svart hörna — Mörk epoxi",
+          "description": "Svart hörnstudio med mörkt epoxigolv, dramatisk och premium"
         },
-        "glossyReflective": {
-          "name": "Blank Reflekterande Golvstudio",
-          "description": "Professionell studio med blankt reflekterande golv"
+        "commercialShowroomTile": {
+          "name": "Kommersiell showroom — Kakel",
+          "description": "Professionell kommersiell showroom med kakelgolv, bilhandlarstandard"
+        },
+        "industrialConcrete": {
+          "name": "Industriell — Betonggolv",
+          "description": "Industriell bilstudio med texturerat betonggolv"
+        },
+        "matteBlackAutomotive": {
+          "name": "Mattsvart bilstudio",
+          "description": "Helt mattsvart miljö för elegant, exklusiv presentation"
         }
       }
     },
@@ -290,12 +298,14 @@
     "studio": {
       "title": "2. Välj Studio",
       "studios": {
-        "luxury_showroom": "Lyxig Showroom",
-        "white_minimal": "Vit Minimal Studio",
-        "cinematic_dark": "Cinematisk Mörk Studio",
-        "black_showroom": "Svart Bilshowroom",
-        "luxury_exhibition": "Lyxig Utställningshall",
-        "glossy_reflective": "Blank Reflekterande Golvstudio"
+        "white_corner_light_epoxy": "Vit hörna — Ljusgrå epoxi",
+        "white_corner_ceramic_tile": "Vit hörna — Keramiskt kakel",
+        "light_gray_corner_medium_epoxy": "Ljusgrå hörna — Mellangrå epoxi",
+        "dark_gray_corner_concrete": "Mörkgrå hörna — Betonggolv",
+        "black_corner_dark_epoxy": "Svart hörna — Mörk epoxi",
+        "commercial_showroom_tile": "Kommersiell showroom — Kakel",
+        "industrial_concrete": "Industriell — Betonggolv",
+        "matte_black_automotive": "Mattsvart bilstudio"
       }
     },
     "options": {

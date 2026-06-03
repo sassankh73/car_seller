@@ -3,8 +3,9 @@ Core image processing services for AutoStudio AI.
 Implements production compositing pipeline:
 - Background removal (using external API)
 - Studio background placement
-- Vehicle scaling and positioning
-- Contact shadow generation
+- Vehicle scaling and positioning with wheel contact detection
+- Contact shadow generation with studio-specific shadow profiles
+- Ambient occlusion shadow for physical grounding
 - Optional enhancement pipeline (feature-flagged)
 
 Feature flags (env vars):
@@ -13,8 +14,10 @@ Feature flags (env vars):
 """
 
 import logging
+import math
 import os
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -34,6 +37,73 @@ logger.info(
     ENABLE_ENHANCEMENT,
     ENABLE_LIGHTING_CORRECTION,
 )
+
+
+# ============================================================================
+# Studio Shadow Profile & Vehicle Type Definitions
+# ============================================================================
+
+
+@dataclass
+class StudioShadowProfile:
+    """Shadow parameters specific to each studio environment.
+
+    Each studio has different lighting conditions, so shadows must
+    be tuned per-studio to look natural.
+    """
+
+    floor_y: float = 0.88
+    """Vertical position of the floor line as a fraction of canvas height (0.0-1.0)."""
+
+    shadow_direction: str = "center"
+    """Direction shadows fall: 'center', 'left', or 'right'.
+
+    - center: light directly above, shadow falls straight down
+    - left: light from the right, shadow offset to the left
+    - right: light from the left, shadow offset to the right
+    """
+
+    shadow_blur: int = 35
+    """Gaussian blur radius for the body shadow (pixels). Higher = softer."""
+
+    shadow_opacity: float = 0.30
+    """Maximum opacity of the body shadow (0.0-1.0)."""
+
+    shadow_length: float = 1.0
+    """Shadow length multiplier. 1.0 = standard, >1.0 = longer shadow."""
+
+    tire_shadow_blur: int = 14
+    """Gaussian blur radius for the tire contact shadow (pixels)."""
+
+    tire_shadow_opacity: float = 0.55
+    """Maximum opacity of the tire contact shadow (0.0-1.0)."""
+
+    ao_shadow_opacity: float = 0.35
+    """Maximum opacity of the ambient occlusion contact shadow (0.0-1.0)."""
+
+    ao_shadow_width: float = 1.0
+    """Width multiplier for the ambient occlusion shadow relative to vehicle width."""
+
+    ao_shadow_height: float = 0.04
+    """Height of the AO shadow as a fraction of canvas height."""
+
+
+# Vehicle type classification thresholds based on aspect ratio (width / height)
+VEHICLE_TYPE_SUV = "suv"
+VEHICLE_TYPE_SEDAN = "sedan"
+VEHICLE_TYPE_COUPE = "coupe"
+VEHICLE_TYPE_HATCHBACK = "hatchback"
+VEHICLE_TYPE_WAGON = "wagon"
+
+# Scale targets per vehicle type (fraction of canvas width)
+VEHICLE_SCALE_TARGETS = {
+    VEHICLE_TYPE_SUV: 0.75,        # SUVs: 70-80% canvas width
+    VEHICLE_TYPE_SEDAN: 0.70,      # Sedans: 65-75% canvas width
+    VEHICLE_TYPE_COUPE: 0.68,      # Coupes: 63-73% canvas width (slightly smaller)
+    VEHICLE_TYPE_WAGON: 0.72,      # Wagons: 67-77% canvas width (slightly wider)
+    VEHICLE_TYPE_HATCHBACK: 0.65,  # Hatchbacks: 60-70% canvas width
+}
+
 
 # ============================================================================
 # Interface for AI Background Removers (External API wrapper)
@@ -82,89 +152,248 @@ class MockRemover(BackgroundRemover):
 
 
 # ============================================================================
-# Contact Shadow Generator (replaces ReflectionGenerator)
+# Contact Shadow Generator (studio-aware, with tire contact shadows)
 # ============================================================================
 
 
 class ContactShadowGenerator:
-    """Generates a soft contact shadow beneath the vehicle.
+    """Generates realistic contact shadows beneath the vehicle.
 
-    Unlike a mirrored reflection, this creates a simple elliptical
-    gradient shadow that sits on the studio floor — matching the
-    look of BMW configurator / dealer studio photography.
+    Creates three shadow layers for physical grounding:
+    1. Ambient occlusion contact shadow — dark band at the vehicle's base
+       where it meets the floor, giving a sense of physical contact
+    2. Tire contact shadows — thin, darker elliptical patches directly
+       under each tire contact point
+    3. Body floor shadow — wider, softer shadow under the vehicle body,
+       offset based on studio lighting direction
+
+    Studio-specific parameters are provided via StudioShadowProfile.
     """
 
-    def __init__(
+    def generate_ambient_occlusion_shadow(
         self,
-        blur_radius: int = 40,
-        opacity: float = 0.35,
-        width_ratio: float = 1.1,
-        height_ratio: float = 0.08,
-    ):
-        self.blur_radius = blur_radius
-        self.opacity = opacity
-        self.width_ratio = width_ratio
-        self.height_ratio = height_ratio
-
-    def generate(
-        self, vehicle_width: int, vehicle_height: int, canvas_size: Tuple[int, int]
+        vehicle: Image.Image,
+        wheel_contact_points: List[Tuple[int, int]],
+        vehicle_offset: Tuple[int, int],
+        canvas_size: Tuple[int, int],
+        profile: StudioShadowProfile,
     ) -> Image.Image:
-        """
-        Generate a soft contact shadow layer.
+        """Generate an ambient occlusion shadow under the vehicle body.
+
+        This creates a narrow, dark band where the vehicle meets the floor,
+        simulating the occlusion of ambient light in the gap between the
+        vehicle's underside and the floor surface. This is critical for
+        making the vehicle appear physically grounded on the surface.
 
         Args:
-            vehicle_width: Width of the scaled vehicle image
-            vehicle_height: Height of the scaled vehicle image
-            canvas_size: Size of the final canvas (width, height)
+            vehicle: Scaled vehicle image (RGBA)
+            wheel_contact_points: List of (x, y) contact points relative to vehicle
+            vehicle_offset: (x, y) position of vehicle on canvas
+            canvas_size: Canvas dimensions (width, height)
+            profile: Studio shadow profile with AO shadow parameters
 
         Returns:
-            Shadow image (RGBA) ready for compositing
+            RGBA shadow layer with ambient occlusion shadow
         """
         canvas_w, canvas_h = canvas_size
+        v_w, v_h = vehicle.size
 
-        # Shadow is a soft elliptical gradient beneath the car
-        shadow_w = int(vehicle_width * self.width_ratio)
-        shadow_h = max(int(vehicle_height * self.height_ratio), 20)
+        # AO shadow dimensions
+        ao_w = int(v_w * profile.ao_shadow_width)
+        ao_h = max(int(canvas_h * profile.ao_shadow_height), 8)
 
-        # Create radial gradient for shadow
+        # Position: centered under the vehicle, just above the floor
+        lowest_contact_y = max(cy for _, cy in wheel_contact_points) if wheel_contact_points else v_h
+        ao_cx = vehicle_offset[0] + v_w // 2
+        ao_cy = vehicle_offset[1] + lowest_contact_y
+
+        # Build AO shadow as a horizontal gradient
         shadow_layer = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
         shadow_arr = np.zeros((canvas_h, canvas_w), dtype=np.float32)
 
-        # Position shadow at the vehicle's base (centered horizontally)
-        cx = canvas_w // 2
-        cy = canvas_h  # Will be positioned at floor level by caller
-
-        # Draw elliptical gradient
+        # Create the shadow gradient
         y_coords, x_coords = np.ogrid[:canvas_h, :canvas_w]
-        # Ellipse: wider than tall
-        x_dist = ((x_coords - cx).astype(np.float32) / (shadow_w / 2)) ** 2
-        y_dist = ((y_coords - cy).astype(np.float32) / (shadow_h / 2)) ** 2
+
+        # Horizontal: strong in the center, fading at the edges
+        x_dist = ((x_coords - ao_cx).astype(np.float32) / (ao_w / 2)) ** 2
+        # Vertical: strongest at the floor line, fading both up and down
+        # The shadow should be slightly above and below the floor line
+        y_dist = ((y_coords - ao_cy).astype(np.float32) / (ao_h / 2)) ** 2
+
+        # Combine: elliptical gradient with stronger vertical falloff above
         ellipse_dist = np.sqrt(x_dist + y_dist)
 
-        # Smooth falloff
-        shadow_strength = np.clip(1.0 - ellipse_dist, 0, 1)
-        shadow_strength = shadow_strength**2  # Quadratic falloff for softness
-        shadow_strength *= self.opacity
+        # AO shadow is a soft gradient with stronger intensity at center
+        ao_strength = np.clip(1.0 - ellipse_dist, 0, 1)
+        # Use a softer falloff curve (cubic) for natural AO
+        ao_strength = ao_strength ** 2.0
+        ao_strength *= profile.ao_shadow_opacity
 
-        shadow_arr = (shadow_strength * 255).astype(np.uint8)
+        shadow_arr = (ao_strength * 255).astype(np.uint8)
 
-        shadow_rgba = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
-        # Apply the shadow as the alpha channel of a black image
+        # Build RGBA shadow layer
         r = np.zeros_like(shadow_arr)
         g = np.zeros_like(shadow_arr)
         b = np.zeros_like(shadow_arr)
         a = shadow_arr
+        shadow_composite = np.stack([r, g, b, a], axis=-1)
+        shadow_rgba = Image.fromarray(shadow_composite, mode="RGBA")
 
+        # Apply light Gaussian blur for softness
+        if profile.shadow_blur > 0:
+            blur_radius = max(int(profile.shadow_blur * 0.4), 3)
+            alpha = shadow_rgba.split()[3]
+            alpha = alpha.filter(ImageFilter.GaussianBlur(blur_radius))
+            r_ch, g_ch, b_ch, _ = shadow_rgba.split()
+            shadow_rgba = Image.merge("RGBA", (r_ch, g_ch, b_ch, alpha))
+
+        return shadow_rgba
+
+    def generate_tire_contact_shadow(
+        self,
+        vehicle: Image.Image,
+        wheel_contact_points: List[Tuple[int, int]],
+        vehicle_offset: Tuple[int, int],
+        canvas_size: Tuple[int, int],
+        profile: StudioShadowProfile,
+    ) -> Image.Image:
+        """Generate thin contact shadows directly under each tire.
+
+        Args:
+            vehicle: Scaled vehicle image (RGBA)
+            wheel_contact_points: List of (x, y) contact points relative to vehicle
+            vehicle_offset: (x, y) position of vehicle on canvas
+            canvas_size: Canvas dimensions (width, height)
+            profile: Studio shadow profile with tire shadow parameters
+
+        Returns:
+            RGBA shadow layer with tire contact shadows
+        """
+        canvas_w, canvas_h = canvas_size
+        shadow_layer = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+
+        # Tire contact shadow parameters — wider and more visible for grounding
+        tire_w = int(vehicle.size[0] * 0.09)  # ~9% of vehicle width per tire
+        tire_h = max(int(tire_w * 0.30), 5)   # Wider ellipse for more visible shadow
+        blur = profile.tire_shadow_blur
+        opacity = profile.tire_shadow_opacity
+
+        for cx_rel, cy_rel in wheel_contact_points:
+            # Convert from vehicle-relative to canvas coordinates
+            cx = vehicle_offset[0] + cx_rel
+            cy = vehicle_offset[1] + cy_rel
+
+            # Create small elliptical gradient for each tire
+            patch_w = tire_w * 3  # Extra space for blur
+            patch_h = tire_h * 4
+            patch = Image.new("RGBA", (patch_w, patch_h), (0, 0, 0, 0))
+            patch_arr = np.zeros((patch_h, patch_w, 4), dtype=np.uint8)
+
+            # Elliptical gradient centered in the patch
+            cy_patch = patch_h // 2
+            cx_patch = patch_w // 2
+            y_coords, x_coords = np.ogrid[:patch_h, :patch_w]
+            x_dist = ((x_coords - cx_patch).astype(np.float32) / (tire_w / 2)) ** 2
+            y_dist = ((y_coords - cy_patch).astype(np.float32) / (tire_h / 2)) ** 2
+            ellipse_val = np.sqrt(x_dist + y_dist)
+
+            alpha_val = np.clip(1.0 - ellipse_val, 0, 1)
+            alpha_val = alpha_val ** 1.3  # Slightly softer falloff for natural look
+            alpha_val *= opacity
+
+            patch_arr[:, :, 0] = 0  # R
+            patch_arr[:, :, 1] = 0  # G
+            patch_arr[:, :, 2] = 0  # B
+            patch_arr[:, :, 3] = (alpha_val * 255).astype(np.uint8)
+
+            patch = Image.fromarray(patch_arr, mode="RGBA")
+
+            # Apply blur for softness
+            if blur > 0:
+                patch = patch.filter(ImageFilter.GaussianBlur(blur))
+
+            # Paste onto shadow layer at the tire contact point
+            dest_x = cx - patch_w // 2
+            dest_y = cy - patch_h // 2
+            shadow_layer.alpha_composite(patch, dest=(dest_x, dest_y))
+
+        return shadow_layer
+
+    def generate_body_floor_shadow(
+        self,
+        vehicle: Image.Image,
+        wheel_contact_points: List[Tuple[int, int]],
+        vehicle_offset: Tuple[int, int],
+        canvas_size: Tuple[int, int],
+        profile: StudioShadowProfile,
+    ) -> Image.Image:
+        """Generate the wider, softer body shadow on the floor.
+
+        Args:
+            vehicle: Scaled vehicle image (RGBA)
+            wheel_contact_points: List of (x, y) contact points relative to vehicle
+            vehicle_offset: (x, y) position of vehicle on canvas
+            canvas_size: Canvas dimensions (width, height)
+            profile: Studio shadow profile with shadow parameters
+
+        Returns:
+            RGBA shadow layer with the body floor shadow
+        """
+        canvas_w, canvas_h = canvas_size
+        v_w, v_h = vehicle.size
+
+        # Calculate shadow dimensions based on vehicle size
+        shadow_w = int(v_w * 1.15 * profile.shadow_length)
+        shadow_h = max(int(v_h * 0.08 * profile.shadow_length), 20)
+
+        # Shadow offset based on direction
+        if profile.shadow_direction == "left":
+            offset_x = -int(v_w * 0.05)  # Shadow shifted left
+        elif profile.shadow_direction == "right":
+            offset_x = int(v_w * 0.05)  # Shadow shifted right
+        else:
+            offset_x = 0  # Center: no horizontal offset
+
+        # Shadow center position on canvas
+        # Center the shadow horizontally under the vehicle
+        shadow_cx = vehicle_offset[0] + v_w // 2 + offset_x
+        # Place shadow top edge just below the lowest wheel contact point
+        lowest_contact_y = max(cy for _, cy in wheel_contact_points) if wheel_contact_points else v_h
+        shadow_top_y = vehicle_offset[1] + lowest_contact_y
+
+        # Build shadow as elliptical gradient
+        shadow_layer = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+        shadow_arr = np.zeros((canvas_h, canvas_w), dtype=np.float32)
+
+        # Elliptical gradient centered at shadow position
+        y_coords, x_coords = np.ogrid[:canvas_h, :canvas_w]
+        x_dist = ((x_coords - shadow_cx).astype(np.float32) / (shadow_w / 2)) ** 2
+        # Shadow stretches downward slightly from the contact line
+        y_center = shadow_top_y + shadow_h // 2
+        y_dist = ((y_coords - y_center).astype(np.float32) / (shadow_h / 2)) ** 2
+        ellipse_dist = np.sqrt(x_dist + y_dist)
+
+        shadow_strength = np.clip(1.0 - ellipse_dist, 0, 1)
+        # Smoother falloff for more natural shadow appearance
+        shadow_strength = shadow_strength ** 1.8
+        shadow_strength *= profile.shadow_opacity
+
+        shadow_arr = (shadow_strength * 255).astype(np.uint8)
+
+        # Build RGBA shadow layer
+        r = np.zeros_like(shadow_arr)
+        g = np.zeros_like(shadow_arr)
+        b = np.zeros_like(shadow_arr)
+        a = shadow_arr
         shadow_composite = np.stack([r, g, b, a], axis=-1)
         shadow_rgba = Image.fromarray(shadow_composite, mode="RGBA")
 
         # Apply Gaussian blur for extra softness
-        if self.blur_radius > 0:
-            # Blur only the alpha channel for performance
+        if profile.shadow_blur > 0:
             alpha = shadow_rgba.split()[3]
-            alpha = alpha.filter(ImageFilter.GaussianBlur(self.blur_radius))
-            r, g, b, _ = shadow_rgba.split()
-            shadow_rgba = Image.merge("RGBA", (r, g, b, alpha))
+            alpha = alpha.filter(ImageFilter.GaussianBlur(profile.shadow_blur))
+            r_ch, g_ch, b_ch, _ = shadow_rgba.split()
+            shadow_rgba = Image.merge("RGBA", (r_ch, g_ch, b_ch, alpha))
 
         return shadow_rgba
 
@@ -195,42 +424,42 @@ class LightingCorrector:
 
     def correct(self, image: Image.Image) -> Image.Image:
         """Apply professional lighting corrections while preserving alpha channel."""
-        # Extract alpha channel before RGB processing
         if "A" in image.getbands():
             alpha = image.split()[3]
         else:
             alpha = Image.new("L", image.size, 255)
 
-        # Process RGB channels only
         img = image.convert("RGB")
 
-        # Color balance adjustment (warm/cool tone)
         r, g, b = img.split()
         r = ImageEnhance.Brightness(r).enhance(self.color_balance[0])
         g = ImageEnhance.Brightness(g).enhance(self.color_balance[1])
         b = ImageEnhance.Brightness(b).enhance(self.color_balance[2])
         img = Image.merge("RGB", (r, g, b))
 
-        # Brightness and contrast
         img = ImageEnhance.Brightness(img).enhance(self.brightness)
         img = ImageEnhance.Contrast(img).enhance(self.contrast)
 
-        # Subtle sharpening for detail
         if self.sharpen > 0:
             img = ImageEnhance.Sharpness(img).enhance(1 + self.sharpen)
 
-        # Reattach original alpha channel
         result = Image.merge("RGBA", img.split() + (alpha,))
         return result
 
 
 # ============================================================================
-# Perspective Corrector
+# Perspective Corrector (preserved for future use)
 # ============================================================================
 
 
 class PerspectiveCorrector:
-    """Corrects perspective and maintains proper car proportions."""
+    """Corrects perspective and maintains proper car proportions.
+
+    NOTE: Not currently used in the production pipeline.
+    Vehicle perspective is preserved as-is to avoid distortion.
+    Future perspective correction should be based on explicit wheel
+    geometry and horizon detection, not estimated transforms.
+    """
 
     def __init__(
         self,
@@ -246,15 +475,13 @@ class PerspectiveCorrector:
         """Apply perspective corrections."""
         w, h = image.size
 
-        # Scale the car appropriately
         if self.scale_factor != 1.0:
             new_w = int(w * self.scale_factor)
             new_h = int(h * self.scale_factor)
             image = image.resize((new_w, new_h), Image.LANCZOS)
 
         if self.keystone_correct:
-            # Keystone correction placeholder — kept for future OpenCV integration
-            pass
+            pass  # Reserved for future OpenCV integration
 
         return image
 
@@ -459,23 +686,28 @@ class AICompositingService:
 
     Pipeline (production default):
     1. Remove background
-    2. Scale vehicle to 65% of canvas width (maintain aspect ratio)
-    3. [Optional] Lighting correction (ENABLE_LIGHTING_CORRECTION)
-    4. [Optional] Enhancement (ENABLE_ENHANCEMENT)
-    5. Generate contact shadow (soft ellipse, no mirror)
-    6. Composite: studio bg → shadow → vehicle
+    2. Crop to vehicle bounding box & classify vehicle type
+    3. Scale vehicle based on type (SUV/sedan/coupe/wagon/hatchback)
+    4. Detect wheel contact points (lowest opaque pixels)
+    5. [Optional] Lighting correction (ENABLE_LIGHTING_CORRECTION)
+    6. [Optional] Enhancement (ENABLE_ENHANCEMENT)
+    7. Generate ambient occlusion shadow + tire contact shadows + body floor shadow
+    8. Composite: studio bg → AO shadow → body shadow → tire shadow → vehicle
+
+    Wheel contact detection ensures vehicles sit ON the floor rather
+    than floating above it, matching OEM configurator imagery.
 
     Target output resembles:
     - BMW configurator imagery
+    - Audi configurator imagery
+    - Volvo configurator imagery
+    - Mercedes configurator imagery
     - Dealer studio photography
     - Automotive marketplace listing images
     """
 
-    # Vehicle should occupy this fraction of canvas width
-    VEHICLE_WIDTH_RATIO = 0.70  # 70% — targets 60-75% range (accounts for height constraint)
-
-    # Vehicle bottom edge at this fraction of canvas height (leaves room for shadow)
-    FLOOR_POSITION_RATIO = 0.88  # 88% down — natural floor line
+    # Default floor position ratio (overridden by studio shadow profile)
+    FLOOR_POSITION_RATIO = 0.88
 
     def __init__(
         self,
@@ -489,13 +721,8 @@ class AICompositingService:
         self.studio_width = studio_width
         self.studio_height = studio_height
 
-        # Contact shadow generator (replaces ReflectionGenerator)
-        self.contact_shadow_gen = ContactShadowGenerator(
-            blur_radius=40,
-            opacity=0.35,
-            width_ratio=1.1,
-            height_ratio=0.08,
-        )
+        # Shadow generators (studio-aware)
+        self.shadow_generator = ContactShadowGenerator()
 
         # Optional enhancement modules (only used when feature flags are on)
         self.lighting_corrector = LightingCorrector(
@@ -511,14 +738,266 @@ class AICompositingService:
             highlight_boost=1.4, specular_boost=1.2, smoothness=0.5
         )
 
-    def _scale_vehicle(self, vehicle: Image.Image) -> Image.Image:
-        """Scale vehicle to occupy ~70% of canvas width, maintaining aspect ratio.
+    # -----------------------------------------------------------------------
+    # Wheel contact point detection
+    # -----------------------------------------------------------------------
+
+    def _detect_wheel_contact_points(self, vehicle: Image.Image) -> List[Tuple[int, int]]:
+        """Detect the lowest opaque pixels in the vehicle image (wheel contact line).
+
+        Scans the alpha channel bottom-up to find where the vehicle's
+        wheels make contact with the ground. This is used to anchor
+        the vehicle to the studio floor.
+
+        The detection uses a two-threshold approach:
+        - A higher threshold (alpha > 30) for identifying wheel segments
+        - A lower threshold (alpha > 10) for finding the true bottom of each
+          tire, catching anti-aliased edge pixels that are the actual contact
+
+        Each segment scans the ENTIRE height of its column range (not just
+        a restricted wheel region) to ensure the absolute lowest opaque pixel
+        is found. This prevents vehicles from floating above the floor.
+
+        Supports SUV, Sedan, Coupe, Wagon, and Hatchback body types.
+        Handles up to 4 visible wheel contact points.
+
+        Args:
+            vehicle: Vehicle image with transparent background (RGBA), already cropped
+
+        Returns:
+            List of (x, y) tuples representing wheel contact points,
+            relative to the vehicle image top-left corner.
+        """
+        if "A" not in vehicle.getbands():
+            # No alpha channel — treat entire bottom row as contact
+            w, h = vehicle.size
+            return [(w // 4, h - 1), (3 * w // 4, h - 1)]
+
+        alpha = np.array(vehicle.split()[3])
+        h, w = alpha.shape
+
+        if alpha.max() == 0:
+            # Fully transparent — shouldn't happen after bg removal
+            logger.warning("Vehicle image is fully transparent — using bottom edge as contact")
+            return [(w // 4, h - 1), (3 * w // 4, h - 1)]
+
+        # Two thresholds: higher for segment detection, lower for bottom pixel detection
+        alpha_threshold = 30   # For identifying wheel segments (filters noise)
+        bottom_threshold = 10  # For finding the true lowest tire pixel (catches anti-aliased edges)
+
+        # Find the lowest row that has significant opaque content
+        # Scan bottom-up, looking for rows with enough opaque pixels
+        row_opaque_counts = np.sum(alpha > alpha_threshold, axis=1)
+
+        # Find the bottom-most row with a meaningful amount of opaque pixels
+        # (at least 3% of the vehicle width, to filter out noise)
+        min_opaque_width = max(int(w * 0.03), 5)
+
+        bottom_row = h - 1
+        for row in range(h - 1, -1, -1):
+            if row_opaque_counts[row] >= min_opaque_width:
+                bottom_row = row
+                break
+
+        # Now find wheel contact points in the bottom region
+        # Wheels are typically in the bottom 25% of the vehicle (expanded from 18%)
+        # to better capture SUV/large vehicle wheels which sit lower relative to body
+        wheel_region_top = max(bottom_row - int(h * 0.25), 0)
+        wheel_region = alpha[wheel_region_top:, :]
+
+        # Find columns that have opaque pixels in the wheel region
+        col_opaque = np.any(wheel_region > alpha_threshold, axis=0)
+
+        if not col_opaque.any():
+            # Fallback: use the bottom row
+            logger.debug("No wheel region detected — using bottom row")
+            return [(w // 4, bottom_row), (3 * w // 4, bottom_row)]
+
+        # Find contiguous segments of opaque columns (these represent wheels/tires)
+        segments = []
+        in_segment = False
+        seg_start = 0
+
+        for col_idx in range(len(col_opaque)):
+            if col_opaque[col_idx] and not in_segment:
+                in_segment = True
+                seg_start = col_idx
+            elif not col_opaque[col_idx] and in_segment:
+                in_segment = False
+                segments.append((seg_start, col_idx - 1))
+
+        if in_segment:
+            segments.append((seg_start, len(col_opaque) - 1))
+
+        # Filter out very small segments (noise) — keep segments at least 2.5% of width
+        min_segment_width = max(int(w * 0.025), 3)
+        significant_segments = [
+            (start, end) for start, end in segments
+            if (end - start) >= min_segment_width
+        ]
+
+        if not significant_segments:
+            # Fallback: use the largest segment or default positions
+            logger.debug("No significant wheel segments found — using default positions")
+            return [(w // 4, bottom_row), (3 * w // 4, bottom_row)]
+
+        # For each significant segment, find the TRUE lowest opaque pixel
+        # by scanning the ENTIRE height of that segment's columns bottom-up.
+        # This is the key fix: we must not restrict to the wheel region because
+        # the very bottom pixels of tires (often anti-aliased with low alpha)
+        # exist below the wheel region boundary.
+        contact_points = []
+        for seg_start, seg_end in significant_segments:
+            # Scan the full height of this segment's columns, bottom-up
+            segment_cols = alpha[:, seg_start:seg_end + 1]
+
+            # Find the absolute lowest row in this segment with any opaque pixel
+            # Use the lower threshold (alpha > 10) for bottom detection to catch
+            # anti-aliased tire edges that would be missed with a higher threshold
+            lowest_row = None
+            for row in range(h - 1, -1, -1):
+                if np.any(segment_cols[row, :] > bottom_threshold):
+                    lowest_row = row
+                    break
+
+            if lowest_row is None:
+                # No opaque pixels in this segment at all (shouldn't happen)
+                continue
+
+            # Find the center column at the lowest row for this segment
+            row_pixels = segment_cols[lowest_row, :]
+            opaque_cols = np.where(row_pixels > bottom_threshold)[0]
+
+            if len(opaque_cols) == 0:
+                continue
+
+            center_col = opaque_cols[len(opaque_cols) // 2]
+            contact_points.append((
+                seg_start + center_col,  # x relative to vehicle
+                lowest_row,               # y relative to vehicle (absolute bottom)
+            ))
+
+        # Intelligent contact point selection based on count
+        if len(contact_points) >= 4:
+            # For 4+ points: keep the two outermost plus two inner
+            # This handles SUVs and wagons with visible front/rear wheels on both sides
+            contact_points.sort(key=lambda p: p[0])
+            # Keep leftmost, rightmost, and two middle-ish
+            leftmost = contact_points[0]
+            rightmost = contact_points[-1]
+            # From the middle points, pick the two that are most separated
+            middle_points = contact_points[1:-1]
+            if len(middle_points) >= 2:
+                # Find the pair with the most separation
+                best_pair = None
+                best_dist = 0
+                for i in range(len(middle_points)):
+                    for j in range(i + 1, len(middle_points)):
+                        dist = abs(middle_points[j][0] - middle_points[i][0])
+                        if dist > best_dist:
+                            best_dist = dist
+                            best_pair = (middle_points[i], middle_points[j])
+                if best_pair:
+                    contact_points = [leftmost, best_pair[0], best_pair[1], rightmost]
+                else:
+                    contact_points = [leftmost, rightmost]
+            else:
+                contact_points = [leftmost, rightmost]
+
+        elif len(contact_points) == 3:
+            # Keep leftmost and rightmost for best floor contact
+            contact_points.sort(key=lambda p: p[0])
+            contact_points = [contact_points[0], contact_points[-1]]
+
+        elif len(contact_points) == 1:
+            # Add a symmetric point
+            cx, cy = contact_points[0]
+            contact_points.append((w - cx, cy))
+
+        if len(contact_points) == 0:
+            # Ultimate fallback
+            contact_points = [(w // 4, bottom_row), (3 * w // 4, bottom_row)]
+
+        # Use the LOWEST (largest Y) contact point as the definitive anchor
+        # This ensures we use the true bottom of the tires, not an approximate row
+        lowest_y = max(cy for _, cy in contact_points)
+
+        logger.debug(
+            "Wheel contact points detected: %s (bottom_row=%d, lowest_contact_y=%d, vehicle_h=%d)",
+            contact_points, bottom_row, lowest_y, h,
+        )
+        return contact_points
+
+    # -----------------------------------------------------------------------
+    # Vehicle type classification
+    # -----------------------------------------------------------------------
+
+    def _classify_vehicle_type(self, vehicle: Image.Image) -> str:
+        """Classify vehicle type based on aspect ratio.
+
+        Uses the width/height ratio of the cropped vehicle to estimate
+        whether it's an SUV, sedan, coupe, wagon, or hatchback.
+        This determines the appropriate scale factor.
+
+        Args:
+            vehicle: Vehicle image with transparent background (RGBA), cropped to bbox
+
+        Returns:
+            Vehicle type string: VEHICLE_TYPE_SUV, VEHICLE_TYPE_SEDAN,
+            VEHICLE_TYPE_COUPE, VEHICLE_TYPE_WAGON, or VEHICLE_TYPE_HATCHBACK
+        """
+        v_w, v_h = vehicle.size
+        aspect_ratio = v_w / v_h if v_h > 0 else 2.5
+
+        if aspect_ratio < 2.0:
+            # Tall vehicles (aspect ratio < 2.0) — SUVs, trucks, large vehicles
+            vehicle_type = VEHICLE_TYPE_SUV
+        elif aspect_ratio > 2.8:
+            # Wide/short vehicles (aspect ratio > 2.8) — hatchbacks, compacts
+            vehicle_type = VEHICLE_TYPE_HATCHBACK
+        elif 2.0 <= aspect_ratio < 2.3:
+            # Narrower sedans and coupes — could be either
+            # Coupes tend to be shorter/smaller, sedans larger
+            # Use pixel count as a heuristic: more pixels = larger car = sedan
+            pixel_count = v_w * v_h
+            if pixel_count < 200000:  # Smaller silhouette
+                vehicle_type = VEHICLE_TYPE_COUPE
+            else:
+                vehicle_type = VEHICLE_TYPE_SEDAN
+        elif 2.3 <= aspect_ratio <= 2.5:
+            # Wagons: wider than sedans but not as extreme as hatchbacks
+            # They often have more rectangular profiles
+            pixel_count = v_w * v_h
+            if pixel_count > 300000:  # Larger silhouette suggests wagon
+                vehicle_type = VEHICLE_TYPE_WAGON
+            else:
+                vehicle_type = VEHICLE_TYPE_SEDAN
+        else:
+            # Standard vehicles (2.5–2.8) — sedans
+            vehicle_type = VEHICLE_TYPE_SEDAN
+
+        logger.debug(
+            "Vehicle classified as '%s' (aspect_ratio=%.2f, size=%dx%d)",
+            vehicle_type, aspect_ratio, v_w, v_h,
+        )
+        return vehicle_type
+
+    # -----------------------------------------------------------------------
+    # Vehicle scaling (type-aware)
+    # -----------------------------------------------------------------------
+
+    def _scale_vehicle(self, vehicle: Image.Image, vehicle_type: Optional[str] = None) -> Image.Image:
+        """Scale vehicle to appropriate canvas width based on type, maintaining aspect ratio.
 
         Crops to the bounding box of non-transparent pixels first to remove
         any transparent padding, then scales to the target width.
 
+        SUVs scale to ~75%, sedans to ~70%, coupes to ~68%,
+        wagons to ~72%, hatchbacks to ~65% of canvas width.
+
         Args:
             vehicle: Vehicle image with transparent background (RGBA)
+            vehicle_type: Optional pre-classified vehicle type. If None, will be classified.
 
         Returns:
             Scaled vehicle image (RGBA), cropped to vehicle extent
@@ -536,15 +1015,23 @@ class AICompositingService:
 
         v_w, v_h = vehicle.size
 
+        # Classify vehicle type if not provided
+        if vehicle_type is None:
+            vehicle_type = self._classify_vehicle_type(vehicle)
+
+        # Get scale target based on vehicle type
+        width_ratio = VEHICLE_SCALE_TARGETS.get(vehicle_type, 0.70)
+
         # Calculate scale factor based on canvas width
-        target_width = int(self.studio_width * self.VEHICLE_WIDTH_RATIO)
+        target_width = int(self.studio_width * width_ratio)
         scale_factor = target_width / v_w
 
         new_w = int(v_w * scale_factor)
         new_h = int(v_h * scale_factor)
 
-        # Ensure we don't exceed available floor space (leave room above + shadow below)
-        max_height = int(self.studio_height * self.FLOOR_POSITION_RATIO)
+        # Ensure we don't exceed available vertical space
+        # Leave at least 5% at top and space for shadow below
+        max_height = int(self.studio_height * 0.85)
         if new_h > max_height:
             height_scale = max_height / new_h
             new_w = int(new_w * height_scale)
@@ -552,10 +1039,14 @@ class AICompositingService:
 
         scaled = vehicle.resize((new_w, new_h), Image.LANCZOS)
         logger.debug(
-            "Vehicle scaled: %dx%d -> %dx%d (scale_factor=%.2f)",
-            v_w, v_h, new_w, new_h, scale_factor,
+            "Vehicle scaled: %dx%d -> %dx%d (scale_factor=%.2f, type=%s)",
+            v_w, v_h, new_w, new_h, scale_factor, vehicle_type,
         )
         return scaled
+
+    # -----------------------------------------------------------------------
+    # Main compositing pipeline
+    # -----------------------------------------------------------------------
 
     def process(
         self,
@@ -563,20 +1054,36 @@ class AICompositingService:
         studio_background: Optional[Image.Image] = None,
         studio_color: str = "#1a1a1a",
         original_image: Optional[Image.Image] = None,
+        shadow_profile: Optional[StudioShadowProfile] = None,
     ) -> Image.Image:
         """
         Process car image through production AI pipeline.
+
+        Pipeline:
+        1. Remove background
+        2. Crop to bounding box & classify vehicle type
+        3. Scale vehicle based on type
+        4. Detect wheel contact points
+        5. [Optional] Lighting correction
+        6. [Optional] Enhancement
+        7. Generate AO shadow + tire contact shadows + body floor shadow
+        8. Composite: studio bg → AO shadow → body shadow → tire shadow → vehicle
 
         Args:
             car_image: Original car image (mobile phone photo)
             studio_background: Studio background image (must be loaded by caller)
             studio_color: Fallback studio floor color (hex) if no background image
             original_image: Original unprocessed image (for optional wheel preservation)
+            shadow_profile: Studio-specific shadow parameters. If None, uses defaults.
 
         Returns:
             Professionally composed final image (RGBA)
         """
+        if shadow_profile is None:
+            shadow_profile = StudioShadowProfile()
+
         canvas_size = (self.studio_width, self.studio_height)
+        floor_y = int(self.studio_height * shadow_profile.floor_y)
 
         # ── Step 1: Remove background ──
         car_no_bg = self.background_remover.remove_background(car_image)
@@ -587,15 +1094,27 @@ class AICompositingService:
         )
         self.transparent_image = car_no_bg.copy()
 
-        # ── Step 2: Scale vehicle to 60-75% of canvas width ──
-        vehicle = self._scale_vehicle(car_no_bg)
+        # ── Step 2: Classify vehicle type ──
+        vehicle_type = self._classify_vehicle_type(car_no_bg)
+
+        # ── Step 3: Scale vehicle based on type ──
+        vehicle = self._scale_vehicle(car_no_bg, vehicle_type=vehicle_type)
         logger.debug(
-            "Scaled vehicle mode=%s size=%s",
+            "Scaled vehicle mode=%s size=%s type=%s",
             vehicle.mode,
+            vehicle.size,
+            vehicle_type,
+        )
+
+        # ── Step 4: Detect wheel contact points ──
+        wheel_contacts = self._detect_wheel_contact_points(vehicle)
+        logger.debug(
+            "Wheel contact points: %s (vehicle size: %s)",
+            wheel_contacts,
             vehicle.size,
         )
 
-        # ── Step 3: Optional lighting correction ──
+        # ── Step 5: Optional lighting correction ──
         if ENABLE_LIGHTING_CORRECTION:
             vehicle = self.lighting_corrector.correct(vehicle)
             logger.debug(
@@ -606,7 +1125,7 @@ class AICompositingService:
         else:
             logger.debug("LightingCorrector SKIPPED (ENABLE_LIGHTING_CORRECTION=false)")
 
-        # ── Step 4: Optional enhancement ──
+        # ── Step 6: Optional enhancement ──
         if ENABLE_ENHANCEMENT:
             vehicle = self.wheel_preserver.preserve(vehicle, original_image)
             logger.debug(
@@ -623,22 +1142,95 @@ class AICompositingService:
         else:
             logger.debug("Enhancement SKIPPED (ENABLE_ENHANCEMENT=false)")
 
-        # ── Step 5: Generate contact shadow ──
-        contact_shadow = self.contact_shadow_gen.generate(
-            vehicle_width=vehicle.size[0],
-            vehicle_height=vehicle.size[1],
-            canvas_size=canvas_size,
-        )
-        logger.debug("ContactShadowGenerator output mode=%s size=%s", contact_shadow.mode, contact_shadow.size)
-
-        # ── Step 6: Composite final image ──
-        # Calculate vehicle position: centered horizontally, sitting on floor
+        # ── Step 7: Calculate vehicle position using wheel contact points ──
         v_w, v_h = vehicle.size
-        car_x = (self.studio_width - v_w) // 2
-        floor_y = int(self.studio_height * self.FLOOR_POSITION_RATIO)
-        car_y = floor_y - v_h
+        car_x = (self.studio_width - v_w) // 2  # Centered horizontally
 
-        # 6a: Canvas starts with studio background or solid color fallback
+        # The key fix: use the LOWEST wheel contact point Y to anchor
+        # the vehicle to the floor, NOT the bottom of the bounding box.
+        # This prevents floating vehicles when there's transparent space
+        # below the wheels.
+        lowest_contact_y = max(cy for _, cy in wheel_contacts)
+
+        # Tire compression: allow slight overlap (1-3px) for realistic grounding.
+        # Real tires compress slightly under vehicle weight, so the contact patch
+        # should overlap the floor line rather than hover above it.
+        TIRE_COMPRESSION_PX = 2
+
+        # Large vehicles (SUVs, vans, pickups) need extra downward offset because:
+        # 1. Background removal tends to leave more artifacts around large wheel wells
+        # 2. Their greater visual weight requires deeper grounding to look realistic
+        LARGE_VEHICLE_EXTRA_OFFSET = {
+            VEHICLE_TYPE_SUV: 3,
+            VEHICLE_TYPE_WAGON: 2,
+            VEHICLE_TYPE_SEDAN: 0,
+            VEHICLE_TYPE_COUPE: 0,
+            VEHICLE_TYPE_HATCHBACK: 0,
+        }
+        vehicle_extra_offset = LARGE_VEHICLE_EXTRA_OFFSET.get(vehicle_type, 0)
+
+        # Position vehicle so the lowest wheel contact point sits at floor_y,
+        # with tire compression offset allowing slight overlap for realism
+        car_y = floor_y - lowest_contact_y + TIRE_COMPRESSION_PX + vehicle_extra_offset
+
+        # Debug logging for vehicle placement diagnostics
+        logger.debug(
+            "Vehicle bottom: %d, Wheel contact y: %d, Floor y: %d, Final offset: %d",
+            v_h, lowest_contact_y, floor_y, car_y,
+        )
+
+        # Verify anchoring: the lowest contact point should be at or very near floor_y
+        # (allowing for the tire compression offset)
+        actual_floor_contact = car_y + lowest_contact_y
+        expected_contact = floor_y + TIRE_COMPRESSION_PX + vehicle_extra_offset
+        if abs(actual_floor_contact - expected_contact) > 2:
+            logger.warning(
+                "Vehicle anchoring off by %d pixels (expected floor_y=%d, got %d). "
+                "Adjusting position.",
+                abs(actual_floor_contact - expected_contact),
+                expected_contact,
+                actual_floor_contact,
+            )
+            # Force exact anchoring with compression offset
+            car_y = floor_y - lowest_contact_y + TIRE_COMPRESSION_PX + vehicle_extra_offset
+
+        logger.debug(
+            "Vehicle placement: car_x=%d, car_y=%d, floor_y=%d, lowest_contact_y=%d, "
+            "vehicle_size=%s, vehicle_type=%s, tire_compression=%d, extra_offset=%d",
+            car_x, car_y, floor_y, lowest_contact_y, vehicle.size, vehicle_type,
+            TIRE_COMPRESSION_PX, vehicle_extra_offset,
+        )
+
+        # ── Step 8: Generate shadows ──
+        # 8a: Ambient occlusion shadow (dark contact band at vehicle base)
+        ao_shadow = self.shadow_generator.generate_ambient_occlusion_shadow(
+            vehicle=vehicle,
+            wheel_contact_points=wheel_contacts,
+            vehicle_offset=(car_x, car_y),
+            canvas_size=canvas_size,
+            profile=shadow_profile,
+        )
+
+        # 8b: Tire contact shadows (thin, dark patches under each wheel)
+        tire_shadow = self.shadow_generator.generate_tire_contact_shadow(
+            vehicle=vehicle,
+            wheel_contact_points=wheel_contacts,
+            vehicle_offset=(car_x, car_y),
+            canvas_size=canvas_size,
+            profile=shadow_profile,
+        )
+
+        # 8c: Body floor shadow (wider, softer shadow under the vehicle body)
+        body_shadow = self.shadow_generator.generate_body_floor_shadow(
+            vehicle=vehicle,
+            wheel_contact_points=wheel_contacts,
+            vehicle_offset=(car_x, car_y),
+            canvas_size=canvas_size,
+            profile=shadow_profile,
+        )
+
+        # ── Step 9: Composite final image ──
+        # 9a: Canvas starts with studio background or solid color fallback
         canvas = Image.new("RGBA", canvas_size)
 
         if studio_background is not None:
@@ -656,16 +1248,26 @@ class AICompositingService:
             canvas = Image.new("RGBA", canvas_size, (r, g, b, 255))
             logger.debug("No studio background — using solid color: %s", studio_color)
 
-        # 6b: Place contact shadow at vehicle's floor position
-        # Shadow sits right below the vehicle's bottom edge
-        shadow_y = floor_y - int(v_h * self.contact_shadow_gen.height_ratio)
-        canvas.alpha_composite(contact_shadow, dest=(0, shadow_y))
+        # 9b: Place ambient occlusion shadow first (closest to the floor surface)
+        canvas.alpha_composite(ao_shadow, dest=(0, 0))
 
-        # 6c: Place vehicle on top
+        # 9c: Place body floor shadow on top of AO shadow
+        canvas.alpha_composite(body_shadow, dest=(0, 0))
+
+        # 9d: Place tire contact shadow on top of body shadow
+        canvas.alpha_composite(tire_shadow, dest=(0, 0))
+
+        # 9e: Place vehicle on top of everything
         canvas.alpha_composite(vehicle, dest=(car_x, car_y))
-        logger.debug(
-            "Vehicle placed at (%d, %d), floor_y=%d, canvas=%s",
-            car_x, car_y, floor_y, canvas_size,
+
+        logger.info(
+            "Compositing complete: vehicle at (%d, %d), floor_y=%d, "
+            "wheel_contacts=%d, shadow_direction=%s, canvas=%s, vehicle_type=%s",
+            car_x, car_y, floor_y,
+            len(wheel_contacts),
+            shadow_profile.shadow_direction,
+            canvas_size,
+            vehicle_type,
         )
 
         return canvas

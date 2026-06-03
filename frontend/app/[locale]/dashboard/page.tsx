@@ -32,7 +32,7 @@ export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [studios, setStudios] = useState<Studio[]>([]);
   const [selectedStudio, setSelectedStudio] =
-    useState<string>("luxury_showroom");
+    useState<string>("white_corner_light_epoxy");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -177,14 +177,16 @@ export default function Dashboard() {
     );
   }
 
-  // Studio translations mapping - Professional indoor studios only
+  // Studio translations mapping - Automotive corner studios
   const studioTranslations: Record<string, string> = {
-    luxury_showroom: t("studio.studios.luxury_showroom"),
-    white_minimal: t("studio.studios.white_minimal"),
-    cinematic_dark: t("studio.studios.cinematic_dark"),
-    black_showroom: t("studio.studios.black_showroom"),
-    luxury_exhibition: t("studio.studios.luxury_exhibition"),
-    glossy_reflective: t("studio.studios.glossy_reflective"),
+    white_corner_light_epoxy: t("studio.studios.white_corner_light_epoxy"),
+    white_corner_ceramic_tile: t("studio.studios.white_corner_ceramic_tile"),
+    light_gray_corner_medium_epoxy: t("studio.studios.light_gray_corner_medium_epoxy"),
+    dark_gray_corner_concrete: t("studio.studios.dark_gray_corner_concrete"),
+    black_corner_dark_epoxy: t("studio.studios.black_corner_dark_epoxy"),
+    commercial_showroom_tile: t("studio.studios.commercial_showroom_tile"),
+    industrial_concrete: t("studio.studios.industrial_concrete"),
+    matte_black_automotive: t("studio.studios.matte_black_automotive"),
   };
 
   return (
