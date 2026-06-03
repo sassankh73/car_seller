@@ -2,8 +2,17 @@ FROM python:3.12
 
 WORKDIR /app
 
-# Install curl for Docker healthcheck
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+# Install system dependencies:
+# - curl: for Docker healthcheck
+# - libheif-dev: for HEIC/HEIF image support (pillow-heif)
+# - libavif-dev: for AVIF image support
+# - libmagic1: for python-magic MIME type detection
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libheif-dev \
+    libavif-dev \
+    libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 

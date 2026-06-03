@@ -166,12 +166,14 @@ def get_current_admin(request: Request):
     """
     Get the current authenticated admin user or raise 403.
     
+    Allows SUPER_ADMIN and ADMIN roles to access admin routes.
+    
     Usage:
         @app.get("/admin")
         def admin_route(user: User = Depends(get_current_admin)):
             return {"user": user}
     """
     user = get_current_user(request)
-    if not user or user.role != Role.ADMIN:
+    if not user or user.role not in (Role.SUPER_ADMIN, Role.ADMIN):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return user

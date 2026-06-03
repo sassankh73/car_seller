@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import DragDropUpload from "@/components/DragDropUpload";
 import { useAuth, authFetch, getAuthHeaders } from "@/context/AuthContext";
 
 interface Project {
@@ -80,6 +81,14 @@ export default function Dashboard() {
       setPreviewUrl(url);
     } else {
       setPreviewUrl(null);
+    }
+  };
+
+  const handleDragDropFiles = (files: File[]) => {
+    if (files.length > 0) {
+      setFile(files[0]);
+      const url = URL.createObjectURL(files[0]);
+      setPreviewUrl(url);
     }
   };
 
@@ -313,38 +322,16 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Upload & Studio Selection */}
             <div className="lg:col-span-1 space-y-5">
-              {/* Upload Section */}
+              {/* Upload Section with Drag & Drop */}
               <div className="bg-white rounded-2xl border border-black/[0.06] p-6 shadow-card">
                 <h2 className="text-base font-semibold text-charcoal-900 mb-4">
                   {t("upload.title")}
                 </h2>
-                <div className="border-2 border-dashed border-charcoal-200 rounded-xl p-6 text-center hover:border-red-300 transition-colors cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    id="file-upload"
-                  />
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    {previewUrl ? (
-                      <Image
-                        src={previewUrl}
-                        alt="Preview"
-                        width={200}
-                        height={150}
-                        className="rounded-lg mx-auto object-cover"
-                      />
-                    ) : (
-                      <div className="text-charcoal-400">
-                        <svg className="w-10 h-10 mx-auto mb-2 text-charcoal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                        </svg>
-                        <span className="text-sm">{t("upload.clickToUpload")}</span>
-                      </div>
-                    )}
-                  </label>
-                </div>
+                <DragDropUpload
+                  onFilesSelected={handleDragDropFiles}
+                  previewUrl={previewUrl}
+                  t={t}
+                />
               </div>
 
               {/* Studio Selection */}

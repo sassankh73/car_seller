@@ -45,9 +45,10 @@ Base = declarative_base()
 class Role(str, Enum):
     """User role for access control."""
 
+    SUPER_ADMIN = "super_admin"
     ADMIN = "admin"
-    PREMIUM = "premium"
-    FREE = "free"
+    DEALER = "dealer"
+    USER = "user"
 
 
 class PlanTier(str, Enum):
@@ -67,10 +68,11 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     name = Column(String(255), nullable=True)
-    role = Column(SQLEnum(Role), default=Role.FREE)
+    role = Column(SQLEnum(Role), default=Role.USER)
     is_active = Column(Boolean, default=True)
     is_disabled = Column(Boolean, default=False)
     is_superuser = Column(Boolean, default=False)
+    force_password_reset = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -137,6 +139,7 @@ class Project(Base):
     name = Column(String(255), nullable=False)
     background = Column(String(255), nullable=False)  # studio key
     image_url = Column(Text, nullable=True)
+    original_format = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

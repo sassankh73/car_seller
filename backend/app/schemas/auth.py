@@ -57,6 +57,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     email: str
     name: Optional[str] = None
+    force_password_reset: bool = False
 
 
 class UserResponse(BaseModel):
@@ -65,7 +66,7 @@ class UserResponse(BaseModel):
     id: int
     email: str
     name: Optional[str] = None
-    role: str = "free"
+    role: str = "user"
     is_active: bool = True
 
     class Config:
@@ -91,3 +92,27 @@ class ResetPasswordRequest(BaseModel):
 
     token: str
     new_password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    """Request model for changing password (used when force_password_reset is True)."""
+
+    email: str
+    current_password: str
+    new_password: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v):
+        """Basic email validation."""
+        if not v or "@" not in v:
+            raise ValueError("Invalid email address")
+        return v.strip().lower()
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v):
+        """Validate new password length."""
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        return v

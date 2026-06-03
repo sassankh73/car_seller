@@ -10,6 +10,7 @@ interface User {
   name?: string;
   role: string;
   is_active: boolean;
+  force_password_reset?: boolean;
 }
 
 interface AuthContextType {
@@ -18,9 +19,11 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
+  changePassword: (email: string, currentPassword: string, newPassword: string) => Promise<boolean>;
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
+  needsPasswordReset: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [needsPasswordReset, setNeedsPasswordReset] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const locale = useLocale();
@@ -198,10 +202,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
+    setNeedsPasswordReset(false);
     localStorage.removeItem("auth_token");
     router.push("/");
     router.refresh();
   }, [router]);
+
+  const changePassword = async (email: string, currentPassword: string, newPassword: string): Promise<boolean> => {
+    try {
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ email, current_password: currentPassword, new_password: newPassword }),
+      });
+      if (response.ok) {
+        setNeedsPasswordReset(false);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
 
   // Redirect unauthenticated users away from protected routes
   useEffect(() => {
@@ -237,9 +259,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        changePassword,
         loading,
         error,
         isAuthenticated: !!user && !!token,
+        needsPasswordReset,
       }}
     >
       {children}

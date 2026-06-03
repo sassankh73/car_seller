@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models import User, get_db
 from app.schemas.auth import (
+    ChangePasswordRequest,
     ForgotPasswordRequest,
     TokenResponse,
     UserCreate,
@@ -15,6 +16,8 @@ from app.services.auth import (
     create_access_token,
     create_user,
     get_user_by_email,
+    hash_password,
+    verify_password,
 )
 
 router = APIRouter()
@@ -52,7 +55,8 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     """
     Authenticate a user and return a JWT token.
 
-    Returns a 401 error if credentials are invalid.
+    If the user has force_password_reset set, the response will include
+    a flag indicating that the user must change their password.
     """
     db_user = authenticate_user(db, email=user.email, password=user.password)
     if not db_user:
@@ -64,12 +68,47 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 
     access_token = create_access_token(data={"sub": db_user.email})
 
+    # Check if user needs to force password reset
+    force_reset = getattr(db_user, 'force_password_reset', False)
+
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
         email=db_user.email,
         name=db_user.name,
+        force_password_reset=force_reset,
     )
+
+
+@router.post("/change-password")
+def change_password(
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Change password for the current user. Used when force_password_reset is True.
+
+    Requires the current password for verification.
+    """
+    db_user = authenticate_user(db, email=payload.email, password=payload.current_password)
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect",
+        )
+
+    if len(payload.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters",
+        )
+
+    db_user.hashed_password = hash_password(payload.new_password)
+    db_user.force_password_reset = False
+    db.commit()
+    db.refresh(db_user)
+
+    return {"detail": "Password changed successfully", "force_password_reset": False}
 
 
 @router.post("/forgot-password")

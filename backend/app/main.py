@@ -44,7 +44,7 @@ def ensure_admin_user():
             email=admin_email,
             hashed_password=hash_password(admin_password),
             name="Admin",
-            role=Role.ADMIN,
+            role=Role.SUPER_ADMIN,
             is_active=True,
             is_disabled=False,
             is_superuser=True,
