@@ -57,8 +57,8 @@ def list_plans():
             name=plan.name,
             price_monthly=plan.price_monthly,
             price_yearly=plan.price_yearly,
-            price_monthly_display=f"${plan.price_monthly / 100:.0f}",
-            price_yearly_display=f"${plan.price_yearly / 100:.0f}",
+            price_monthly_display=f"{plan.price_monthly / 100:.0f} SEK",
+            price_yearly_display=f"{plan.price_yearly / 100:.0f} SEK",
             features=plan.features,
         )
         for plan in plans
@@ -82,8 +82,8 @@ def get_plan(tier: str):
         "name": plan.name,
         "price_monthly": plan.price_monthly,
         "price_yearly": plan.price_yearly,
-        "price_monthly_display": f"${plan.price_monthly / 100:.0f}",
-        "price_yearly_display": f"${plan.price_yearly / 100:.0f}",
+        "price_monthly_display": f"{plan.price_monthly / 100:.0f} SEK",
+        "price_yearly_display": f"{plan.price_yearly / 100:.0f} SEK",
         "features": plan.features,
     }
 

@@ -472,8 +472,8 @@ export default function AdminUsers() {
                   <div><span className="text-gray-400 text-sm">{t("subscription")}</span><p className="text-white">{selectedUser.subscription_plan || "-"}</p></div>
                   <div><span className="text-gray-400 text-sm">{t("projects")}</span><p className="text-white">{selectedUser.project_count}</p></div>
                 </div>
-                <div><span className="text-gray-400 text-sm">{t("createdAt")}</span><p className="text-gray-300 text-sm">{new Date(selectedUser.created_at).toLocaleString()}</p></div>
-                <div><span className="text-gray-400 text-sm">{t("updatedAt")}</span><p className="text-gray-300 text-sm">{new Date(selectedUser.updated_at).toLocaleString()}</p></div>
+                <div><span className="text-gray-400 text-sm">{t("createdAt")}</span><p className="text-gray-300 text-sm">{new Date(selectedUser.created_at).toLocaleString(locale === "sv" ? "sv-SE" : "en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p></div>
+                <div><span className="text-gray-400 text-sm">{t("updatedAt")}</span><p className="text-gray-300 text-sm">{new Date(selectedUser.updated_at).toLocaleString(locale === "sv" ? "sv-SE" : "en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p></div>
               </div>
               <div className="p-6 border-t border-gray-700 flex flex-wrap gap-2 justify-end">
                 <button onClick={() => openEditModal(selectedUser)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">{t("editUser")}</button>

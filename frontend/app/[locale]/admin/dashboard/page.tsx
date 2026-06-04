@@ -168,7 +168,7 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
             <h3 className="text-gray-400 text-sm mb-2">{t("stats.totalRevenue")}</h3>
-            <p className="text-4xl font-bold text-white">${stats.total_revenue.toLocaleString()}</p>
+            <p className="text-4xl font-bold text-white">{stats.total_revenue.toLocaleString(locale === "sv" ? "sv-SE" : "en-US")} SEK</p>
           </div>
         </div>
 
@@ -203,7 +203,7 @@ export default function AdminDashboard() {
                         {reg.name || "-"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                        {new Date(reg.registered_at).toLocaleDateString()}
+                        {new Date(reg.registered_at).toLocaleDateString(locale === "sv" ? "sv-SE" : "en-US", { year: "numeric", month: "long", day: "numeric" })}
                       </td>
                     </tr>
                   ))}
@@ -218,13 +218,13 @@ export default function AdminDashboard() {
           <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
             <h3 className="text-gray-400 text-sm mb-4">{t("stats.revenueLast30Days")}</h3>
             <p className="text-3xl font-bold text-green-400">
-              ${stats.revenue_last_30_days.toLocaleString()}
+              {stats.revenue_last_30_days.toLocaleString(locale === "sv" ? "sv-SE" : "en-US")} SEK
             </p>
           </div>
           <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
             <h3 className="text-gray-400 text-sm mb-4">{t("stats.revenueLast7Days")}</h3>
             <p className="text-3xl font-bold text-green-400">
-              ${stats.revenue_last_7_days.toLocaleString()}
+              {stats.revenue_last_7_days.toLocaleString(locale === "sv" ? "sv-SE" : "en-US")} SEK
             </p>
           </div>
         </div>

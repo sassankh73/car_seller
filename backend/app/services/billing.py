@@ -34,31 +34,31 @@ class SubscriptionPlan(BaseModel):
 
     tier: PlanTier
     name: str
-    price_monthly: int  # In cents
-    price_yearly: int  # In cents
+    price_monthly: int  # In SEK öre (1 SEK = 100 öre)
+    price_yearly: int  # In SEK öre (1 SEK = 100 öre)
     stripe_price_id_monthly: str
     stripe_price_id_yearly: str
     features: Dict[str, Any]
 
 
-# Plan configurations
+# Plan configurations (prices in SEK öre — 1 SEK = 100 öre)
 PLANS: Dict[PlanTier, SubscriptionPlan] = {
     PlanTier.BASIC: SubscriptionPlan(
         tier=PlanTier.BASIC,
         name="Basic",
-        price_monthly=2900,  # $29/month
-        price_yearly=29000,  # $290/year (save ~17%)
+        price_monthly=4900,  # 49 SEK/month
+        price_yearly=49000,  # 490 SEK/year (save ~17%)
         stripe_price_id_monthly="price_basic_monthly",  # Replace with actual Stripe price IDs
         stripe_price_id_yearly="price_basic_yearly",
         features={
             "generations_per_month": 20,
             "max_resolution": "hd",
             "studios_included": ["white_studio"],
-            "extra_studio_price": 500,  # $5 per extra studio
+            "extra_studio_price": 4900,  # 49 SEK per extra studio
             "logo_branding": False,
             "logo_branding_price": 0,
             "premium_ai": False,
-            "premium_ai_price_per_use": 200,  # $2 per premium AI use
+            "premium_ai_price_per_use": 1900,  # 19 SEK per premium AI use
             "priority_processing": False,
             "support_level": "email",
         },
@@ -66,15 +66,15 @@ PLANS: Dict[PlanTier, SubscriptionPlan] = {
     PlanTier.PROFESSIONAL: SubscriptionPlan(
         tier=PlanTier.PROFESSIONAL,
         name="Professional",
-        price_monthly=7900,  # $79/month
-        price_yearly=79000,  # $790/year
+        price_monthly=19900,  # 199 SEK/month
+        price_yearly=199000,  # 1990 SEK/year
         stripe_price_id_monthly="price_pro_monthly",
         stripe_price_id_yearly="price_pro_yearly",
         features={
             "generations_per_month": 100,
             "max_resolution": "4k",
             "studios_included": ["white_studio", "luxury_showroom", "dark_cinematic"],
-            "extra_studio_price": 300,  # $3 per extra studio
+            "extra_studio_price": 2900,  # 29 SEK per extra studio
             "logo_branding": True,
             "logo_branding_price": 0,
             "premium_ai": True,
@@ -86,8 +86,8 @@ PLANS: Dict[PlanTier, SubscriptionPlan] = {
     PlanTier.ENTERPRISE: SubscriptionPlan(
         tier=PlanTier.ENTERPRISE,
         name="Enterprise",
-        price_monthly=19900,  # $199/month
-        price_yearly=199000,  # $1990/year
+        price_monthly=99900,  # 999 SEK/month
+        price_yearly=999000,  # 9990 SEK/year
         stripe_price_id_monthly="price_enterprise_monthly",
         stripe_price_id_yearly="price_enterprise_yearly",
         features={
@@ -176,7 +176,7 @@ class BillingService:
 
         # Logo branding
         if logo_branding and not features["logo_branding"]:
-            logo_cost = 1000  # $10 per generation with logo
+            logo_cost = 9900  # 99 SEK per generation with logo
             charges.append(
                 {
                     "item": "Logo Branding",
@@ -202,7 +202,7 @@ class BillingService:
 
         # 4K export (if not included in plan)
         if export_4k and features["max_resolution"] != "4k":
-            four_k_cost = 500  # $5 per 4K export
+            four_k_cost = 4900  # 49 SEK per 4K export
             charges.append(
                 {
                     "item": "4K Export",
@@ -216,7 +216,7 @@ class BillingService:
         return {
             "charges": charges,
             "total_cents": total_cents,
-            "total_dollars": total_cents / 100,
+            "total_sek": total_cents / 100,
         }
 
     def check_usage_limits(
@@ -255,7 +255,7 @@ class BillingService:
             "remaining": max(0, remaining),
             "limit": generations_limit,
             "overage": not allowed,
-            "overage_price": 300 if not allowed else 0,  # $3 per extra generation
+            "overage_price": 2900 if not allowed else 0,  # 29 SEK per extra generation
         }
 
     def create_checkout_session(

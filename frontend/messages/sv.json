@@ -1,6 +1,8 @@
 {
   "common": {
     "appName": "AutoStudio",
+    "currency": "kr",
+    "currencyFormat": "{amount} kr",
     "getStarted": "Kom igång",
     "backToHome": "Tillbaka till startsidan",
     "loading": "Laddar...",

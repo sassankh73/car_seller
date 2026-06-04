@@ -1,6 +1,6 @@
 import { getRequestConfig } from "next-intl/server";
 
-const locales = ["en", "sv"] as const;
+const locales = ["sv", "en"] as const;
 
 export default getRequestConfig(async ({ locale }) => {
   // Ensure locale is a valid string

@@ -33,6 +33,7 @@ async def authenticate_middleware(request: Request, call_next):
         "/health",
         "/static",
         "/api/studio",
+        "/api/billing/plans",
     ]
 
     path = request.url.path

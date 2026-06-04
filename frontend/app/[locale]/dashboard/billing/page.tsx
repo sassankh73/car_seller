@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useAuth, authFetch } from "@/context/AuthContext";
 
 interface Plan {
   tier: string;
@@ -47,37 +47,62 @@ export default function BillingPage() {
   const [currentPlan, setCurrentPlan] = useState<string>("professional");
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated } = useAuth();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
+  // Currency formatter based on locale
+  const formatCurrency = (amount: number) => {
+    if (locale === "sv") {
+      return `${amount} kr`;
+    }
+    return `${amount} SEK`;
+  };
+
   useEffect(() => {
-    // Load plans
-    axios
-      .get("/api/billing/plans")
-      .then((res) => setPlans(res.data))
+    // Load plans (public endpoint)
+    fetch("/api/billing/plans")
+      .then((res) => res.json())
+      .then((data) => setPlans(data))
       .catch(console.error);
 
-    // Load usage (mock user_id for demo)
-    axios
-      .get("/api/billing/usage/demo_user_123")
-      .then((res) => setUsage(res.data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+    // Load usage (authenticated endpoint)
+    if (isAuthenticated && user) {
+      authFetch(`/api/billing/usage/${user.id}`)
+        .then((res) => {
+          if (res.ok) return res.json();
+          throw new Error("Failed to load usage");
+        })
+        .then((data) => setUsage(data))
+        .catch(console.error);
+    }
+    setLoading(false);
+  }, [isAuthenticated, user]);
 
   const handleSubscribe = async (planTier: string) => {
+    if (!isAuthenticated || !user) {
+      alert(t("manageSubscription.subtitle"));
+      return;
+    }
     setCheckoutLoading(planTier);
 
     try {
-      const response = await axios.post("/api/billing/checkout", {
-        plan_tier: planTier,
-        billing_cycle: billingCycle,
-        user_email: "user@example.com",
-        user_id: "demo_user_123",
+      const response = await authFetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan_tier: planTier,
+          billing_cycle: billingCycle,
+          user_email: user.email,
+          user_id: String(user.id),
+        }),
       });
 
+      if (!response.ok) throw new Error("Checkout failed");
+      const data = await response.json();
+
       // Redirect to Stripe Checkout
-      if (response.data.checkout_url) {
-        window.location.href = response.data.checkout_url;
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
       }
     } catch (error) {
       console.error("Checkout failed:", error);
@@ -89,11 +114,11 @@ export default function BillingPage() {
 
   const handleManageSubscription = async () => {
     try {
-      const response = await axios.get(
-        "/api/billing/portal?stripe_customer_id=cus_demo_123",
-      );
-      if (response.data.portal_url) {
-        window.open(response.data.portal_url, "_blank");
+      const response = await authFetch("/api/billing/portal?stripe_customer_id=cus_demo_123");
+      if (!response.ok) throw new Error("Portal access failed");
+      const data = await response.json();
+      if (data.portal_url) {
+        window.open(data.portal_url, "_blank");
       }
     } catch (error) {
       console.error("Portal access failed:", error);
@@ -110,7 +135,7 @@ export default function BillingPage() {
 
   const formatNumber = (num: number) => {
     if (num < 0) return t("unlimited");
-    return num.toLocaleString();
+    return num.toLocaleString(locale === "sv" ? "sv-SE" : "en-US");
   };
 
   return (
@@ -238,8 +263,8 @@ export default function BillingPage() {
             const isPopular = plan.tier === "professional";
             const price =
               billingCycle === "monthly"
-                ? plan.price_monthly_display
-                : plan.price_yearly_display;
+                ? formatCurrency(plan.price_monthly / 100)
+                : formatCurrency(plan.price_yearly / 100);
 
             return (
               <div
@@ -395,25 +420,25 @@ export default function BillingPage() {
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="text-center p-4 bg-gray-900 rounded-lg">
-              <div className="text-2xl font-bold text-indigo-400">$3.00</div>
+              <div className="text-2xl font-bold text-indigo-400">{formatCurrency(29)}</div>
               <div className="text-sm text-gray-400 mt-1">
                 {t("usageBasedBilling.perExtraGeneration")}
               </div>
             </div>
             <div className="text-center p-4 bg-gray-900 rounded-lg">
-              <div className="text-2xl font-bold text-indigo-400">$3-5</div>
+              <div className="text-2xl font-bold text-indigo-400">{formatCurrency(29)}–{formatCurrency(49)}</div>
               <div className="text-sm text-gray-400 mt-1">
                 {t("usageBasedBilling.perExtraStudio")}
               </div>
             </div>
             <div className="text-center p-4 bg-gray-900 rounded-lg">
-              <div className="text-2xl font-bold text-indigo-400">$10</div>
+              <div className="text-2xl font-bold text-indigo-400">{formatCurrency(99)}</div>
               <div className="text-sm text-gray-400 mt-1">
                 {t("usageBasedBilling.perLogoBranding")}
               </div>
             </div>
             <div className="text-center p-4 bg-gray-900 rounded-lg">
-              <div className="text-2xl font-bold text-indigo-400">$5</div>
+              <div className="text-2xl font-bold text-indigo-400">{formatCurrency(49)}</div>
               <div className="text-sm text-gray-400 mt-1">
                 {t("usageBasedBilling.perFourKExport")}
               </div>

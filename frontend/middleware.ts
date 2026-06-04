@@ -2,7 +2,7 @@ import createMiddleware from "next-intl/middleware";
 
 export default createMiddleware({
   // A list of all locales that are supported
-  locales: ["en", "sv"],
+  locales: ["sv", "en"],
 
   // Used when no locale matches - Swedish is the primary market
   defaultLocale: "sv",
