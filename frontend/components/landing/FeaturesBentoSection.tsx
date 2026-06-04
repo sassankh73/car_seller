@@ -75,10 +75,6 @@ export default function FeaturesBentoSection() {
         {/* Bento Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
           {FEATURES.map((feature) => {
-            const item = t(`items.${feature.key}` as any) as unknown as {
-              title: string;
-              description: string;
-            };
             const isLarge = feature.large;
 
             return (
@@ -138,12 +134,12 @@ export default function FeaturesBentoSection() {
 
                 {/* Title */}
                 <h3 className="text-lg font-semibold text-charcoal-900 mb-2 tracking-[-0.01em]">
-                  {item.title}
+                  {t(`items.${feature.key}.title`)}
                 </h3>
 
                 {/* Description */}
                 <p className="text-sm text-charcoal-500 leading-relaxed">
-                  {item.description}
+                  {t(`items.${feature.key}.description`)}
                 </p>
               </div>
             );

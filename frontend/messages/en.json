@@ -31,7 +31,21 @@
       "subheadline": "Transform ordinary vehicle photos into professional dealership-ready images in minutes.",
       "startFreeTrial": "Start Free Trial",
       "viewDemo": "View Demo",
-      "trustedBy": "Trusted by 1,200+ dealerships worldwide"
+      "trustedBy": "Trusted by 1,200+ dealerships worldwide",
+      "categories": {
+        "sedan": "Sedan",
+        "suv": "SUV",
+        "wagon": "Wagon",
+        "coupe": "Coupe",
+        "pickupEv": "Pickup / EV"
+      },
+      "studios": {
+        "whiteEpoxy": "White Epoxy Studio",
+        "commercial": "Commercial Showroom",
+        "concrete": "Concrete Studio",
+        "darkStudio": "Dark Automotive Studio",
+        "premiumGray": "Premium Light Studio"
+      }
     },
     "features": {
       "label": "Features",

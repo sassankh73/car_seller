@@ -31,7 +31,21 @@
       "subheadline": "Förvandla vanliga fordonsbilder till professionella bildhandlarbilder på minuter.",
       "startFreeTrial": "Starta gratis provperiod",
       "viewDemo": "Se demo",
-      "trustedBy": "Betrodd av 1 200+ bilhandlare världen över"
+      "trustedBy": "Betrodd av 1 200+ bilhandlare världen över",
+      "categories": {
+        "sedan": "Sedan",
+        "suv": "SUV",
+        "wagon": "Kombi",
+        "coupe": "Coupé",
+        "pickupEv": "Pickup / EL"
+      },
+      "studios": {
+        "whiteEpoxy": "Vitt Epoxystudio",
+        "commercial": "Kommersiell Showroom",
+        "concrete": "Betongstudio",
+        "darkStudio": "Mörk Bilstudio",
+        "premiumGray": "Premium Ljustudio"
+      }
     },
     "features": {
       "label": "Funktioner",

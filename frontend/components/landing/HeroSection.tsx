@@ -1,36 +1,50 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Image from "next/image";
+import { memo } from "react";
 
-const STUDIO_CARDS = [
+// ── Type-safe key constraints matching translation file ────────────────
+type HeroCategoryKey = "sedan" | "suv" | "wagon" | "coupe" | "pickupEv";
+type HeroStudioKey = "whiteEpoxy" | "commercial" | "concrete" | "darkStudio" | "premiumGray";
+
+interface HeroCardData {
+  readonly id: number;
+  readonly categoryKey: HeroCategoryKey;
+  readonly studioKey: HeroStudioKey;
+  readonly image: string;
+  readonly darkOverlay: boolean;
+}
+
+// ── Static card data (keys must match translation file exactly) ───────
+const HERO_CARDS: readonly HeroCardData[] = [
   {
     id: 1,
-    label: "White Epoxy",
-    image: "/static/studios/white_corner_light_epoxy_preview.png",
-    gradient: "bg-[#E8E3DB]",
-    span: "col-span-1 row-span-1",
+    categoryKey: "wagon",
+    studioKey: "whiteEpoxy",
+    image: "/hero/readystudio1.png",
+    darkOverlay: false,
   },
   {
     id: 2,
-    label: "Dark Studio",
-    image: "/static/studios/black_corner_dark_epoxy_preview.png",
-    gradient: "bg-[#2A2A2A]",
-    span: "col-span-1 row-span-1",
-    textLight: true,
+    categoryKey: "coupe",
+    studioKey: "commercial",
+    image: "/hero/readystudio2.png",
+    darkOverlay: false,
   },
   {
     id: 3,
-    label: "Commercial Showroom",
-    image: "/static/studios/commercial_showroom_tile_preview.png",
-    gradient: "bg-[#F0EDE8]",
-    span: "col-span-1 row-span-1",
+    categoryKey: "suv",
+    studioKey: "concrete",
+    image: "/hero/readystudio3.png",
+    darkOverlay: true,
   },
   {
     id: 4,
-    label: "Concrete Studio",
-    image: "/static/studios/dark_gray_corner_concrete_preview.png",
-    gradient: "bg-[#D6CDC4]",
-    span: "col-span-1 row-span-1",
+    categoryKey: "sedan",
+    studioKey: "darkStudio",
+    image: "/hero/readystudio4.png",
+    darkOverlay: true,
   },
 ];
 
@@ -84,38 +98,10 @@ export default function HeroSection() {
             </p>
           </div>
 
-          {/* Right — Bento Grid of studio preview cards */}
+          {/* Right — Vehicle Showcase Cards (2×2 grid) */}
           <div className="grid grid-cols-2 gap-4 lg:gap-5">
-            {STUDIO_CARDS.map((card) => (
-              <div
-                key={card.id}
-                className={`${card.span} relative rounded-2xl lg:rounded-3xl overflow-hidden aspect-[4/3] ${card.gradient} card-premium shadow-card-lg group`}
-              >
-                {/* Studio image */}
-                <img
-                  src={card.image}
-                  alt={card.label}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  onError={(e) => {
-                    // Fallback: hide image, show gradient background
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-                
-                {/* Subtle overlay for depth */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
-
-                {/* Label */}
-                <div
-                  className={`absolute bottom-3 left-3 text-xs font-medium px-2.5 py-1 rounded-full backdrop-blur-md ${
-                    card.textLight
-                      ? "bg-white/10 text-white/90"
-                      : "bg-white/70 text-charcoal-700"
-                  }`}
-                >
-                  {card.label}
-                </div>
-              </div>
+            {HERO_CARDS.map((card) => (
+              <HeroCard key={card.id} card={card} t={t} />
             ))}
           </div>
         </div>
@@ -123,3 +109,61 @@ export default function HeroSection() {
     </section>
   );
 }
+
+// ── Memoised presentational card ──────────────────────────────────────
+const HeroCard = memo(function HeroCard({
+  card,
+  t,
+}: {
+  card: HeroCardData;
+  t: ReturnType<typeof useTranslations<"landing.hero">>;
+}) {
+  const isDark = card.darkOverlay;
+
+  return (
+    <div className="hero-card group relative rounded-2xl lg:rounded-3xl overflow-hidden aspect-[4/3] shadow-card-lg">
+      {/* Vehicle in studio image */}
+      <Image
+        src={card.image}
+        alt={`${t(`categories.${card.categoryKey}`)} — ${t(`studios.${card.studioKey}`)}`}
+        fill
+        sizes="(max-width: 1024px) 50vw, 25vw"
+        className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
+      />
+
+      {/* Subtle gradient overlay for depth */}
+      <div
+        className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/5 pointer-events-none transition-opacity duration-500 group-hover:from-black/50"
+        aria-hidden="true"
+      />
+
+      {/* Category badge — top left */}
+      <div
+        className={`absolute top-3 left-3 text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-md transition-all duration-300 group-hover:scale-105 ${
+          isDark
+            ? "bg-white/15 text-white/90 border border-white/10"
+            : "bg-white/80 text-charcoal-800 border border-white/50 shadow-sm"
+        }`}
+      >
+        {t(`categories.${card.categoryKey}`)}
+      </div>
+
+      {/* Studio name badge — bottom left */}
+      <div
+        className={`absolute bottom-3 left-3 text-xs font-medium px-2.5 py-1 rounded-full backdrop-blur-md transition-all duration-300 group-hover:translate-y-0 translate-y-0.5 ${
+          isDark
+            ? "bg-white/10 text-white/70"
+            : "bg-white/70 text-charcoal-600"
+        }`}
+      >
+        {t(`studios.${card.studioKey}`)}
+      </div>
+
+      {/* Hover glow effect */}
+      <div
+        className="absolute inset-0 rounded-2xl lg:rounded-3xl ring-1 ring-inset ring-white/10 group-hover:ring-white/30 transition-all duration-500 pointer-events-none"
+        aria-hidden="true"
+      />
+    </div>
+  );
+});
