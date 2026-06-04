@@ -9,6 +9,7 @@ This module contains SQLAlchemy models for:
 """
 
 import os
+import logging
 from datetime import datetime
 from enum import Enum
 from typing import Optional
@@ -38,6 +39,8 @@ if not SQLALCHEMY_DATABASE_URL:
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
@@ -173,6 +176,21 @@ def get_db():
 def init_db():
     """Initialize database tables."""
     Base.metadata.create_all(bind=engine)
+
+    # Auto-migrate: add columns that may not exist yet in older databases
+    from sqlalchemy import text, inspect
+    inspector = inspect(engine)
+    user_columns = [col["name"] for col in inspector.get_columns("users")]
+
+    with engine.connect() as conn:
+        if "last_login" not in user_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN last_login TIMESTAMP"))
+            conn.commit()
+            logger.info("Added last_login column to users table")
+        if "password_changed_at" not in user_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN password_changed_at TIMESTAMP"))
+            conn.commit()
+            logger.info("Added password_changed_at column to users table")
 
 
 def get_engine():
