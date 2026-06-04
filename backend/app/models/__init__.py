@@ -43,12 +43,21 @@ Base = declarative_base()
 
 
 class Role(str, Enum):
-    """User role for access control."""
+    """User role for access control.
 
-    SUPER_ADMIN = "super_admin"
-    ADMIN = "admin"
-    DEALER = "dealer"
-    USER = "user"
+    These values MUST match the PostgreSQL enum type exactly:
+      ADMIN  - Full administrative access
+      PREMIUM - Premium/paid features
+      FREE  - Default free-tier user
+
+    Migration plan (future): If more granular roles are needed, the
+    PostgreSQL enum must be altered via:
+      ALTER TYPE role ADD VALUE 'new_value';
+    """
+
+    ADMIN = "ADMIN"
+    PREMIUM = "PREMIUM"
+    FREE = "FREE"
 
 
 class PlanTier(str, Enum):
@@ -68,7 +77,7 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     name = Column(String(255), nullable=True)
-    role = Column(SQLEnum(Role), default=Role.USER)
+    role = Column(SQLEnum(Role, name="role"), default=Role.FREE)
     is_active = Column(Boolean, default=True)
     is_disabled = Column(Boolean, default=False)
     is_superuser = Column(Boolean, default=False)

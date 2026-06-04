@@ -115,7 +115,7 @@ class AdminPasswordResetResponse(BaseModel):
 
 class AdminRoleChangeRequest(BaseModel):
     """Request to change a user's role."""
-    role: str  # super_admin, admin, dealer, user
+    role: str  # ADMIN, PREMIUM, FREE
 
 
 class AdminStatusChangeRequest(BaseModel):
@@ -140,7 +140,7 @@ def _get_user_detail(db: Session, user: User) -> UserDetail:
         id=user.id,
         email=user.email,
         name=user.name,
-        role=user.role.value if user.role else "user",
+        role=user.role.value if user.role else "FREE",
         is_active=user.is_active,
         is_disabled=user.is_disabled,
         force_password_reset=user.force_password_reset if hasattr(user, 'force_password_reset') else False,
@@ -262,7 +262,7 @@ async def search_users(
             id=u.id,
             email=u.email,
             name=u.name,
-            role=u.role.value if u.role else "user",
+            role=u.role.value if u.role else "FREE",
             is_active=u.is_active,
             is_disabled=u.is_disabled,
             force_password_reset=u.force_password_reset if hasattr(u, 'force_password_reset') else False,
@@ -320,16 +320,16 @@ async def update_user(
         u.email = update_data.email
     if update_data.role is not None:
         role_value = _validate_role(update_data.role)
-        # Prevent removing the last super_admin
-        if u.role == Role.SUPER_ADMIN and role_value != Role.SUPER_ADMIN.value:
-            super_admin_count = db.query(func.count(User.id)).filter(
-                User.role == Role.SUPER_ADMIN,
+        # Prevent removing the last admin
+        if u.role == Role.ADMIN and role_value != Role.ADMIN.value:
+            admin_count = db.query(func.count(User.id)).filter(
+                User.role == Role.ADMIN,
                 User.is_disabled == False
             ).scalar()
-            if super_admin_count <= 1:
+            if admin_count <= 1:
                 raise HTTPException(
                     status_code=400,
-                    detail="Cannot remove the last super admin. Promote another user first."
+                    detail="Cannot remove the last admin. Promote another user first."
                 )
         u.role = Role(role_value)
     if update_data.is_active is not None:
@@ -468,26 +468,26 @@ async def change_user_role(
 
     new_role = _validate_role(role_data.role)
 
-    # Prevent removing the last super_admin
-    if u.role == Role.SUPER_ADMIN and new_role != Role.SUPER_ADMIN.value:
-        super_admin_count = db.query(func.count(User.id)).filter(
-            User.role == Role.SUPER_ADMIN,
+    # Prevent removing the last admin
+    if u.role == Role.ADMIN and new_role != Role.ADMIN.value:
+        admin_count = db.query(func.count(User.id)).filter(
+            User.role == Role.ADMIN,
             User.is_disabled == False
         ).scalar()
-        if super_admin_count <= 1:
+        if admin_count <= 1:
             raise HTTPException(
                 status_code=400,
-                detail="Cannot remove the last super admin. Promote another user first."
+                detail="Cannot remove the last admin. Promote another user first."
             )
 
-    # Only super_admin can promote to super_admin
-    if new_role == Role.SUPER_ADMIN.value and current_user.role != Role.SUPER_ADMIN:
+    # Only admins can promote to admin
+    if new_role == Role.ADMIN.value and current_user.role != Role.ADMIN:
         raise HTTPException(
             status_code=403,
-            detail="Only super admins can promote users to super admin"
+            detail="Only admins can promote users to admin"
         )
 
-    old_role = u.role.value if u.role else "user"
+    old_role = u.role.value if u.role else "FREE"
     u.role = Role(new_role)
     db.commit()
     db.refresh(u)
@@ -518,10 +518,10 @@ async def change_user_status(
     if u.id == current_user.id and status_data.is_disabled:
         raise HTTPException(status_code=400, detail="You cannot disable your own account")
 
-    # Prevent disabling the last admin/super_admin
-    if status_data.is_disabled and u.role in (Role.ADMIN, Role.SUPER_ADMIN):
+    # Prevent disabling the last admin
+    if status_data.is_disabled and u.role == Role.ADMIN:
         admin_count = db.query(func.count(User.id)).filter(
-            User.role.in_([Role.ADMIN, Role.SUPER_ADMIN]),
+            User.role == Role.ADMIN,
             User.is_disabled == False
         ).scalar()
         if admin_count <= 1:
@@ -557,9 +557,9 @@ async def disable_user(
     if disable_request.disable and u.id == current_user.id:
         raise HTTPException(status_code=400, detail="You cannot disable your own account")
 
-    if disable_request.disable and u.role in (Role.ADMIN, Role.SUPER_ADMIN):
+    if disable_request.disable and u.role == Role.ADMIN:
         admin_count = db.query(func.count(User.id)).filter(
-            User.role.in_([Role.ADMIN, Role.SUPER_ADMIN]),
+            User.role == Role.ADMIN,
             User.is_disabled == False
         ).scalar()
         if admin_count <= 1:
@@ -613,4 +613,4 @@ async def get_available_roles(
     current_user=Depends(get_current_admin),
 ):
     """Get all available roles."""
-    return [{"value": r.value, "label": r.value.replace("_", " ").title()} for r in Role]
+    return [{"value": r.value, "label": r.value.capitalize()} for r in Role]

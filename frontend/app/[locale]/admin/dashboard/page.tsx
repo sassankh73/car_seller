@@ -34,7 +34,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isAuthenticated || user?.role !== "admin") return;
+    if (!isAuthenticated || user?.role !== "ADMIN") return;
 
     const loadStats = async () => {
       try {
@@ -68,7 +68,7 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!isAuthenticated || user?.role !== "admin") {
+  if (!isAuthenticated || user?.role !== "ADMIN") {
     return (
       <main className="p-8 min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">

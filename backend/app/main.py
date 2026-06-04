@@ -44,7 +44,7 @@ def ensure_admin_user():
             email=admin_email,
             hashed_password=hash_password(admin_password),
             name="Admin",
-            role=Role.SUPER_ADMIN,
+            role=Role.ADMIN,
             is_active=True,
             is_disabled=False,
             is_superuser=True,
@@ -208,6 +208,6 @@ async def get_current_user_info(request: Request):
         id=user.id,
         email=user.email,
         name=user.name,
-        role=user.role.value if user.role else "free",
+        role=user.role.value if user.role else "FREE",
         is_active=user.is_active,
     )

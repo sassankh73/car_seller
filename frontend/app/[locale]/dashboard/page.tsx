@@ -208,7 +208,7 @@ export default function Dashboard() {
                 >
                   {t("navigation.billing")}
                 </Link>
-                {user?.role === "admin" && (
+                {user?.role === "ADMIN" && (
                   <Link
                     href={`/${locale}/admin/dashboard`}
                     className="text-sm font-medium text-accent-coral hover:text-accent-terracotta px-4 py-1.5 rounded-full transition-colors"

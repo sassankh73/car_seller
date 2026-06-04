@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: data.id,
           email: data.email,
           name: data.name,
-          role: data.role || "free",
+          role: data.role || "FREE",
           is_active: data.is_active ?? true,
         };
       }
@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: 0,
             email: data.email,
             name: data.name,
-            role: "free",
+            role: "FREE",
             is_active: true,
           });
         }
@@ -183,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: 0,
             email: data.email,
             name: data.name,
-            role: "free",
+            role: "FREE",
             is_active: true,
           });
         }

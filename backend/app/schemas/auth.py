@@ -66,7 +66,7 @@ class UserResponse(BaseModel):
     id: int
     email: str
     name: Optional[str] = None
-    role: str = "user"
+    role: str = "FREE"
     is_active: bool = True
 
     class Config:

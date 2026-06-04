@@ -33,7 +33,7 @@ interface UserDetail {
   force_password_reset?: boolean;
 }
 
-const ROLES = ["super_admin", "admin", "dealer", "user"];
+const ROLES = ["ADMIN", "PREMIUM", "FREE"];
 
 export default function AdminUsers() {
   const t = useTranslations("admin");
@@ -57,7 +57,7 @@ export default function AdminUsers() {
   const [editUser, setEditUser] = useState<UserDetail | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [editRole, setEditRole] = useState("user");
+  const [editRole, setEditRole] = useState("FREE");
   const [editPlan, setEditPlan] = useState("");
   const [editActive, setEditActive] = useState(true);
   const [editSaving, setEditSaving] = useState(false);
@@ -77,7 +77,7 @@ export default function AdminUsers() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isAuthenticated || (user?.role !== "admin" && user?.role !== "super_admin")) return;
+    if (!isAuthenticated || user?.role !== "ADMIN") return;
     loadUsers();
   }, [authLoading, isAuthenticated, user]);
 
@@ -126,7 +126,7 @@ export default function AdminUsers() {
     setEditName(u.name || "");
     setEditEmail(u.email);
     setEditRole(u.role);
-    setEditPlan(u.subscription_plan || "free");
+    setEditPlan(u.subscription_plan || "basic");
     setEditActive(u.is_active && !u.is_disabled);
     setShowEditModal(true);
   };
@@ -295,7 +295,7 @@ export default function AdminUsers() {
     );
   }
 
-  if (!isAuthenticated || (user?.role !== "admin" && user?.role !== "super_admin")) {
+  if (!isAuthenticated || user?.role !== "ADMIN") {
     return (
       <main className="p-8 min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -421,7 +421,7 @@ export default function AdminUsers() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{u.email}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{u.name || "-"}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${u.role === "super_admin" ? "bg-yellow-500/20 text-yellow-400" : u.role === "admin" ? "bg-purple-500/20 text-purple-400" : u.role === "dealer" ? "bg-blue-500/20 text-blue-400" : "bg-gray-500/20 text-gray-400"}`}>{u.role}</span>
+                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${u.role === "ADMIN" ? "bg-yellow-500/20 text-yellow-400" : u.role === "PREMIUM" ? "bg-purple-500/20 text-purple-400" : "bg-gray-500/20 text-gray-400"}`}>{u.role}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col gap-1">
@@ -439,7 +439,7 @@ export default function AdminUsers() {
                           <button onClick={() => handleViewUser(u.id)} className="text-indigo-400 hover:text-indigo-300">{t("view")}</button>
                           <button onClick={async () => { const data = await handleViewUser(u.id); if (data) openEditModal(data); }} className="text-blue-400 hover:text-blue-300">{t("edit")}</button>
                           <button onClick={async () => { const data = await handleViewUser(u.id); if (data) openPasswordModal(data); }} className="text-amber-400 hover:text-amber-300">{t("resetPassword")}</button>
-                          {u.role !== "super_admin" && u.id !== user?.id && (
+                          {u.role !== "ADMIN" && u.id !== user?.id && (
                             <button onClick={() => { setUserToDisable(u.id); setShowDisableConfirm(true); }} className={u.is_disabled ? "text-green-400 hover:text-green-300" : "text-red-400 hover:text-red-300"}>
                               {u.is_disabled ? t("enable") : t("disable")}
                             </button>
@@ -479,7 +479,7 @@ export default function AdminUsers() {
                 <button onClick={() => openEditModal(selectedUser)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">{t("editUser")}</button>
                 <button onClick={() => openPasswordModal(selectedUser)} className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm">{t("resetPassword")}</button>
                 <button onClick={() => setSelectedUser(null)} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">{t("close")}</button>
-                {selectedUser.role !== "super_admin" && selectedUser.id !== user?.id && (
+                {selectedUser.role !== "ADMIN" && selectedUser.id !== user?.id && (
                   <button onClick={() => { setUserToDisable(selectedUser.id); setShowDisableConfirm(true); }} className={`px-4 py-2 text-white rounded-lg text-sm ${selectedUser.is_disabled ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}>
                     {selectedUser.is_disabled ? t("enableUser") : t("disableUser")}
                   </button>
@@ -509,15 +509,15 @@ export default function AdminUsers() {
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">{t("role")}</label>
                   <select value={editRole} onChange={(e) => setEditRole(e.target.value)} className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                    {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                    {ROLES.map((r) => <option key={r} value={r}>{r === "ADMIN" ? "Admin" : r === "PREMIUM" ? "Premium" : "Free"}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">{t("subscriptionPlan")}</label>
                   <select value={editPlan} onChange={(e) => setEditPlan(e.target.value)} className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                    <option value="free">Free</option>
-                    <option value="pro">Pro</option>
-                    <option value="dealer">Dealer</option>
+                    <option value="basic">Basic</option>
+                    <option value="professional">Professional</option>
+                    <option value="enterprise">Enterprise</option>
                   </select>
                 </div>
                 <div className="flex items-center space-x-3">
