@@ -10,6 +10,7 @@ from PIL import Image
 from pydantic import BaseModel
 
 from ..services.image_processing import AICompositingService, StudioShadowProfile, get_compositing_service
+from ..services.image_upload import validate_and_convert_upload, ImageUploadError, ImageValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -268,12 +269,53 @@ async def process_image(
     # Generate unique ID for this generation
     generation_id = str(uuid.uuid4())
 
-    # Read uploaded image
+    # Read and preprocess the uploaded image through the compatibility layer
+    # This normalizes ALL formats to JPEG RGB with proper orientation,
+    # color profiles, and alpha handling. Never returns HTTP 500 for format issues.
     try:
         contents = await file.read()
-        original_image = Image.open(io.BytesIO(contents))
+        filename = file.filename or "upload.jpg"
+        mime_type = file.content_type
+
+        # Validate and convert the image through the universal compatibility layer
+        try:
+            converted_bytes, original_format, internal_format = validate_and_convert_upload(
+                file_content=contents,
+                filename=filename,
+                mime_type=mime_type,
+            )
+            logger.info(
+                "Image preprocessed: filename=%s, original_format=%s → %s",
+                filename, original_format, internal_format
+            )
+            original_image = Image.open(io.BytesIO(converted_bytes))
+            original_image.load()  # Ensure fully loaded
+        except ImageUploadError as e:
+            # Map ImageValidationError to proper HTTP status codes (never 500)
+            error_map = {
+                ImageValidationError.EMPTY_FILE: 400,
+                ImageValidationError.CORRUPTED: 400,
+                ImageValidationError.UNSUPPORTED_FORMAT: 415,
+                ImageValidationError.FILE_SIZE_EXCEEDED: 413,
+                ImageValidationError.RESOLUTION_TOO_SMALL: 400,
+                ImageValidationError.DIMENSIONS_TOO_LARGE: 413,
+                ImageValidationError.INVALID_IMAGE_CONTENT: 400,
+            }
+            status_code = error_map.get(e.error_type, 400)
+            logger.warning(
+                "Upload validation failed: filename=%s, error=%s, detail=%s",
+                filename, e.error_type.value, e.message
+            )
+            raise HTTPException(status_code=status_code, detail=e.message)
+
+    except HTTPException:
+        raise  # Re-raise our mapped 4xx errors
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to read image: {str(e)}")
+        logger.error("Unexpected error reading upload: %s", str(e)[:200])
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to process the uploaded image. Please ensure the file is a valid image."
+        )
 
     # Preserve original uploaded image to filesystem
     try:

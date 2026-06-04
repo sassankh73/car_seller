@@ -21,6 +21,7 @@ const ACCEPTED_TYPES = [
   "image/heif",
   "image/avif",
   "image/tiff",
+  "image/tif",
   "image/bmp",
 ];
 
@@ -48,7 +49,7 @@ export default function DragDropUpload({
     (file: File): string | null => {
       // Check file type
       const isTypeAllowed = ACCEPTED_TYPES.includes(file.type) || 
-        /\.(heic|heif|avif)$/i.test(file.name);
+        /\.(heic|heif|avif|tif)$/i.test(file.name);
       if (!isTypeAllowed) {
         return t("upload.errors.unsupportedFormat");
       }
