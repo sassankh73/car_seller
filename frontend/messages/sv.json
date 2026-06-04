@@ -195,6 +195,60 @@
   "dashboard": {
     "title": "AutoStudio Instrumentpanel",
     "subtitle": "Förvandla dina bildbilder till professionella studioskott",
+    "smartPhotoGuide": {
+      "title": "Smart Foto Guide",
+      "description": "Ta fordonsfoton med guided kamerahjälp för bästa AI-resultat",
+      "startGuidedCapture": "Starta Guided Capture",
+      "useExistingUpload": "eller använd befintlig uppladdning",
+      "bestResultsBanner": {
+        "title": "Bästa resultat här",
+        "subtitle": "De flesta användare får betydligt bättre AI-resultat genom att ta nya foton med sin mobilkamera. Vårt guidade capture-system hjälper dig få perfekt vinkel och positionering varje gång.",
+        "cta": "Starta Guided Capture",
+        "fallback": "Du kan fortfarande ladda upp befintliga foton om du vill."
+      },
+      "step": {
+        "stepOf": "Steg {{current}} av {{total}}",
+        "title_frontLeft45": "Fram Left 45°",
+        "title_side": "Sidovy",
+        "title_rearLeft45": "Bak Left 45°",
+        "title_rearOrFront": "Bak eller Fram",
+        "description_frontLeft45": "Positionera ditt fordon så att du ser fronten och vänster sida tydligt",
+        "description_side": "Ta hela längden på ditt fordon",
+        "description_rearLeft45": "Positionera ditt fordon så att du ser baken och vänster sida",
+        "description_rearOrFront": "Välj antingen bak eller fram för symmetri",
+        "requirement_fullVehicle": "Hela fordonet syns",
+        "requirement_allWheels": "Alla hjul syns",
+        "requirement_eyeLevel": "Kameran på ögonhöjd",
+        "requirement_centered": "Fordonet centrerat i bilden",
+        "requirement_aligned": "Fordonet justerat med ramen",
+        "requirement_symmetrical": "Symetrisk inramning"
+      },
+      "feedback": {
+        "validating": "Validerar position...",
+        "positioning": "Positionera fordonet i guiden",
+        "vehicleNotDetected": "Fordonet inte upptäckt. Se till att fordonet är i bilden.",
+        "tooFar": "Närmare för att fylla bilden",
+        "tooClose": "Tillbaka, fordonet är för nära",
+        "notCentered": "Centrera fordonet i bilden",
+        "raiseCamera": "Sänk kameran lite",
+        "lowerCamera": "Höj kameran lite",
+        "wheelsNotVisible": "Se till att alla hjul är synliga",
+        "horizonNotLevel": "Håll kameran nivå med marken",
+        "correctPosition": "Perfekt position! Tryck för att ta foto.",
+        "error": "Misslyckades att ta foto. Försök igen.",
+        "notProperlyPositioned": "Fordonet inte korrekt positionerat. Försök igen."
+      },
+      "captureButtons": {
+        "retake": "Gör om",
+        "capture": "Ta Foto"
+      },
+      "requirementsTitle": "Krav:"
+    },
+    "interiorPhotos": {
+      "title": "Innrfoton",
+      "description": "Innrfoton bearbetas inte av AutoStudio. Fotografera dem separat för din fordonlistning.",
+      "examples": "Exempel: Instrumentpanel, Styrehjul, Säten, Lastutrymme"
+    },
     "navigation": {
       "projects": "Projekt",
       "billing": "Fakturering",

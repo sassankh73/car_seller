@@ -78,14 +78,45 @@ class StudioShadowProfile:
     tire_shadow_opacity: float = 0.55
     """Maximum opacity of the tire contact shadow (0.0-1.0)."""
 
-    ao_shadow_opacity: float = 0.35
+    ao_shadow_opacity: float = 0.40
     """Maximum opacity of the ambient occlusion contact shadow (0.0-1.0)."""
 
     ao_shadow_width: float = 1.0
     """Width multiplier for the ambient occlusion shadow relative to vehicle width."""
 
-    ao_shadow_height: float = 0.04
+    ao_shadow_height: float = 0.05
     """Height of the AO shadow as a fraction of canvas height."""
+
+    vehicle_y_offset: float = 0.035
+    """Additional vertical offset as a fraction of canvas height (positive = lower, negative = higher).
+
+    This controls how far down the vehicle sits on the studio floor.
+    0.035 = 3.5% of canvas height (~38px on 1080, ~76px on 4K).
+    Use positive values to push the vehicle lower (better ground contact),
+    negative values if the vehicle overlaps the floor too much.
+    """
+
+    vehicle_scale: float = 1.0
+    """Scale multiplier applied to the vehicle type's base scale target.
+
+    1.0 = default size, 0.9 = 10% smaller, 1.1 = 10% larger.
+    Adjust to fine-tune vehicle proportions relative to the studio.
+    """
+
+    shadow_strength: float = 1.0
+    """Overall shadow strength multiplier. Scales all shadow opacities.
+
+    1.0 = default shadows, 1.3 = 30% stronger, 0.7 = 30% lighter.
+    Higher values make shadows more pronounced, lower values more subtle.
+    """
+
+    horizon_y: float = 0.45
+    """Vertical position of the studio horizon/vanishing point (0.0-1.0).
+
+    Used for perspective matching: when the horizon is lower (smaller value),
+    the camera is more at eye level and the vehicle should sit lower on the floor.
+    When the horizon is higher (larger value), the camera is looking down more.
+    """
 
 
 # Vehicle type classification thresholds based on aspect ratio (width / height)
@@ -273,8 +304,8 @@ class ContactShadowGenerator:
         shadow_layer = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
 
         # Tire contact shadow parameters — wider and more visible for grounding
-        tire_w = int(vehicle.size[0] * 0.09)  # ~9% of vehicle width per tire
-        tire_h = max(int(tire_w * 0.30), 5)   # Wider ellipse for more visible shadow
+        tire_w = int(vehicle.size[0] * 0.11)  # ~11% of vehicle width per tire (increased for better contact)
+        tire_h = max(int(tire_w * 0.35), 6)   # Wider ellipse for more visible shadow (was 0.30→0.35)
         blur = profile.tire_shadow_blur
         opacity = profile.tire_shadow_opacity
 
@@ -986,7 +1017,7 @@ class AICompositingService:
     # Vehicle scaling (type-aware)
     # -----------------------------------------------------------------------
 
-    def _scale_vehicle(self, vehicle: Image.Image, vehicle_type: Optional[str] = None) -> Image.Image:
+    def _scale_vehicle(self, vehicle: Image.Image, vehicle_type: Optional[str] = None, vehicle_scale: float = 1.0) -> Image.Image:
         """Scale vehicle to appropriate canvas width based on type, maintaining aspect ratio.
 
         Crops to the bounding box of non-transparent pixels first to remove
@@ -995,9 +1026,14 @@ class AICompositingService:
         SUVs scale to ~75%, sedans to ~70%, coupes to ~68%,
         wagons to ~72%, hatchbacks to ~65% of canvas width.
 
+        The vehicle_scale multiplier adjusts the base scale target for fine-tuning
+        the vehicle's visual proportion relative to the studio. Values < 1.0 make
+        the vehicle smaller (more studio visible), values > 1.0 make it larger.
+
         Args:
             vehicle: Vehicle image with transparent background (RGBA)
             vehicle_type: Optional pre-classified vehicle type. If None, will be classified.
+            vehicle_scale: Scale multiplier applied to the base scale target (default: 1.0).
 
         Returns:
             Scaled vehicle image (RGBA), cropped to vehicle extent
@@ -1019,8 +1055,9 @@ class AICompositingService:
         if vehicle_type is None:
             vehicle_type = self._classify_vehicle_type(vehicle)
 
-        # Get scale target based on vehicle type
-        width_ratio = VEHICLE_SCALE_TARGETS.get(vehicle_type, 0.70)
+        # Get scale target based on vehicle type, then apply vehicle_scale multiplier
+        base_width_ratio = VEHICLE_SCALE_TARGETS.get(vehicle_type, 0.70)
+        width_ratio = base_width_ratio * vehicle_scale
 
         # Calculate scale factor based on canvas width
         target_width = int(self.studio_width * width_ratio)
@@ -1039,8 +1076,8 @@ class AICompositingService:
 
         scaled = vehicle.resize((new_w, new_h), Image.LANCZOS)
         logger.debug(
-            "Vehicle scaled: %dx%d -> %dx%d (scale_factor=%.2f, type=%s)",
-            v_w, v_h, new_w, new_h, scale_factor, vehicle_type,
+            "Vehicle scaled: %dx%d -> %dx%d (scale_factor=%.2f, type=%s, vehicle_scale=%.2f, base_ratio=%.2f)",
+            v_w, v_h, new_w, new_h, scale_factor, vehicle_type, vehicle_scale, base_width_ratio,
         )
         return scaled
 
@@ -1097,8 +1134,8 @@ class AICompositingService:
         # ── Step 2: Classify vehicle type ──
         vehicle_type = self._classify_vehicle_type(car_no_bg)
 
-        # ── Step 3: Scale vehicle based on type ──
-        vehicle = self._scale_vehicle(car_no_bg, vehicle_type=vehicle_type)
+        # ── Step 3: Scale vehicle based on type (with profile scale multiplier) ──
+        vehicle = self._scale_vehicle(car_no_bg, vehicle_type=vehicle_type, vehicle_scale=shadow_profile.vehicle_scale)
         logger.debug(
             "Scaled vehicle mode=%s size=%s type=%s",
             vehicle.mode,
@@ -1152,63 +1189,83 @@ class AICompositingService:
         # below the wheels.
         lowest_contact_y = max(cy for _, cy in wheel_contacts)
 
-        # Tire compression: allow slight overlap (1-3px) for realistic grounding.
-        # Real tires compress slightly under vehicle weight, so the contact patch
-        # should overlap the floor line rather than hover above it.
-        TIRE_COMPRESSION_PX = 2
+        # ── PERCENTAGE-BASED GROUNDING OFFSETS ──
+        # All offsets are fractions of canvas height, ensuring consistent
+        # grounding regardless of resolution (1080p, 4K, etc.).
+        # On a 1080px canvas: 0.01 = 10.8px, 0.02 = 21.6px, 0.035 = 37.8px
 
-        # Large vehicles (SUVs, vans, pickups) need extra downward offset because:
-        # 1. Background removal tends to leave more artifacts around large wheel wells
-        # 2. Their greater visual weight requires deeper grounding to look realistic
-        LARGE_VEHICLE_EXTRA_OFFSET = {
-            VEHICLE_TYPE_SUV: 3,
-            VEHICLE_TYPE_WAGON: 2,
-            VEHICLE_TYPE_SEDAN: 0,
-            VEHICLE_TYPE_COUPE: 0,
-            VEHICLE_TYPE_HATCHBACK: 0,
+        canvas_h = self.studio_height
+
+        # Tire compression: fraction of canvas height for overlap with floor.
+        # Real tires compress under weight, so contact patch overlaps the floor.
+        # 0.006 = ~6.5px on 1080, ~13px on 4K
+        TIRE_COMPRESSION = 0.006
+
+        # Vehicle type grounding offsets (fraction of canvas height).
+        # All types get downward push to prevent "floating car" appearance.
+        # Heavier vehicles need more because bg removal leaves more artifacts
+        # around large wheel wells, and their visual weight needs deeper grounding.
+        VEHICLE_TYPE_OFFSET = {
+            VEHICLE_TYPE_SUV: 0.010,        # ~10.8px on 1080
+            VEHICLE_TYPE_WAGON: 0.008,      # ~8.6px on 1080
+            VEHICLE_TYPE_SEDAN: 0.006,      # ~6.5px on 1080
+            VEHICLE_TYPE_COUPE: 0.004,      # ~4.3px on 1080
+            VEHICLE_TYPE_HATCHBACK: 0.004,  # ~4.3px on 1080
         }
-        vehicle_extra_offset = LARGE_VEHICLE_EXTRA_OFFSET.get(vehicle_type, 0)
+        vehicle_type_offset = VEHICLE_TYPE_OFFSET.get(vehicle_type, 0.006)
+
+        # Profile Y offset: fraction of canvas height from studio config.
+        # Default 0.035 = ~37.8px on 1080, ~75.6px on 4K
+        profile_y_offset = shadow_profile.vehicle_y_offset
+
+        # Convert all offsets to pixels
+        tire_compression_px = int(canvas_h * TIRE_COMPRESSION)
+        vehicle_type_px = int(canvas_h * vehicle_type_offset)
+        profile_y_px = int(canvas_h * profile_y_offset)
 
         # Position vehicle so the lowest wheel contact point sits at floor_y,
-        # with tire compression offset allowing slight overlap for realism
-        car_y = floor_y - lowest_contact_y + TIRE_COMPRESSION_PX + vehicle_extra_offset
+        # with tire compression + vehicle type offset + profile offset
+        car_y = floor_y - lowest_contact_y + tire_compression_px + vehicle_type_px + profile_y_px
 
-        # Debug logging for vehicle placement diagnostics
-        logger.debug(
-            "Vehicle bottom: %d, Wheel contact y: %d, Floor y: %d, Final offset: %d",
-            v_h, lowest_contact_y, floor_y, car_y,
-        )
-
-        # Verify anchoring: the lowest contact point should be at or very near floor_y
-        # (allowing for the tire compression offset)
-        actual_floor_contact = car_y + lowest_contact_y
-        expected_contact = floor_y + TIRE_COMPRESSION_PX + vehicle_extra_offset
-        if abs(actual_floor_contact - expected_contact) > 2:
-            logger.warning(
-                "Vehicle anchoring off by %d pixels (expected floor_y=%d, got %d). "
-                "Adjusting position.",
-                abs(actual_floor_contact - expected_contact),
-                expected_contact,
-                actual_floor_contact,
-            )
-            # Force exact anchoring with compression offset
-            car_y = floor_y - lowest_contact_y + TIRE_COMPRESSION_PX + vehicle_extra_offset
-
-        logger.debug(
+        # Comprehensive debug logging for vehicle placement diagnostics
+        logger.info(
             "Vehicle placement: car_x=%d, car_y=%d, floor_y=%d, lowest_contact_y=%d, "
-            "vehicle_size=%s, vehicle_type=%s, tire_compression=%d, extra_offset=%d",
-            car_x, car_y, floor_y, lowest_contact_y, vehicle.size, vehicle_type,
-            TIRE_COMPRESSION_PX, vehicle_extra_offset,
+            "vehicle_h=%d, vehicle_w=%d, canvas_h=%d, vehicle_type=%s, "
+            "tire_compression=%.3f(%dpx), type_offset=%.3f(%dpx), profile_offset=%.3f(%dpx)",
+            car_x, car_y, floor_y, lowest_contact_y, v_h, v_w, canvas_h, vehicle_type,
+            TIRE_COMPRESSION, tire_compression_px,
+            vehicle_type_offset, vehicle_type_px,
+            profile_y_offset, profile_y_px,
         )
 
         # ── Step 8: Generate shadows ──
+        # Apply shadow_strength multiplier from profile to all shadow opacities.
+        # This allows per-studio tuning of overall shadow intensity without
+        # changing individual shadow parameters.
+        shadow_render_profile = StudioShadowProfile(
+            floor_y=shadow_profile.floor_y,
+            shadow_direction=shadow_profile.shadow_direction,
+            shadow_blur=shadow_profile.shadow_blur,
+            shadow_opacity=min(shadow_profile.shadow_opacity * shadow_profile.shadow_strength, 1.0),
+            shadow_length=shadow_profile.shadow_length,
+            tire_shadow_blur=shadow_profile.tire_shadow_blur,
+            tire_shadow_opacity=min(shadow_profile.tire_shadow_opacity * shadow_profile.shadow_strength, 1.0),
+            ao_shadow_opacity=min(shadow_profile.ao_shadow_opacity * shadow_profile.shadow_strength, 1.0),
+            ao_shadow_width=shadow_profile.ao_shadow_width,
+            ao_shadow_height=shadow_profile.ao_shadow_height,
+            vehicle_y_offset=shadow_profile.vehicle_y_offset,
+            vehicle_scale=shadow_profile.vehicle_scale,
+            shadow_strength=shadow_profile.shadow_strength,
+            horizon_y=shadow_profile.horizon_y,
+        )
+
         # 8a: Ambient occlusion shadow (dark contact band at vehicle base)
         ao_shadow = self.shadow_generator.generate_ambient_occlusion_shadow(
             vehicle=vehicle,
             wheel_contact_points=wheel_contacts,
             vehicle_offset=(car_x, car_y),
             canvas_size=canvas_size,
-            profile=shadow_profile,
+            profile=shadow_render_profile,
         )
 
         # 8b: Tire contact shadows (thin, dark patches under each wheel)
@@ -1217,7 +1274,7 @@ class AICompositingService:
             wheel_contact_points=wheel_contacts,
             vehicle_offset=(car_x, car_y),
             canvas_size=canvas_size,
-            profile=shadow_profile,
+            profile=shadow_render_profile,
         )
 
         # 8c: Body floor shadow (wider, softer shadow under the vehicle body)
@@ -1226,7 +1283,7 @@ class AICompositingService:
             wheel_contact_points=wheel_contacts,
             vehicle_offset=(car_x, car_y),
             canvas_size=canvas_size,
-            profile=shadow_profile,
+            profile=shadow_render_profile,
         )
 
         # ── Step 9: Composite final image ──
@@ -1270,7 +1327,117 @@ class AICompositingService:
             vehicle_type,
         )
 
+        # ── Step 10: Debug image (if enabled) ──
+        if os.getenv("DEBUG_COMPOSITION", "false").lower() == "true":
+            self._save_debug_image(
+                canvas=canvas,
+                vehicle=vehicle,
+                car_x=car_x,
+                car_y=car_y,
+                floor_y=floor_y,
+                wheel_contacts=wheel_contacts,
+                lowest_contact_y=lowest_contact_y,
+                tire_compression_px=tire_compression_px,
+                vehicle_type_px=vehicle_type_px,
+                profile_y_px=profile_y_px,
+                shadow_profile=shadow_profile,
+                vehicle_type=vehicle_type,
+            )
+
         return canvas
+
+    def _save_debug_image(
+        self,
+        canvas: Image.Image,
+        vehicle: Image.Image,
+        car_x: int,
+        car_y: int,
+        floor_y: int,
+        wheel_contacts: List[Tuple[int, int]],
+        lowest_contact_y: int,
+        tire_compression_px: int,
+        vehicle_type_px: int,
+        profile_y_px: int,
+        shadow_profile: StudioShadowProfile,
+        vehicle_type: str,
+    ) -> None:
+        """Save a debug image showing placement calculations.
+
+        Draws diagnostic overlays:
+        - Red line: floor position (floor_y)
+        - Green circles: wheel contact points
+        - Blue rectangle: vehicle bounding box
+        - Yellow line: lowest contact point Y
+        - Cyan line: horizon line (horizon_y)
+
+        Saved to STORAGE_DIR / debug / debug_composition_<timestamp>.png
+        """
+        import time
+        from pathlib import Path
+
+        debug_canvas = canvas.copy()
+
+        # Import ImageDraw for annotations
+        from PIL import ImageDraw
+        draw = ImageDraw.Draw(debug_canvas)
+
+        canvas_w, canvas_h = debug_canvas.size
+
+        # Red line: floor position
+        draw.line([(0, floor_y), (canvas_w, floor_y)], fill=(255, 0, 0, 200), width=3)
+        draw.text((10, floor_y - 20), f"floor_y={floor_y} ({shadow_profile.floor_y:.2f})", fill=(255, 0, 0, 255))
+
+        # Cyan line: horizon position
+        horizon_y = int(canvas_h * shadow_profile.horizon_y)
+        draw.line([(0, horizon_y), (canvas_w, horizon_y)], fill=(0, 255, 255, 200), width=2)
+        draw.text((10, horizon_y + 5), f"horizon_y={horizon_y} ({shadow_profile.horizon_y:.2f})", fill=(0, 255, 255, 255))
+
+        # Blue rectangle: vehicle bounding box
+        v_w, v_h = vehicle.size
+        draw.rectangle(
+            [(car_x, car_y), (car_x + v_w, car_y + v_h)],
+            outline=(0, 100, 255, 200),
+            width=2,
+        )
+        draw.text((car_x + 5, car_y + 5), f"vehicle ({v_w}x{v_h})", fill=(0, 100, 255, 255))
+
+        # Yellow line: lowest contact point Y (on canvas)
+        contact_canvas_y = car_y + lowest_contact_y
+        draw.line([(0, contact_canvas_y), (canvas_w, contact_canvas_y)], fill=(255, 255, 0, 200), width=2)
+        draw.text((10, contact_canvas_y + 5), f"lowest_contact_y={contact_canvas_y}", fill=(255, 255, 0, 255))
+
+        # Green circles: wheel contact points (on canvas)
+        for cx_rel, cy_rel in wheel_contacts:
+            cx_canvas = car_x + cx_rel
+            cy_canvas = car_y + cy_rel
+            r = 12
+            draw.ellipse(
+                [(cx_canvas - r, cy_canvas - r), (cx_canvas + r, cy_canvas + r)],
+                outline=(0, 255, 0, 255),
+                width=3,
+            )
+            draw.text((cx_canvas + r + 5, cy_canvas - 8), f"({cx_rel},{cy_rel})", fill=(0, 255, 0, 255))
+
+        # Summary text
+        total_offset = tire_compression_px + vehicle_type_px + profile_y_px
+        summary_lines = [
+            f"type={vehicle_type}  canvas={canvas_w}x{canvas_h}",
+            f"car_y={car_y}  floor_y={floor_y}  contact_y={lowest_contact_y}",
+            f"offsets: tire={tire_compression_px}px + type={vehicle_type_px}px + profile={profile_y_px}px = {total_offset}px",
+            f"vehicle_y_offset={shadow_profile.vehicle_y_offset:.3f}  shadow_strength={shadow_profile.shadow_strength:.2f}",
+        ]
+        y_text = 10
+        for line in summary_lines:
+            draw.text((canvas_w - 400, y_text), line, fill=(255, 255, 255, 255))
+            y_text += 18
+
+        # Save to debug directory
+        storage_dir = Path(__file__).parent.parent / "storage" / "debug"
+        storage_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = int(time.time())
+        debug_path = storage_dir / f"debug_composition_{timestamp}.png"
+        debug_canvas.save(debug_path, format="PNG")
+        logger.info("Debug composition image saved to %s", debug_path)
 
 
 # ============================================================================

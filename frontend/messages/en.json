@@ -195,6 +195,77 @@
   "dashboard": {
     "title": "AutoStudio Dashboard",
     "subtitle": "Transform your car photos into professional studio shots",
+    "smartPhotoGuide": {
+      "title": "Smart Photo Guide",
+      "description": "Capture vehicle photos with guided camera assistance for best AI results",
+      "startGuidedCapture": "Start Guided Capture",
+      "useExistingUpload": "or use existing upload",
+      "bestResultsBanner": {
+        "title": "Best Results Achieved Here",
+        "subtitle": "Most users achieve significantly better AI results by taking new photos using your mobile camera. Our guided capture system helps you get the perfect angle and positioning every time.",
+        "cta": "Start Guided Capture",
+        "fallback": "You can still upload existing photos if needed."
+      },
+      "step": {
+        "stepOf": "Step {{current}} of {{total}}",
+        "title_frontLeft45": "Front Left 45°",
+        "title_side": "Side View",
+        "title_rearLeft45": "Rear Left 45°",
+        "title_rearOrFront": "Rear or Front View",
+        "description_frontLeft45": "Position your vehicle so you can see the front and left side clearly",
+        "description_side": "Capture the full length of your vehicle",
+        "description_rearLeft45": "Position your vehicle so you can see the rear and left side",
+        "description_rearOrFront": "Choose either rear or front view for symmetry",
+        "requirement_fullVehicle": "Full vehicle visible",
+        "requirement_allWheels": "All wheels visible",
+        "requirement_eyeLevel": "Camera at eye level",
+        "requirement_centered": "Vehicle centered in frame",
+        "requirement_aligned": "Vehicle aligned with frame",
+        "requirement_symmetrical": "Symmetrical framing"
+      },
+      "feedback": {
+        "validating": "Validating position...",
+        "positioning": "Position your vehicle inside the guide",
+        "vehicleNotDetected": "Vehicle not detected. Ensure vehicle is in frame.",
+        "tooFar": "Move closer to fill the frame",
+        "tooClose": "Move back, vehicle is too close",
+        "notCentered": "Center the vehicle in the frame",
+        "raiseCamera": "Lower camera slightly",
+        "lowerCamera": "Raise camera slightly",
+        "wheelsNotVisible": "Ensure all wheels are visible",
+        "horizonNotLevel": "Keep camera level with the ground",
+        "correctPosition": "Perfect position! Tap to capture.",
+        "error": "Failed to capture image. Please try again.",
+        "notProperlyPositioned": "Vehicle not properly positioned. Please try again."
+      },
+      "captureButtons": {
+        "retake": "Retake",
+        "capture": "Capture Photo"
+      },
+      "requirementsTitle": "Requirements:"
+    },
+    "interiorPhotos": {
+      "title": "Interior Photos",
+      "description": "Interior photos are not processed by AutoStudio. Please photograph them separately for your vehicle listing.",
+      "examples": "Examples: Dashboard, Steering wheel, Seats, Cargo area"
+    },
+    "upload": {
+      "title": "Upload Vehicle Photo",
+      "clickToUpload": "Click to upload or drag and drop",
+      "dropImage": "Drop your image here",
+      "dragDropTitle": "Drag & drop your vehicle photo here",
+      "orClickToBrowse": "or click to browse",
+      "supportedFormats": "Supported formats:",
+      "maxSize": "Maximum file size: 50MB",
+      "clickToReplace": "Click to replace the image",
+      "errors": {
+        "unsupportedFormat": "Unsupported file format. Please upload a valid image.",
+        "corrupted": "The image file is corrupted or cannot be read.",
+        "resolutionTooSmall": "Image resolution is too small. Minimum is 640x480px.",
+        "fileSizeExceeded": "File size exceeds the maximum limit of {max}MB.",
+        "emptyFile": "The uploaded file is empty."
+      }
+    },
     "navigation": {
       "projects": "Projects",
       "billing": "Billing",

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import DragDropUpload from "@/components/DragDropUpload";
+import GuidedCapture from "@/components/GuidedCapture";
 import { useAuth, authFetch, getAuthHeaders } from "@/context/AuthContext";
 
 interface Project {
@@ -36,6 +37,8 @@ export default function Dashboard() {
     useState<string>("white_corner_light_epoxy");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [useGuidedCapture, setUseGuidedCapture] = useState(false);
+  const [capturedImages, setCapturedImages] = useState<any[]>([]);
   const [processing, setProcessing] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [enhanceWheels, setEnhanceWheels] = useState(true);
@@ -84,12 +87,25 @@ export default function Dashboard() {
     }
   };
 
+  // Helper function to convert blob to File for processing
+  const blobToFile = (blob: Blob, fileName: string): File => {
+    const type = blob.type || 'image/jpeg';
+    return new File([blob], fileName, { type });
+  };
+
   const handleDragDropFiles = (files: File[]) => {
     if (files.length > 0) {
       setFile(files[0]);
       const url = URL.createObjectURL(files[0]);
       setPreviewUrl(url);
     }
+  };
+
+  const handleCapturedImage = (blob: Blob) => {
+    const file = blobToFile(blob, `captured_${Date.now()}.jpg`);
+    setFile(file);
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
   };
 
   const statusSteps = ["uploading", "preparing", "applying", "finalizing"] as const;
@@ -252,7 +268,7 @@ export default function Dashboard() {
         </header>
 
         {/* Quick Action Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-8">
           {/* Upload Card */}
           <div className="bg-white rounded-2xl border border-black/[0.06] p-5 shadow-card hover:shadow-card-hover transition-shadow">
             <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center mb-3">
@@ -262,6 +278,18 @@ export default function Dashboard() {
             </div>
             <h3 className="text-sm font-semibold text-charcoal-900 mb-1">{t("cards.uploadPhoto.title")}</h3>
             <p className="text-xs text-charcoal-400 leading-relaxed">{t("cards.uploadPhoto.description")}</p>
+          </div>
+
+          {/* Interior Photos Card */}
+          <div className="bg-white rounded-2xl border border-black/[0.06] p-5 shadow-card hover:shadow-card-hover transition-shadow">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-3">
+              <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-semibold text-charcoal-900 mb-1">{t("interiorPhotos.title")}</h3>
+            <p className="text-xs text-charcoal-400 leading-relaxed">{t("interiorPhotos.description")}</p>
+            <p className="text-xs text-charcoal-500 mt-2 italic">{t("interiorPhotos.examples")}</p>
           </div>
 
           {/* Select Studio Card */}
@@ -328,24 +356,91 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Upload & Studio Selection */}
             <div className="lg:col-span-1 space-y-5">
-              {/* Upload Section with Drag & Drop */}
-              <div className="bg-white rounded-2xl border border-black/[0.06] p-6 shadow-card">
-                <h2 className="text-base font-semibold text-charcoal-900 mb-4">
-                  {t("upload.title")}
-                </h2>
-                <DragDropUpload
-                  onFilesSelected={handleDragDropFiles}
-                  previewUrl={previewUrl}
-                  t={t}
-                />
-              </div>
+              {/* Smart Photo Guide Section - Only show when not capturing */}
+              {!useGuidedCapture && (
+                <div className="mb-6">
+                  <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-2xl p-6 text-white">
+                    <div className="flex items-center gap-3 mb-3">
+                      <svg className="w-6 h-6 text-red-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      <h2 className="text-lg font-bold">{t("smartPhotoGuide.title")}</h2>
+                    </div>
+                    <p className="text-red-50 text-sm leading-relaxed mb-4">
+                      {t("smartPhotoGuide.description")}
+                    </p>
+                    <button
+                      onClick={() => setUseGuidedCapture(true)}
+                      className="bg-white text-red-600 px-6 py-2.5 rounded-xl font-semibold hover:bg-red-50 transition-colors shadow-lg text-sm"
+                    >
+                      {t("smartPhotoGuide.startGuidedCapture")}
+                    </button>
+                    <p className="text-xs text-red-100 mt-3">
+                      {t("smartPhotoGuide.useExistingUpload")}
+                    </p>
+                  </div>
+                </div>
+              )}
 
-              {/* Studio Selection */}
-              <div className="bg-white rounded-2xl border border-black/[0.06] p-6 shadow-card">
+              {/* Guided Capture Modal */}
+              {useGuidedCapture && (
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+                  <div className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl overflow-hidden">
+                    <button
+                      onClick={() => {
+                        setUseGuidedCapture(false);
+                        setCapturedImages([]);
+                      }}
+                      className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <div className="h-[60vh]">
+                      <GuidedCapture
+                        onCaptureComplete={(images) => {
+                          setCapturedImages(images);
+                          setUseGuidedCapture(false);
+                          if (images.length > 0) {
+                            const file = images[images.length - 1].blob as unknown as File;
+                            setFile(file);
+                            const url = URL.createObjectURL(file);
+                            setPreviewUrl(url);
+                          }
+                        }}
+                        onCancel={() => {
+                          setUseGuidedCapture(false);
+                          setCapturedImages([]);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Upload Section with Drag & Drop */}
+              {!useGuidedCapture && (
+                <div className="bg-white rounded-2xl border border-black/[0.06] p-6 shadow-card">
+                  <h2 className="text-base font-semibold text-charcoal-900 mb-4">
+                    {t("upload.title")}
+                  </h2>
+                  <DragDropUpload
+                    onFilesSelected={handleDragDropFiles}
+                    previewUrl={previewUrl}
+                    t={t}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Studio Selection */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-2xl border border-black/[0.06] p-6 shadow-card h-full">
                 <h2 className="text-base font-semibold text-charcoal-900 mb-4">
                   {t("studio.title")}
                 </h2>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                   {studios.map((studio) => (
                     <button
                       key={studio.key}
@@ -382,14 +477,9 @@ export default function Dashboard() {
                     </button>
                   ))}
                 </div>
-              </div>
 
-              {/* Options */}
-              <div className="bg-white rounded-2xl border border-black/[0.06] p-6 shadow-card">
-                <h2 className="text-base font-semibold text-charcoal-900 mb-4">
-                  {t("options.title")}
-                </h2>
-                <div className="space-y-3">
+                {/* Options */}
+                <div className="mt-6 space-y-3">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -440,89 +530,29 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Generate Button */}
-              <button
-                onClick={handleGenerate}
-                disabled={!file || processing}
-                className={`w-full py-3.5 rounded-xl font-semibold text-base transition-all ${
-                  !file || processing
-                    ? "bg-charcoal-200 text-charcoal-400 cursor-not-allowed"
-                    : "bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 hover:shadow-red-500/30"
-                }`}
-              >
-                {processing ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    {t(`generate.status.${processingStatus}`)}
-                  </span>
-                ) : (
-                  t("generate.button")
-                )}
-              </button>
-            </div>
-
-            {/* Preview & Results */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-2xl border border-black/[0.06] p-6 shadow-card h-full">
-                <h2 className="text-base font-semibold text-charcoal-900 mb-4">
-                  {t("preview.title")}
-                </h2>
-
-                {resultImage ? (
-                  <div className="space-y-4">
-                    <div className="relative aspect-video bg-warm-cream rounded-xl overflow-hidden">
-                      <Image
-                        src={resultImage}
-                        alt="Generated result"
-                        fill
-                        className="object-contain"
-                      />
-                    </div>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleDownload}
-                        className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors"
-                      >
-                        {t("preview.downloadImage")}
-                      </button>
-                      <button
-                        onClick={() => setResultImage(null)}
-                        className="px-6 py-3 bg-warm-cream hover:bg-warm-beige text-charcoal-600 rounded-xl font-medium transition-colors"
-                      >
-                        {t("preview.newGeneration")}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-96 bg-warm-cream/50 rounded-xl border border-dashed border-charcoal-200">
-                    {previewUrl ? (
-                      <div className="text-center">
-                        <Image
-                          src={previewUrl}
-                          alt="Preview"
-                          width={400}
-                          height={300}
-                          className="rounded-lg mx-auto mb-4 object-cover"
-                        />
-                        <p className="text-charcoal-400 text-sm">
-                          {t("preview.selectStudio")}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="text-center text-charcoal-300">
-                        <svg className="w-14 h-14 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
-                        </svg>
-                        <p className="text-charcoal-400">{t("preview.uploadToStart")}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Generate Button */}
+                <button
+                  onClick={handleGenerate}
+                  disabled={!file || processing}
+                  className={`w-full mt-6 py-3.5 rounded-xl font-semibold text-base transition-all ${
+                    !file || processing
+                      ? "bg-charcoal-200 text-charcoal-400 cursor-not-allowed"
+                      : "bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 hover:shadow-red-500/30"
+                  }`}
+                >
+                  {processing ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      {t(`generate.status.${processingStatus}`)}
+                    </span>
+                  ) : (
+                    t("generate.button")
+                  )}
+                </button>
               </div>
             </div>
           </div>
