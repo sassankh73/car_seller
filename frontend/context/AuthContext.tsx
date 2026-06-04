@@ -10,7 +10,9 @@ interface User {
   name?: string;
   role: string;
   is_active: boolean;
+  is_disabled?: boolean;
   force_password_reset?: boolean;
+  created_at?: string;
 }
 
 interface AuthContextType {
@@ -20,6 +22,9 @@ interface AuthContextType {
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
   changePassword: (email: string, currentPassword: string, newPassword: string) => Promise<boolean>;
+  changePasswordWithToken: (currentPassword: string, newPassword: string, confirmPassword: string) => Promise<{ success: boolean; requireRelogin?: boolean; detail?: string }>;
+  updateProfile: (name?: string, email?: string) => Promise<{ success: boolean; user?: User; detail?: string }>;
+  refreshUser: () => Promise<User | null>;
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
@@ -79,6 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: data.name,
           role: data.role || "FREE",
           is_active: data.is_active ?? true,
+          is_disabled: data.is_disabled ?? false,
+          force_password_reset: data.force_password_reset ?? false,
+          created_at: data.created_at,
         };
       }
       return null;
@@ -134,6 +142,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userData = await fetchCurrentUser(data.access_token);
         if (userData) {
           setUser(userData);
+          if (data.force_password_reset) {
+            setNeedsPasswordReset(true);
+          }
         } else {
           // Fallback: use what we have from the login response
           setUser({
@@ -225,6 +236,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const changePasswordWithToken = async (
+    currentPassword: string,
+    newPassword: string,
+    confirmPassword: string
+  ): Promise<{ success: boolean; requireRelogin?: boolean; detail?: string }> => {
+    try {
+      const response = await authFetch("/api/auth/change-password-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+          confirm_password: confirmPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setNeedsPasswordReset(false);
+        return { success: true, requireRelogin: data.require_relogin || false, detail: data.detail };
+      } else {
+        return { success: false, detail: data.detail || "Failed to change password" };
+      }
+    } catch {
+      return { success: false, detail: "Network error" };
+    }
+  };
+
+  const updateProfile = async (name?: string, email?: string): Promise<{ success: boolean; user?: User; detail?: string }> => {
+    try {
+      const response = await authFetch("/api/auth/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Refresh user data
+        const updatedUser = await fetchCurrentUser(localStorage.getItem("auth_token") || "");
+        if (updatedUser) {
+          setUser(updatedUser);
+          return { success: true, user: updatedUser };
+        }
+        return { success: true };
+      } else {
+        return { success: false, detail: data.detail || "Failed to update profile" };
+      }
+    } catch {
+      return { success: false, detail: "Network error" };
+    }
+  };
+
+  const refreshUser = async (): Promise<User | null> => {
+    const storedToken = localStorage.getItem("auth_token");
+    if (!storedToken) return null;
+
+    const userData = await fetchCurrentUser(storedToken);
+    if (userData) {
+      setUser(userData);
+    }
+    return userData;
+  };
+
   // Redirect unauthenticated users away from protected routes
   useEffect(() => {
     if (!loading && !user) {
@@ -260,6 +337,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         changePassword,
+        changePasswordWithToken,
+        updateProfile,
+        refreshUser,
         loading,
         error,
         isAuthenticated: !!user && !!token,

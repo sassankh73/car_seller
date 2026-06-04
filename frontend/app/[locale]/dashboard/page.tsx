@@ -208,6 +208,12 @@ export default function Dashboard() {
                 >
                   {t("navigation.billing")}
                 </Link>
+                <Link
+                  href={`/${locale}/dashboard/account`}
+                  className="text-sm font-medium text-charcoal-500 hover:text-red-500 px-4 py-1.5 rounded-full transition-colors"
+                >
+                  {t("navigation.account")}
+                </Link>
                 {user?.role === "ADMIN" && (
                   <Link
                     href={`/${locale}/admin/dashboard`}

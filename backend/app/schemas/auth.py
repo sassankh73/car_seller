@@ -68,30 +68,37 @@ class UserResponse(BaseModel):
     name: Optional[str] = None
     role: str = "FREE"
     is_active: bool = True
+    is_disabled: bool = False
+    force_password_reset: bool = False
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 
-class ForgotPasswordRequest(BaseModel):
-    """Request model for forgot password."""
+class ProfileUpdateRequest(BaseModel):
+    """Request model for updating user profile."""
 
-    email: str
+    name: Optional[str] = None
+    email: Optional[str] = None
 
     @field_validator("email")
     @classmethod
     def validate_email(cls, v):
-        """Basic email validation that allows internal domains like .local."""
-        if not v or "@" not in v:
-            raise ValueError("Invalid email address")
-        return v.strip().lower()
+        """Basic email validation."""
+        if v is not None:
+            if not v or "@" not in v:
+                raise ValueError("Invalid email address")
+            return v.strip().lower()
+        return v
 
-
-class ResetPasswordRequest(BaseModel):
-    """Request model for reset password."""
-
-    token: str
-    new_password: str
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v):
+        """Validate name is not empty if provided."""
+        if v is not None and len(v.strip()) == 0:
+            raise ValueError("Name cannot be empty")
+        return v.strip() if v else v
 
 
 class ChangePasswordRequest(BaseModel):
@@ -113,6 +120,88 @@ class ChangePasswordRequest(BaseModel):
     @classmethod
     def validate_new_password(cls, v):
         """Validate new password length."""
-        if len(v) < 6:
-            raise ValueError("Password must be at least 6 characters")
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
         return v
+
+
+class ChangePasswordWithTokenRequest(BaseModel):
+    """Request model for changing password using JWT token (no email required)."""
+
+    current_password: str
+    new_password: str
+    confirm_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v):
+        """Validate new password length and strength."""
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
+
+
+class ProfileResponse(BaseModel):
+    """Response model for user profile information."""
+
+    id: int
+    email: str
+    name: Optional[str] = None
+    role: str = "FREE"
+    is_active: bool = True
+    is_disabled: bool = False
+    created_at: Optional[datetime] = None
+    last_login: Optional[datetime] = None
+    password_changed_at: Optional[datetime] = None
+
+
+class SubscriptionInfoResponse(BaseModel):
+    """Response model for subscription information."""
+
+    plan_tier: Optional[str] = None
+    plan_name: Optional[str] = None
+    status: Optional[str] = None
+    current_period_start: Optional[datetime] = None
+    current_period_end: Optional[datetime] = None
+
+
+class UsageInfoResponse(BaseModel):
+    """Response model for usage information."""
+
+    generation_count: int = 0
+    generations_limit: int = 0
+    remaining: int = 0
+    extra_studios_used: int = 0
+    logo_branding_used: int = 0
+    premium_ai_uses: int = 0
+    four_k_exports: int = 0
+
+
+class AccountResponse(BaseModel):
+    """Full account response model combining profile, subscription, and usage."""
+
+    profile: ProfileResponse
+    subscription: Optional[SubscriptionInfoResponse] = None
+    usage: Optional[UsageInfoResponse] = None
+    security: dict = {}
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Request model for forgot password."""
+
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v):
+        """Basic email validation that allows internal domains like .local."""
+        if not v or "@" not in v:
+            raise ValueError("Invalid email address")
+        return v.strip().lower()
+
+
+class ResetPasswordRequest(BaseModel):
+    """Request model for reset password."""
+
+    token: str
+    new_password: str

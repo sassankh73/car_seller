@@ -210,4 +210,7 @@ async def get_current_user_info(request: Request):
         name=user.name,
         role=user.role.value if user.role else "FREE",
         is_active=user.is_active,
+        is_disabled=user.is_disabled,
+        force_password_reset=user.force_password_reset,
+        created_at=user.created_at,
     )

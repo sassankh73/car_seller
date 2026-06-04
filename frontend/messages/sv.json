@@ -183,6 +183,7 @@
       "projects": "Projekt",
       "billing": "Fakturering",
       "settings": "Inställningar",
+      "account": "Konto",
       "logout": "Logga ut"
     },
     "cards": {
@@ -585,6 +586,70 @@
       "disableUser": "Misslyckades att inaktivera användare",
       "enableUser": "Misslyckades att aktivera användare",
       "loadProjects": "Misslyckades att ladda användarprojekt"
+    }
+  },
+  "account": {
+    "title": "Kontoinställningar",
+    "subtitle": "Hantera din profil, lösenord och prenumeration",
+    "status": {
+      "active": "Aktiv",
+      "disabled": "Inaktiverad"
+    },
+    "never": "Aldrig",
+    "profile": {
+      "title": "Profil",
+      "subtitle": "Din personliga information",
+      "name": "Namn",
+      "email": "E-post",
+      "currentPlan": "Nuvarande plan",
+      "accountStatus": "Kontostatus",
+      "createdDate": "Skapad",
+      "edit": "Redigera",
+      "save": "Spara ändringar",
+      "saving": "Sparar...",
+      "updateSuccess": "Profil uppdaterad",
+      "updateError": "Misslyckades att uppdatera profil"
+    },
+    "password": {
+      "title": "Ändra lösenord",
+      "subtitle": "Uppdatera ditt lösenord för att hålla ditt konto säkert",
+      "current": "Nuvarande lösenord",
+      "new": "Nytt lösenord",
+      "confirm": "Bekräfta nytt lösenord",
+      "change": "Ändra lösenord",
+      "changing": "Ändrar...",
+      "mismatch": "De nya lösenorden matchar inte",
+      "tooShort": "Lösenordet måste vara minst 8 tecken",
+      "changeSuccess": "Lösenordet har ändrats. Logga in igen.",
+      "changeError": "Misslyckades att ändra lösenord"
+    },
+    "passwordStrength": {
+      "weak": "Svagt",
+      "medium": "Medel",
+      "strong": "Starkt"
+    },
+    "subscription": {
+      "title": "Prenumeration och plan",
+      "subtitle": "Din nuvarande plan och användningsdetaljer",
+      "plan": "Nuvarande plan",
+      "status": "Status",
+      "usage": "Månatlig användning",
+      "generations": "Genereringar",
+      "remaining": "Återstående",
+      "unlimited": "Obegränsad",
+      "upgradePrompt": "Uppgradera din plan för att låsa upp fler funktioner och högre gränser.",
+      "upgrade": "Uppgradera plan"
+    },
+    "security": {
+      "title": "Kontosäkerhet",
+      "subtitle": "Säkerhetsinformation om ditt konto",
+      "lastLogin": "Senaste inloggning",
+      "passwordChanged": "Lösenord senast ändrat",
+      "accountStatus": "Kontostatus"
+    },
+    "errors": {
+      "loadAccount": "Misslyckades att ladda kontoinformation",
+      "network": "Nätverksfel. Kontrollera din anslutning."
     }
   }
 }

@@ -183,6 +183,7 @@
       "projects": "Projects",
       "billing": "Billing",
       "settings": "Settings",
+      "account": "Account",
       "logout": "Logout"
     },
     "cards": {
@@ -585,6 +586,70 @@
       "disableUser": "Failed to disable user",
       "enableUser": "Failed to enable user",
       "loadProjects": "Failed to load user projects"
+    }
+  },
+  "account": {
+    "title": "Account Settings",
+    "subtitle": "Manage your profile, password, and subscription",
+    "status": {
+      "active": "Active",
+      "disabled": "Disabled"
+    },
+    "never": "Never",
+    "profile": {
+      "title": "Profile",
+      "subtitle": "Your personal information",
+      "name": "Name",
+      "email": "Email",
+      "currentPlan": "Current Plan",
+      "accountStatus": "Account Status",
+      "createdDate": "Created",
+      "edit": "Edit",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "updateSuccess": "Profile updated successfully",
+      "updateError": "Failed to update profile"
+    },
+    "password": {
+      "title": "Change Password",
+      "subtitle": "Update your password to keep your account secure",
+      "current": "Current Password",
+      "new": "New Password",
+      "confirm": "Confirm New Password",
+      "change": "Change Password",
+      "changing": "Changing...",
+      "mismatch": "New passwords do not match",
+      "tooShort": "Password must be at least 8 characters",
+      "changeSuccess": "Password changed successfully. Please log in again.",
+      "changeError": "Failed to change password"
+    },
+    "passwordStrength": {
+      "weak": "Weak",
+      "medium": "Medium",
+      "strong": "Strong"
+    },
+    "subscription": {
+      "title": "Subscription & Plan",
+      "subtitle": "Your current plan and usage details",
+      "plan": "Current Plan",
+      "status": "Status",
+      "usage": "Monthly Usage",
+      "generations": "Generations",
+      "remaining": "Remaining",
+      "unlimited": "Unlimited",
+      "upgradePrompt": "Upgrade your plan to unlock more features and higher limits.",
+      "upgrade": "Upgrade Plan"
+    },
+    "security": {
+      "title": "Account Security",
+      "subtitle": "Security information about your account",
+      "lastLogin": "Last Login",
+      "passwordChanged": "Password Last Changed",
+      "accountStatus": "Account Status"
+    },
+    "errors": {
+      "loadAccount": "Failed to load account information",
+      "network": "Network error. Please check your connection."
     }
   }
 }

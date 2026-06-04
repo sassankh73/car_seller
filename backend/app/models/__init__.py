@@ -82,6 +82,8 @@ class User(Base):
     is_disabled = Column(Boolean, default=False)
     is_superuser = Column(Boolean, default=False)
     force_password_reset = Column(Boolean, default=False)
+    last_login = Column(DateTime, nullable=True)
+    password_changed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
