@@ -45,6 +45,16 @@ export default function GuidedCapture({
   // Feedback messages
   const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
 
+  // Debug state for video element
+  const [videoDebug, setVideoDebug] = useState({
+    streaming: false,
+    readyState: 0,
+    videoWidth: 0,
+    videoHeight: 0,
+    paused: true,
+    srcObjectExists: false,
+  });
+
   // Check for camera availability on mount
   useEffect(() => {
     const checkCamera = async () => {
@@ -163,17 +173,111 @@ export default function GuidedCapture({
 
   // Render camera view when available
   if (state.hasPermission && state.isStreaming) {
+    console.log('[GuidedCapture] Rendering camera view - streaming active');
+    
+    // Log videoRef current state
+    if (videoRef.current) {
+      console.log('[GuidedCapture] videoRef.current:', videoRef.current);
+      console.log('[GuidedCapture] video.srcObject:', videoRef.current.srcObject);
+      console.log('[GuidedCapture] video.readyState:', videoRef.current.readyState);
+      console.log('[GuidedCapture] video.videoWidth:', videoRef.current.videoWidth);
+      console.log('[GuidedCapture] video.videoHeight:', videoRef.current.videoHeight);
+      console.log('[GuidedCapture] video.paused:', videoRef.current.paused);
+      console.log('[GuidedCapture] video.ended:', videoRef.current.ended);
+      console.log('[GuidedCapture] video.playbackRate:', videoRef.current.playbackRate);
+    } else {
+      console.log('[GuidedCapture] videoRef.current is null');
+    }
+    
     return (
       <div className="fixed inset-0 z-50 bg-black flex flex-col">
         {/* Camera preview */}
         <div className="relative flex-1 flex items-center justify-center overflow-hidden">
+          {/* Debug Panel */}
+          <div className="absolute top-4 left-4 z-40 bg-black/80 backdrop-blur text-white p-2 rounded-lg text-xs font-mono overflow-hidden max-w-[200px]">
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between">
+                <span className="text-gray-400">streaming:</span>
+                <span className={videoDebug.streaming ? "text-green-400" : "text-red-400"}>{videoDebug.streaming ? "true" : "false"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">readyState:</span>
+                <span className="text-blue-400">{videoDebug.readyState}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">width:</span>
+                <span className="text-yellow-400">{videoDebug.videoWidth}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">height:</span>
+                <span className="text-yellow-400">{videoDebug.videoHeight}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">paused:</span>
+                <span className={videoDebug.paused ? "text-red-400" : "text-green-400"}>{videoDebug.paused ? "true" : "false"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">srcObject:</span>
+                <span className={videoDebug.srcObjectExists ? "text-green-400" : "text-red-400"}>{videoDebug.srcObjectExists ? "exists" : "null"}</span>
+              </div>
+            </div>
+          </div>
+          
           <video
             ref={videoRef}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover z-0"
             autoPlay
             playsInline
             muted
             loop
+            onLoadedMetadata={() => {
+              if (videoRef.current) {
+                setVideoDebug({
+                  streaming: true,
+                  readyState: videoRef.current.readyState,
+                  videoWidth: videoRef.current.videoWidth,
+                  videoHeight: videoRef.current.videoHeight,
+                  paused: videoRef.current.paused,
+                  srcObjectExists: videoRef.current.srcObject !== null,
+                });
+              }
+            }}
+            onCanPlay={() => {
+              if (videoRef.current) {
+                setVideoDebug({
+                  streaming: true,
+                  readyState: videoRef.current.readyState,
+                  videoWidth: videoRef.current.videoWidth,
+                  videoHeight: videoRef.current.videoHeight,
+                  paused: videoRef.current.paused,
+                  srcObjectExists: videoRef.current.srcObject !== null,
+                });
+              }
+            }}
+            onPlay={() => {
+              if (videoRef.current) {
+                setVideoDebug({
+                  streaming: true,
+                  readyState: videoRef.current.readyState,
+                  videoWidth: videoRef.current.videoWidth,
+                  videoHeight: videoRef.current.videoHeight,
+                  paused: videoRef.current.paused,
+                  srcObjectExists: videoRef.current.srcObject !== null,
+                });
+              }
+            }}
+            onPause={() => {
+              if (videoRef.current) {
+                setVideoDebug({
+                  streaming: true,
+                  readyState: videoRef.current.readyState,
+                  videoWidth: videoRef.current.videoWidth,
+                  videoHeight: videoRef.current.videoHeight,
+                  paused: videoRef.current.paused,
+                  srcObjectExists: videoRef.current.srcObject !== null,
+                });
+              }
+            }}
           />
           <GuidedCaptureOverlay
             step={CAPTURE_STEPS[currentStepIndex]}

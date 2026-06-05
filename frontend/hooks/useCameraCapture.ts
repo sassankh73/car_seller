@@ -107,15 +107,46 @@ export function useCameraCapture() {
   // Start camera stream
   const startStream = useCallback(
     async (videoElement: HTMLVideoElement): Promise<boolean> => {
+      console.log('[useCameraCapture] startStream called');
+      
       if (!streamRef.current) {
+        console.log('[useCameraCapture] No existing stream, requesting permission...');
         const hasPermission = await requestPermission();
-        if (!hasPermission) return false;
+        if (!hasPermission) {
+          console.log('[useCameraCapture] Permission not granted');
+          return false;
+        }
+        console.log('[useCameraCapture] Permission granted, stream created');
       }
 
       if (videoElement && streamRef.current) {
+        console.log('[useCameraCapture] Assigning stream to video.srcObject');
         videoElement.srcObject = streamRef.current;
+        
+        // Log video element properties
+        console.log('[useCameraCapture] videoRef:', videoElement);
+        console.log('[useCameraCapture] video.srcObject:', videoElement.srcObject);
+        console.log('[useCameraCapture] video.readyState:', videoElement.readyState);
+        console.log('[useCameraCapture] video.videoWidth:', videoElement.videoWidth);
+        console.log('[useCameraCapture] video.videoHeight:', videoElement.videoHeight);
+        
         try {
           await videoElement.play();
+          console.log('[useCameraCapture] Video play() succeeded');
+          console.log('[useCameraCapture] video.readyState after play:', videoElement.readyState);
+          console.log('[useCameraCapture] video.videoWidth after play:', videoElement.videoWidth);
+          console.log('[useCameraCapture] video.videoHeight after play:', videoElement.videoHeight);
+          
+          // Wait a moment for dimensions to be available
+          setTimeout(() => {
+            console.log('[useCameraCapture] Final video dimensions:', {
+              width: videoElement.videoWidth,
+              height: videoElement.videoHeight,
+              readyState: videoElement.readyState,
+              playing: !videoElement.paused && !videoElement.ended,
+            });
+          }, 100);
+          
           setState((prev) => ({
             ...prev,
             isStreaming: true,
@@ -123,6 +154,7 @@ export function useCameraCapture() {
           }));
           return true;
         } catch (error) {
+          console.error('[useCameraCapture] Failed to start video stream:', error);
           setState((prev) => ({
             ...prev,
             isStreaming: false,
@@ -131,6 +163,7 @@ export function useCameraCapture() {
           return false;
         }
       }
+      console.log('[useCameraCapture] startStream: No video element or stream available');
       return false;
     },
     [requestPermission]

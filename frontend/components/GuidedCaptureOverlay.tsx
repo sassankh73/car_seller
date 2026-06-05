@@ -274,7 +274,7 @@ function VehicleGuideFrame({ positionType }: { positionType: CaptureStep['positi
   };
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
       <svg
         viewBox="0 0 500 400"
         className="h-full w-full max-w-lg max-h-[60vh]"
@@ -333,9 +333,9 @@ export default function GuidedCaptureOverlay({
   }, [feedback, isValidating]);
 
   return (
-    <div className="relative w-full h-full overflow-hidden">
+    <div className="relative w-full h-full pointer-events-none z-10">
       {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 p-4 z-10 flex justify-between items-center">
+      <div className="absolute top-0 left-0 right-0 p-4 z-20 flex justify-between items-center">
         <div className="flex flex-col">
           <span className="text-white font-medium text-sm bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
             {step.subtitle}
@@ -350,7 +350,7 @@ export default function GuidedCaptureOverlay({
       <VehicleGuideFrame positionType={step.positionType} />
 
       {/* Requirements display (bottom) */}
-      <div className="absolute bottom-32 left-0 right-0 px-4 z-10">
+      <div className="absolute bottom-24 left-0 right-0 px-4 z-20">
         <div className="bg-black/50 backdrop-blur-md rounded-xl p-4 mx-auto max-w-md">
           <h3 className="text-white font-medium text-sm mb-2">Requirements:</h3>
           <ul className="text-white/80 text-xs space-y-1">
@@ -377,12 +377,12 @@ export default function GuidedCaptureOverlay({
       </div>
 
       {/* Feedback indicator (bottom) */}
-      <div className="absolute bottom-4 left-0 right-0 px-4 z-10">
+      <div className="absolute bottom-4 left-0 right-0 px-4 z-20">
         <FeedbackIndicator feedback={currentFeedback} />
       </div>
 
       {/* Action buttons (bottom) */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 z-20 flex gap-3">
+      <div className="absolute bottom-0 left-0 right-0 p-4 z-30 flex gap-3">
         <button
           onClick={onRetake}
           className="flex-1 py-3 bg-black/60 backdrop-blur-md text-white font-medium rounded-xl hover:bg-black/70 transition-colors"
@@ -398,7 +398,7 @@ export default function GuidedCaptureOverlay({
       </div>
 
       {/* Step progress indicator */}
-      <div className="absolute top-20 left-0 right-0 px-4 z-10 flex justify-center gap-2">
+      <div className="absolute top-20 left-0 right-0 px-4 z-20 flex justify-center gap-2">
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
