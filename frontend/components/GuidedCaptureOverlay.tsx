@@ -75,7 +75,17 @@ export type FeedbackType =
   | 'lower-camera'
   | 'vehicle-detected'
   | 'vehicle-centered'
-  | 'vehicle-correct-position';
+  | 'vehicle-correct-position'
+  | 'validating'
+  | 'positioning'
+  | 'vehicle-not-detected'
+  | 'too-far'
+  | 'too-close'
+  | 'not-centered'
+  | 'wheels-not-visible'
+  | 'horizon-not-level'
+  | 'correct-position'
+  | 'error';
 
 export interface FeedbackMessage {
   type: FeedbackType;
@@ -317,18 +327,18 @@ export default function GuidedCaptureOverlay({
   onCapture: () => void;
   onRetake: () => void;
 }) {
-  const currentFeedback = useMemo(() => {
+  const currentFeedback = useMemo((): FeedbackMessage => {
     if (isValidating) {
       return {
         type: 'validating',
         message: 'Validating position...',
-        priority: 'medium' as const,
+        priority: 'medium',
       };
     }
     return feedback || {
       type: 'positioning',
       message: 'Position your vehicle inside the guide',
-      priority: 'high' as const,
+      priority: 'high',
     };
   }, [feedback, isValidating]);
 
@@ -382,7 +392,7 @@ export default function GuidedCaptureOverlay({
       </div>
 
       {/* Action buttons (bottom) */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 z-30 flex gap-3">
+      <div className="absolute bottom-0 left-0 right-0 p-4 z-30 flex gap-3 pointer-events-auto">
         <button
           onClick={onRetake}
           className="flex-1 py-3 bg-black/60 backdrop-blur-md text-white font-medium rounded-xl hover:bg-black/70 transition-colors"
@@ -403,9 +413,9 @@ export default function GuidedCaptureOverlay({
           <div
             key={i}
             className={`w-2 h-2 rounded-full transition-all ${
-              i === step.id.replace('step', '') - 1
+              i === parseInt(step.id.replace('step', ''), 10) - 1
                 ? 'w-6 bg-red-500'
-                : i < step.id.replace('step', '') - 1
+                : i < parseInt(step.id.replace('step', ''), 10) - 1
                 ? 'bg-green-500'
                 : 'bg-white/30'
             }`}
