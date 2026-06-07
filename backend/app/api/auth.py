@@ -177,7 +177,9 @@ def change_password_with_token(payload: ChangePasswordWithTokenRequest, request:
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    db = get_db_session(request) or next(get_db())
+    db = get_db_session(request)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database session unavailable")
 
     try:
         db_user = db.query(User).filter(User.id == user.id).first()
@@ -213,7 +215,9 @@ def get_account_info(request: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    db = get_db_session(request) or next(get_db())
+    db = get_db_session(request)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database session unavailable")
 
     try:
         db_user = db.query(User).filter(User.id == user.id).first()
@@ -267,7 +271,9 @@ def update_profile(payload: ProfileUpdateRequest, request: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    db = get_db_session(request) or next(get_db())
+    db = get_db_session(request)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database session unavailable")
 
     try:
         db_user = db.query(User).filter(User.id == user.id).first()
@@ -317,7 +323,9 @@ async def upload_logo(request: Request, file: UploadFile = File(...)):
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    db = get_db_session(request) or next(get_db())
+    db = get_db_session(request)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database session unavailable")
 
     try:
         db_user = db.query(User).filter(User.id == user.id).first()
@@ -372,7 +380,9 @@ def delete_logo(request: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    db = get_db_session(request) or next(get_db())
+    db = get_db_session(request)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database session unavailable")
 
     try:
         db_user = db.query(User).filter(User.id == user.id).first()
@@ -415,7 +425,9 @@ def update_logo_settings(
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    db = get_db_session(request) or next(get_db())
+    db = get_db_session(request)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database session unavailable")
 
     try:
         db_user = db.query(User).filter(User.id == user.id).first()
