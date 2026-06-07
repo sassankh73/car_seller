@@ -88,11 +88,11 @@ class TrailingSlashMiddleware(BaseHTTPMiddleware):
 
 app = FastAPI(title="AutoStudio AI Backend", redirect_slashes=False)
 
-# Configure logging to show full tracebacks at DEBUG level
+# Log level driven by LOG_LEVEL env var (default INFO); DEBUG only when ENVIRONMENT=development
+_log_level_name = os.getenv("LOG_LEVEL", "DEBUG" if os.getenv("ENVIRONMENT", "production").lower() == "development" else "INFO")
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=getattr(logging, _log_level_name.upper(), logging.INFO),
     format="%(asctime)s %(levelname)s %(name)s %(filename)s:%(lineno)d %(funcName)s: %(message)s",
-    force=True,
 )
 
 
