@@ -277,10 +277,21 @@ def init_db():
         _add_col_if_missing(conn, "projects", "original_format", "VARCHAR(50)", proj_cols)
 
 
+_ALLOWED_TABLES = {"users", "subscriptions", "usages", "projects"}
+_ALLOWED_COLS = {
+    "last_login", "password_changed_at", "is_disabled", "force_password_reset",
+    "logo_data", "logo_mime_type", "logo_placement", "logo_scale",
+    "watermark_applied", "original_format",
+}
+
+
 def _add_col_if_missing(conn, table: str, col: str, definition: str, existing: list):
     from sqlalchemy import text
+    if table not in _ALLOWED_TABLES or col not in _ALLOWED_COLS:
+        raise ValueError(f"_add_col_if_missing: disallowed table '{table}' or column '{col}'")
     if col not in existing:
-        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {definition}"))
+        # table and col are validated against allow-lists above — safe to interpolate
+        conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN "{col}" {definition}'))
         conn.commit()
         logger.info("Added column %s.%s", table, col)
 
