@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useAuth, authFetch } from "@/context/AuthContext";
 import { formatLocaleDate } from "@/utils/formatLocale";
+import DashboardNav from "@/components/DashboardNav";
 
 interface AccountData {
   profile: {
@@ -47,7 +47,6 @@ interface AccountData {
 export default function AccountPage() {
   const t = useTranslations("account");
   const commonT = useTranslations("common");
-  const dashboardT = useTranslations("dashboard");
   const notifT = useTranslations("notifications");
   const { user, logout, changePasswordWithToken, updateProfile } = useAuth();
   const locale = useLocale();
@@ -206,52 +205,8 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf8f5]">
-      {/* Header */}
-      <nav className="border-b border-stone-200 bg-white/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-8">
-              <Link href={`/${locale}`} className="text-xl font-bold text-stone-900">
-                AutoStudio AI
-              </Link>
-              <Link
-                href={`/${locale}/dashboard`}
-                className="text-stone-500 hover:text-stone-900 transition text-sm font-medium"
-              >
-                {dashboardT("navigation.projects")}
-              </Link>
-              <Link
-                href={`/${locale}/dashboard/billing`}
-                className="text-stone-500 hover:text-stone-900 transition text-sm font-medium"
-              >
-                {dashboardT("navigation.billing")}
-              </Link>
-              <Link
-                href={`/${locale}/dashboard/settings`}
-                className="text-stone-500 hover:text-stone-900 transition text-sm font-medium"
-              >
-                {dashboardT("navigation.settings")}
-              </Link>
-              <Link
-                href={`/${locale}/dashboard/account`}
-                className="text-stone-900 font-medium transition text-sm border-b-2 border-red-500 pb-1"
-              >
-                {dashboardT("navigation.account")}
-              </Link>
-            </div>
-            <div className="flex items-center space-x-4">
-              <LanguageSwitcher />
-              <button
-                onClick={logout}
-                className="text-stone-500 hover:text-stone-900 transition text-sm font-medium"
-              >
-                {dashboardT("navigation.logout")}
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-warm-cream">
+      <DashboardNav active="account" />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">

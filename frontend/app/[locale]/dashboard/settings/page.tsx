@@ -3,12 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useTranslations, useLocale } from "next-intl";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { authFetch, useAuth } from "@/context/AuthContext";
 import Spinner from "@/components/ui/Spinner";
+import DashboardNav from "@/components/DashboardNav";
 
 interface AccountData {
   profile: {
@@ -43,10 +42,8 @@ export default function SettingsPage() {
   const t = useTranslations("branding");
   const profileT = useTranslations("profile");
   const notificationT = useTranslations("notifications");
-  const dashboardT = useTranslations("dashboard");
   const commonT = useTranslations("common");
   const locale = useLocale();
-  const router = useRouter();
   const { updateProfile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -190,8 +187,8 @@ export default function SettingsPage() {
 
   if (accountLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-gray-400 text-center">
+      <div className="min-h-screen bg-warm-cream flex items-center justify-center">
+        <div className="text-stone-500 text-center">
           <Spinner size="lg" className="mx-auto mb-3" />
           <p>{commonT("loading")}</p>
         </div>
@@ -200,37 +197,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Header */}
-      <nav className="border-b border-gray-700 bg-gray-800/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-8">
-              <Link href={`/${locale}`} className="text-xl font-bold text-white">
-                AutoStudio AI
-              </Link>
-              <Link href={`/${locale}/dashboard`} className="text-gray-400 hover:text-white transition">
-                {dashboardT("navigation.projects")}
-              </Link>
-              <Link href={`/${locale}/dashboard/billing`} className="text-gray-400 hover:text-white transition">
-                {dashboardT("navigation.billing")}
-              </Link>
-              <Link href={`/${locale}/dashboard/settings`} className="text-white font-medium transition border-b-2 border-indigo-400 pb-1">
-                {dashboardT("navigation.settings")}
-              </Link>
-              <Link href={`/${locale}/dashboard/account`} className="text-gray-400 hover:text-white transition">
-                {dashboardT("navigation.account")}
-              </Link>
-            </div>
-            <div className="flex items-center space-x-4">
-              <LanguageSwitcher />
-              <Link href={`/${locale}`} className="text-indigo-400 hover:text-indigo-300 transition text-sm">
-                ← {commonT("backToHome")}
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-warm-cream">
+      <DashboardNav active="settings" />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         {error && (
@@ -241,15 +209,15 @@ export default function SettingsPage() {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
           {/* Branding Section */}
-          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+          <div className="bg-white rounded-xl border border-stone-200 p-6">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white mb-2">{t("title")}</h2>
-              <p className="text-gray-400">{t("description")}</p>
+              <h2 className="text-2xl font-bold text-stone-900 mb-2">{t("title")}</h2>
+              <p className="text-stone-500">{t("description")}</p>
             </div>
 
             {/* Plan Badge */}
             <div className="mb-6">
-              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-700 text-gray-300">
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-stone-100 text-stone-600">
                 {t("currentPlan")}: <span className="ml-2 capitalize">{planName}</span>
               </div>
             </div>
@@ -267,8 +235,8 @@ export default function SettingsPage() {
             )}
 
             {/* Logo Upload */}
-            <div className="border-t border-gray-700 pt-6">
-              <h3 className="text-lg font-semibold text-white mb-4">{t("logoUpload.title")}</h3>
+            <div className="border-t border-stone-200 pt-6">
+              <h3 className="text-lg font-semibold text-stone-900 mb-4">{t("logoUpload.title")}</h3>
 
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Upload Area */}
@@ -277,8 +245,8 @@ export default function SettingsPage() {
                     onClick={() => canUseLogo && fileInputRef.current?.click()}
                     className={`border-2 border-dashed rounded-lg p-6 text-center transition ${
                       canUseLogo
-                        ? "border-gray-600 hover:border-indigo-500 cursor-pointer"
-                        : "border-gray-700 opacity-50 cursor-not-allowed"
+                        ? "border-stone-300 hover:border-indigo-500 cursor-pointer"
+                        : "border-stone-200 opacity-50 cursor-not-allowed"
                     }`}
                   >
                     {logoPreview ? (
@@ -293,14 +261,14 @@ export default function SettingsPage() {
                         {canUseLogo && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handleRemoveLogo(); }}
-                            className="text-sm text-red-400 hover:text-red-300"
+                            className="text-sm text-red-500 hover:text-red-600"
                           >
                             {t("logoUpload.removeButton")}
                           </button>
                         )}
                       </div>
                     ) : (
-                      <div className="text-gray-400">
+                      <div className="text-stone-400">
                         <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
@@ -318,7 +286,7 @@ export default function SettingsPage() {
                     className="hidden"
                     disabled={!canUseLogo}
                   />
-                  <div className="mt-3 text-xs text-gray-500">
+                  <div className="mt-3 text-xs text-stone-400">
                     <p>{t("logoUpload.supportedFormats")}</p>
                     <p>{t("logoUpload.recommendedSize")}</p>
                   </div>
@@ -326,7 +294,7 @@ export default function SettingsPage() {
 
                 {/* Logo Placement */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-300 mb-3">{t("logoPlacement.title")}</h4>
+                  <h4 className="text-sm font-medium text-stone-700 mb-3">{t("logoPlacement.title")}</h4>
                   <div className="space-y-2">
                     {placementOptions.map((option) => (
                       <label key={option.value} className="flex items-center space-x-3 cursor-pointer">
@@ -336,20 +304,20 @@ export default function SettingsPage() {
                           value={option.value}
                           checked={logoPlacement === option.value}
                           onChange={(e) => handlePlacementChange(e.target.value)}
-                          className="w-4 h-4 text-indigo-600 bg-gray-700 border-gray-600 focus:ring-indigo-500"
+                          className="w-4 h-4 text-indigo-600 bg-stone-100 border-stone-300 focus:ring-indigo-500"
                           disabled={!canUseLogo}
                         />
-                        <span className="text-gray-300 text-sm">{option.label}</span>
+                        <span className="text-stone-700 text-sm">{option.label}</span>
                       </label>
                     ))}
                   </div>
 
                   {/* Logo Scale Slider */}
                   <div className="mt-4">
-                    <h4 className="text-sm font-medium text-gray-300 mb-2">{t("logoScale.title")}</h4>
-                    <p className="text-xs text-gray-500 mb-3">{t("logoScale.description")}</p>
+                    <h4 className="text-sm font-medium text-stone-700 mb-2">{t("logoScale.title")}</h4>
+                    <p className="text-xs text-stone-400 mb-3">{t("logoScale.description")}</p>
                     <div className="flex items-center space-x-3">
-                      <span className="text-xs text-gray-500 w-10">{t("logoScale.small")}</span>
+                      <span className="text-xs text-stone-400 w-10">{t("logoScale.small")}</span>
                       <input
                         type="range"
                         min={0.05}
@@ -358,19 +326,19 @@ export default function SettingsPage() {
                         value={logoScale}
                         onChange={(e) => handleScaleChange(parseFloat(e.target.value))}
                         disabled={!canUseLogo}
-                        className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
-                      <span className="text-xs text-gray-500 w-10 text-right">{t("logoScale.large")}</span>
+                      <span className="text-xs text-stone-400 w-10 text-right">{t("logoScale.large")}</span>
                     </div>
-                    <div className="mt-1 text-center text-xs text-gray-400">
+                    <div className="mt-1 text-center text-xs text-stone-500">
                       {Math.round(logoScale * 100)}%
                     </div>
                   </div>
 
                   {/* Preview Box */}
-                  <div className="mt-4 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
-                    <p className="text-xs text-gray-400 mb-2">{t("logoUpload.preview")}</p>
-                    <div className="relative w-full h-32 bg-gray-800 rounded border border-gray-600">
+                  <div className="mt-4 p-4 bg-stone-50 rounded-lg border border-stone-200">
+                    <p className="text-xs text-stone-400 mb-2">{t("logoUpload.preview")}</p>
+                    <div className="relative w-full h-32 bg-stone-100 rounded border border-stone-200">
                       {logoPreview ? (
                         <Image
                           src={logoPreview}
@@ -386,7 +354,7 @@ export default function SettingsPage() {
                           }`}
                         />
                       ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-xs">
+                        <div className="absolute inset-0 flex items-center justify-center text-stone-400 text-xs">
                           Upload logo to preview placement
                         </div>
                       )}
@@ -397,11 +365,11 @@ export default function SettingsPage() {
             </div>
 
             {/* Watermark Info */}
-            <div className="border-t border-gray-700 mt-6 pt-6">
+            <div className="border-t border-stone-200 mt-6 pt-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">{t("watermark.title")}</h3>
-                  <p className="text-gray-400 text-sm">{t("watermark.description")}</p>
+                  <h3 className="text-lg font-semibold text-stone-900 mb-1">{t("watermark.title")}</h3>
+                  <p className="text-stone-500 text-sm">{t("watermark.description")}</p>
                 </div>
                 {!hasWatermark ? (
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
@@ -417,27 +385,27 @@ export default function SettingsPage() {
           </div>
 
           {/* Profile Settings */}
-          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-            <h2 className="text-2xl font-bold text-white mb-6">{profileT("title")}</h2>
+          <div className="bg-white rounded-xl border border-stone-200 p-6">
+            <h2 className="text-2xl font-bold text-stone-900 mb-6">{profileT("title")}</h2>
 
             <div className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">{profileT("name")}</label>
+                  <label className="block text-sm font-medium text-stone-700 mb-2">{profileT("name")}</label>
                   <input
                     type="text"
                     value={profileName}
                     onChange={(e) => setProfileName(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">{profileT("email")}</label>
+                  <label className="block text-sm font-medium text-stone-700 mb-2">{profileT("email")}</label>
                   <input
                     type="email"
                     value={profileEmail}
                     onChange={(e) => setProfileEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -447,7 +415,7 @@ export default function SettingsPage() {
                 disabled={loading}
                 className={`px-6 py-3 rounded-lg font-semibold transition ${
                   loading
-                    ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                    ? "bg-stone-200 text-stone-400 cursor-not-allowed"
                     : "bg-indigo-600 hover:bg-indigo-700 text-white"
                 }`}
               >

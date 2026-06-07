@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
+import DashboardNav from "@/components/DashboardNav";
 import { useAuth, authFetch } from "@/context/AuthContext";
 import Spinner from "@/components/ui/Spinner";
 import { formatLocaleNumber, toFormatLocale } from "@/utils/formatLocale";
@@ -152,125 +151,72 @@ export default function BillingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-900">
-      {/* Navigation */}
-      <nav className="border-b border-gray-700 bg-gray-800/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-8">
-              <Link href={`/${locale}`} className="text-xl font-bold text-white">
-                AutoStudio AI
-              </Link>
-              <Link href={`/${locale}/dashboard`} className="text-gray-400 hover:text-white transition text-sm font-medium">
-                {commonT("dashboard") || "Dashboard"}
-              </Link>
-              <span className="text-white font-medium text-sm border-b-2 border-indigo-400 pb-1">
-                {t("title") || "Billing"}
-              </span>
-              <Link href={`/${locale}/dashboard/settings`} className="text-gray-400 hover:text-white transition text-sm font-medium">
-                {commonT("settings") || "Settings"}
-              </Link>
-              <Link href={`/${locale}/dashboard/account`} className="text-gray-400 hover:text-white transition text-sm font-medium">
-                {commonT("account") || "Account"}
-              </Link>
-            </div>
-            <div className="flex items-center space-x-4">
-              <LanguageSwitcher />
-              <Link href={`/${locale}/dashboard`} className="text-indigo-400 hover:text-indigo-300 transition text-sm">
-                ← {commonT("backToHome")}
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-warm-cream">
+      <DashboardNav active="billing" />
 
-      <div className="p-8">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <header className="mb-12">
-          <h1 className="text-4xl font-bold text-white mb-2">{t("title")}</h1>
-          <p className="text-gray-400">{t("subtitle")}</p>
+          <h1 className="text-4xl font-bold text-stone-900 mb-2">{t("title")}</h1>
+          <p className="text-stone-500">{t("subtitle")}</p>
         </header>
 
         {billingError && (
-          <div className="mb-6 bg-red-500/10 border border-red-500 rounded-xl p-4">
-            <p className="text-red-300 text-sm">{billingError}</p>
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-red-700 text-sm">{billingError}</p>
           </div>
         )}
 
         {/* Current Usage */}
         {usage && (
-          <section className="mb-12 bg-gray-800 rounded-xl p-6 border border-gray-700">
-            <h2 className="text-2xl font-semibold text-white mb-6">
+          <section className="mb-12 bg-white rounded-xl p-6 border border-stone-200 shadow-sm">
+            <h2 className="text-2xl font-semibold text-stone-900 mb-6">
               {t("currentUsage")}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-400">
+                <div className="text-3xl font-bold text-indigo-600">
                   {usage.remaining < 0 ? "∞" : usage.remaining}
                 </div>
-                <div className="text-sm text-gray-400 mt-1">
+                <div className="text-sm text-stone-500 mt-1">
                   {usage.generations_limit < 0
                     ? t("unlimited")
                     : `${usage.generation_count}/${usage.generations_limit}`}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-stone-400 mt-1">
                   {t("generations")}
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-400">
-                  {usage.extra_studios_used}
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  {t("extraStudios")}
-                </div>
+                <div className="text-3xl font-bold text-indigo-600">{usage.extra_studios_used}</div>
+                <div className="text-xs text-stone-400 mt-2">{t("extraStudios")}</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-400">
-                  {usage.logo_branding_used}
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  {t("logoBranding")}
-                </div>
+                <div className="text-3xl font-bold text-indigo-600">{usage.logo_branding_used}</div>
+                <div className="text-xs text-stone-400 mt-2">{t("logoBranding")}</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-400">
-                  {usage.premium_ai_uses}
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  {t("premiumAI")}
-                </div>
+                <div className="text-3xl font-bold text-indigo-600">{usage.premium_ai_uses}</div>
+                <div className="text-xs text-stone-400 mt-2">{t("premiumAI")}</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-400">
-                  {usage.four_k_exports}
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  {t("fourKExports")}
-                </div>
+                <div className="text-3xl font-bold text-indigo-600">{usage.four_k_exports}</div>
+                <div className="text-xs text-stone-400 mt-2">{t("fourKExports")}</div>
               </div>
             </div>
 
-            {/* Usage Progress Bar */}
             {usage.generations_limit > 0 && (
               <div className="mt-6">
-                <div className="flex justify-between text-sm text-gray-400 mb-2">
+                <div className="flex justify-between text-sm text-stone-500 mb-2">
                   <span>{t("monthlyGenerations")}</span>
-                  <span>
-                    {usage.generation_count} / {usage.generations_limit}
-                  </span>
+                  <span>{usage.generation_count} / {usage.generations_limit}</span>
                 </div>
-                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
                   <div
                     className={`h-full transition-all ${
-                      usage.generation_count / usage.generations_limit > 0.8
-                        ? "bg-red-500"
-                        : "bg-indigo-500"
+                      usage.generation_count / usage.generations_limit > 0.8 ? "bg-red-500" : "bg-indigo-500"
                     }`}
-                    style={{
-                      width: `${Math.min(100, (usage.generation_count / usage.generations_limit) * 100)}%`,
-                    }}
+                    style={{ width: `${Math.min(100, (usage.generation_count / usage.generations_limit) * 100)}%` }}
                   />
                 </div>
               </div>
@@ -280,13 +226,11 @@ export default function BillingPage() {
 
         {/* Billing Cycle Toggle */}
         <div className="flex justify-center mb-8">
-          <div className="bg-gray-800 rounded-lg p-1 inline-flex">
+          <div className="bg-stone-100 border border-stone-200 rounded-lg p-1 inline-flex">
             <button
               onClick={() => setBillingCycle("monthly")}
               className={`px-6 py-2 rounded-md font-medium transition ${
-                billingCycle === "monthly"
-                  ? "bg-indigo-600 text-white"
-                  : "text-gray-400 hover:text-white"
+                billingCycle === "monthly" ? "bg-indigo-600 text-white" : "text-stone-600 hover:text-stone-900"
               }`}
             >
               {t("billingCycle.monthly")}
@@ -294,9 +238,7 @@ export default function BillingPage() {
             <button
               onClick={() => setBillingCycle("yearly")}
               className={`px-6 py-2 rounded-md font-medium transition flex items-center ${
-                billingCycle === "yearly"
-                  ? "bg-indigo-600 text-white"
-                  : "text-gray-400 hover:text-white"
+                billingCycle === "yearly" ? "bg-indigo-600 text-white" : "text-stone-600 hover:text-stone-900"
               }`}
             >
               {t("billingCycle.yearly")}
@@ -322,10 +264,10 @@ export default function BillingPage() {
                 key={plan.tier}
                 className={`relative rounded-2xl p-8 border transition-all ${
                   isCurrentPlan
-                    ? "bg-indigo-600/20 border-indigo-500"
+                    ? "bg-indigo-50 border-indigo-400"
                     : isPopular
-                      ? "bg-gray-800 border-indigo-500 shadow-xl shadow-indigo-500/20"
-                      : "bg-gray-800 border-gray-700"
+                      ? "bg-white border-indigo-400 shadow-xl shadow-indigo-100"
+                      : "bg-white border-stone-200 shadow-sm"
                 }`}
               >
                 {isPopular && (
@@ -337,63 +279,45 @@ export default function BillingPage() {
                 )}
 
                 <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    {plan.name}
-                  </h3>
+                  <h3 className="text-2xl font-bold text-stone-900 mb-2">{plan.name}</h3>
                   <div className="flex items-baseline justify-center">
-                    <span className="text-4xl font-bold text-white">
-                      {price}
-                    </span>
-                    <span className="text-gray-400 ml-2">
-                      /
-                      {billingCycle === "monthly"
-                        ? t("billingCycle.monthly").toLowerCase()
-                        : t("billingCycle.yearly").toLowerCase()}
+                    <span className="text-4xl font-bold text-stone-900">{price}</span>
+                    <span className="text-stone-500 ml-2">
+                      /{billingCycle === "monthly" ? t("billingCycle.monthly").toLowerCase() : t("billingCycle.yearly").toLowerCase()}
                     </span>
                   </div>
                 </div>
 
                 <ul className="space-y-4 mb-8">
-                  <li className="flex items-center justify-between text-gray-300">
-                    <span>
-                      {formatNumber(plan.features.generations_per_month)}{" "}
-                      {t("billingCycle.monthly").toLowerCase()}
-                    </span>
+                  <li className="flex items-center justify-between text-stone-700">
+                    <span>{formatNumber(plan.features.generations_per_month)}{" "}{t("billingCycle.monthly").toLowerCase()}</span>
                     {getFeatureIcon(true, t("features.generationsPerMonth"))}
                   </li>
-                  <li className="flex items-center justify-between text-gray-300">
-                    <span>
-                      Max {plan.features.max_resolution.toUpperCase()}
-                    </span>
+                  <li className="flex items-center justify-between text-stone-700">
+                    <span>Max {plan.features.max_resolution.toUpperCase()}</span>
                     {getFeatureIcon(true, t("features.maxResolution"))}
                   </li>
-                  <li className="flex items-center justify-between text-gray-300">
+                  <li className="flex items-center justify-between text-stone-700">
                     <span>
                       {plan.features.studios_included.length}{" "}
-                      {t("plans.starter.studiosIncluded", {
-                        count: plan.features.studios_included.length,
-                      })}
+                      {t("plans.starter.studiosIncluded", { count: plan.features.studios_included.length })}
                     </span>
                     {getFeatureIcon(true, t("features.studiosIncluded"))}
                   </li>
-                  <li className="flex items-center justify-between text-gray-300">
+                  <li className="flex items-center justify-between text-stone-700">
                     <span>{t("plans.starter.logoBranding")}</span>
                     {getFeatureIcon(plan.features.logo_branding, t("plans.starter.logoBranding"))}
                   </li>
-                  <li className="flex items-center justify-between text-gray-300">
+                  <li className="flex items-center justify-between text-stone-700">
                     <span>{t("plans.starter.premiumAI")}</span>
                     {getFeatureIcon(plan.features.premium_ai, t("plans.starter.premiumAI"))}
                   </li>
-                  <li className="flex items-center justify-between text-gray-300">
+                  <li className="flex items-center justify-between text-stone-700">
                     <span>{t("plans.starter.priorityProcessing")}</span>
                     {getFeatureIcon(plan.features.priority_processing, t("plans.starter.priorityProcessing"))}
                   </li>
-                  <li className="flex items-center justify-between text-gray-300">
-                    <span>
-                      {t("plans.starter.support", {
-                        level: plan.features.support_level,
-                      })}
-                    </span>
+                  <li className="flex items-center justify-between text-stone-700">
+                    <span>{t("plans.starter.support", { level: plan.features.support_level })}</span>
                     {getFeatureIcon(true, t("features.support"))}
                   </li>
                 </ul>
@@ -403,7 +327,7 @@ export default function BillingPage() {
                   disabled={isCurrentPlan || checkoutLoading !== null}
                   className={`w-full py-3 rounded-lg font-semibold transition ${
                     isCurrentPlan
-                      ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                      ? "bg-stone-200 text-stone-400 cursor-not-allowed"
                       : "bg-indigo-600 hover:bg-indigo-700 text-white"
                   }`}
                 >
@@ -424,19 +348,15 @@ export default function BillingPage() {
         </section>
 
         {/* Manage Subscription */}
-        <section className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <section className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 className="text-xl font-semibold text-white mb-2">
-                {t("manageSubscription.title")}
-              </h3>
-              <p className="text-gray-400">
-                {t("manageSubscription.subtitle")}
-              </p>
+              <h3 className="text-xl font-semibold text-stone-900 mb-2">{t("manageSubscription.title")}</h3>
+              <p className="text-stone-500">{t("manageSubscription.subtitle")}</p>
             </div>
             <button
               onClick={handleManageSubscription}
-              className="mt-4 md:mt-0 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition"
+              className="mt-4 md:mt-0 px-6 py-3 bg-stone-100 hover:bg-stone-200 text-stone-900 rounded-lg font-medium transition border border-stone-200"
             >
               {t("manageSubscription.openPortal")}
             </button>
@@ -444,70 +364,43 @@ export default function BillingPage() {
         </section>
 
         {/* Usage-Based Billing Info */}
-        <section className="mt-12 bg-gray-800 rounded-xl p-6 border border-gray-700">
-          <h3 className="text-xl font-semibold text-white mb-4">
-            {t("usageBasedBilling.title")}
-          </h3>
-          <p className="text-gray-400 mb-6">
-            {t("usageBasedBilling.subtitle")}
-          </p>
+        <section className="mt-8 bg-white rounded-xl p-6 border border-stone-200 shadow-sm">
+          <h3 className="text-xl font-semibold text-stone-900 mb-4">{t("usageBasedBilling.title")}</h3>
+          <p className="text-stone-500 mb-6">{t("usageBasedBilling.subtitle")}</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center p-4 bg-gray-900 rounded-lg">
-              <div className="text-2xl font-bold text-indigo-400">{formatCurrency(29)}</div>
-              <div className="text-sm text-gray-400 mt-1">
-                {t("usageBasedBilling.perExtraGeneration")}
+            {[
+              { amount: 29, label: t("usageBasedBilling.perExtraGeneration") },
+              { amount: null, label: t("usageBasedBilling.perExtraStudio"), display: `${formatCurrency(29)}–${formatCurrency(49)}` },
+              { amount: 99, label: t("usageBasedBilling.perLogoBranding") },
+              { amount: 49, label: t("usageBasedBilling.perFourKExport") },
+            ].map((item, i) => (
+              <div key={i} className="text-center p-4 bg-stone-50 rounded-lg border border-stone-100">
+                <div className="text-2xl font-bold text-indigo-600">
+                  {item.display ?? formatCurrency(item.amount!)}
+                </div>
+                <div className="text-sm text-stone-500 mt-1">{item.label}</div>
               </div>
-            </div>
-            <div className="text-center p-4 bg-gray-900 rounded-lg">
-              <div className="text-2xl font-bold text-indigo-400">{formatCurrency(29)}–{formatCurrency(49)}</div>
-              <div className="text-sm text-gray-400 mt-1">
-                {t("usageBasedBilling.perExtraStudio")}
-              </div>
-            </div>
-            <div className="text-center p-4 bg-gray-900 rounded-lg">
-              <div className="text-2xl font-bold text-indigo-400">{formatCurrency(99)}</div>
-              <div className="text-sm text-gray-400 mt-1">
-                {t("usageBasedBilling.perLogoBranding")}
-              </div>
-            </div>
-            <div className="text-center p-4 bg-gray-900 rounded-lg">
-              <div className="text-2xl font-bold text-indigo-400">{formatCurrency(49)}</div>
-              <div className="text-sm text-gray-400 mt-1">
-                {t("usageBasedBilling.perFourKExport")}
-              </div>
-            </div>
+            ))}
           </div>
         </section>
 
         {/* FAQ */}
-        <section className="mt-12">
-          <h3 className="text-2xl font-semibold text-white mb-6">
-            {t("faq.title")}
-          </h3>
+        <section className="mt-8">
+          <h3 className="text-2xl font-semibold text-stone-900 mb-6">{t("faq.title")}</h3>
           <div className="space-y-4">
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <h4 className="text-lg font-medium text-white mb-2">
-                {t("faq.changePlans.question")}
-              </h4>
-              <p className="text-gray-400">{t("faq.changePlans.answer")}</p>
-            </div>
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <h4 className="text-lg font-medium text-white mb-2">
-                {t("faq.exceedLimit.question")}
-              </h4>
-              <p className="text-gray-400">{t("faq.exceedLimit.answer")}</p>
-            </div>
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <h4 className="text-lg font-medium text-white mb-2">
-                {t("faq.rollover.question")}
-              </h4>
-              <p className="text-gray-400">{t("faq.rollover.answer")}</p>
-            </div>
+            {[
+              { q: t("faq.changePlans.question"), a: t("faq.changePlans.answer") },
+              { q: t("faq.exceedLimit.question"), a: t("faq.exceedLimit.answer") },
+              { q: t("faq.rollover.question"), a: t("faq.rollover.answer") },
+            ].map((item, i) => (
+              <div key={i} className="bg-white rounded-lg p-6 border border-stone-200 shadow-sm">
+                <h4 className="text-lg font-medium text-stone-900 mb-2">{item.q}</h4>
+                <p className="text-stone-500">{item.a}</p>
+              </div>
+            ))}
           </div>
         </section>
-
       </div>
-      </div>
-    </main>
+    </div>
   );
 }

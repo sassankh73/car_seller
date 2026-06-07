@@ -3,8 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useTranslations, useLocale } from "next-intl";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useTranslations } from "next-intl";
+import DashboardNav from "@/components/DashboardNav";
 import DragDropUpload from "@/components/DragDropUpload";
 import GuidedCapture from "@/components/GuidedCapture";
 import { useAuth, authFetch, getAuthHeaders } from "@/context/AuthContext";
@@ -29,8 +29,7 @@ export default function Dashboard() {
   const t = useTranslations("dashboard");
   const commonT = useTranslations("common");
   const notificationT = useTranslations("notifications");
-  const locale = useLocale();
-  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [studios, setStudios] = useState<Studio[]>([]);
@@ -271,67 +270,7 @@ export default function Dashboard() {
 
   return (
     <main className="min-h-screen bg-warm-cream">
-      {/* Dashboard Navigation */}
-      <nav className="bg-white border-b border-charcoal-200/50 sticky top-0 z-40">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-6">
-              <Link href={`/${locale}`} className="flex items-center gap-0">
-                <span className="text-xl font-bold tracking-tight text-charcoal-900">Auto</span>
-                <span className="text-xl font-bold tracking-tight text-red-500">Studio</span>
-              </Link>
-              <div className="hidden sm:flex items-center gap-1">
-                <Link
-                  href={`/${locale}/dashboard`}
-                  className="text-sm font-medium text-white bg-red-500 hover:bg-red-600 px-4 py-1.5 rounded-full transition-colors"
-                >
-                  {t("navigation.projects")}
-                </Link>
-                <Link
-                  href={`/${locale}/dashboard/billing`}
-                  className="text-sm font-medium text-charcoal-500 hover:text-red-500 px-4 py-1.5 rounded-full transition-colors"
-                >
-                  {t("navigation.billing")}
-                </Link>
-                <Link
-                  href={`/${locale}/dashboard/settings`}
-                  className="text-sm font-medium text-charcoal-500 hover:text-red-500 px-4 py-1.5 rounded-full transition-colors"
-                >
-                  {t("navigation.settings")}
-                </Link>
-                <Link
-                  href={`/${locale}/dashboard/account`}
-                  className="text-sm font-medium text-charcoal-500 hover:text-red-500 px-4 py-1.5 rounded-full transition-colors"
-                >
-                  {t("navigation.account")}
-                </Link>
-                {user?.role === "ADMIN" && (
-                  <Link
-                    href={`/${locale}/admin/dashboard`}
-                    className="text-sm font-medium text-accent-coral hover:text-accent-terracotta px-4 py-1.5 rounded-full transition-colors"
-                  >
-                    Admin
-                  </Link>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <LanguageSwitcher />
-              {user && (
-                <span className="hidden md:block text-sm text-charcoal-400">
-                  {user.email}
-                </span>
-              )}
-              <button
-                onClick={logout}
-                className="text-sm text-charcoal-400 hover:text-red-500 transition-colors"
-              >
-                {t("navigation.logout")}
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <DashboardNav active="dashboard" />
 
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-8">
         {/* Header */}
