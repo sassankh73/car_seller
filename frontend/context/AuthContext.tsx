@@ -305,24 +305,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Redirect unauthenticated users away from protected routes
   useEffect(() => {
     if (!loading && !user) {
-      const protectedPaths = ["/dashboard", "/admin"];
       const currentPath = pathname || "";
-      if (protectedPaths.some((p) => currentPath.includes(p))) {
+      // Match /<locale>/dashboard/* or /<locale>/admin/*
+      const isProtected = /^\/[a-z]{2}(\/dashboard|\/admin)(\/|$)/.test(currentPath);
+      if (isProtected) {
         router.push(`/${locale}/auth/login`);
       }
     }
   }, [user, loading, pathname, router, locale]);
 
-  // Redirect authenticated users away from auth pages
+  // Redirect authenticated users away from auth pages (exact auth-page segments only)
   useEffect(() => {
     if (user && !loading) {
-      const authPaths = ["/login", "/register", "/forgot-password"];
       const currentPath = pathname || "";
-
-      if (
-        authPaths.some((p) => currentPath.includes(p)) &&
-        !currentPath.includes("/dashboard")
-      ) {
+      // Match /<locale>/auth/login, /register, /forgot-password — exact segment match
+      const isAuthPage = /^\/[a-z]{2}\/auth\/(login|register|forgot-password)(\/|$)/.test(currentPath);
+      if (isAuthPage) {
         router.push(`/${locale}/dashboard`);
       }
     }
