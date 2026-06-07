@@ -207,7 +207,7 @@
         "fallback": "Du kan fortfarande ladda upp befintliga foton om du vill."
       },
       "step": {
-        "stepOf": "Steg {{current}} av {{total}}",
+        "stepOf": "Steg {current} av {total}",
         "title_frontLeft45": "Fram Left 45°",
         "title_side": "Sidovy",
         "title_rearLeft45": "Bak Left 45°",
@@ -221,10 +221,14 @@
         "requirement_eyeLevel": "Kameran på ögonhöjd",
         "requirement_centered": "Fordonet centrerat i bilden",
         "requirement_aligned": "Fordonet justerat med ramen",
-        "requirement_symmetrical": "Symetrisk inramning"
+        "requirement_symmetrical": "Symmetrisk inramning",
+        "requirement_fullLength": "Hela fordonets längd synlig",
+        "requirement_rearAndSide": "Bak och sida synlig",
+        "requirement_insideFrame": "Hela fordonet innanför ramen",
+        "requirement_cleanBackground": "Ren bakgrund föredras"
       },
       "feedback": {
-        "validating": "Validerar position...",
+        "validating": "Tar foto...",
         "positioning": "Positionera fordonet i guiden",
         "vehicleNotDetected": "Fordonet inte upptäckt. Se till att fordonet är i bilden.",
         "tooFar": "Närmare för att fylla bilden",

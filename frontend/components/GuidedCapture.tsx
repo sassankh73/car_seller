@@ -1,15 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useCameraCapture } from '@/hooks/useCameraCapture';
 import GuidedCaptureOverlay, {
   CAPTURE_STEPS,
-  getFeedbackMessage,
   FeedbackMessage,
 } from './GuidedCaptureOverlay';
-import { useTranslations } from 'next-intl';
 
-// Result image data interface (matches CaptureResult from useCameraCapture)
 interface CapturedImage {
   image: string; // Data URL
   blob: Blob;
@@ -24,7 +22,7 @@ export default function GuidedCapture({
   onCaptureComplete: (images: CapturedImage[]) => void;
   onCancel: () => void;
 }) {
-  const t = useTranslations();
+  const t = useTranslations('dashboard');
   const {
     state,
     videoRef,
@@ -35,17 +33,12 @@ export default function GuidedCapture({
     reset,
   } = useCameraCapture();
 
-  // Step tracking
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [capturedImages, setCapturedImages] = useState<CapturedImage[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [validationResult, setValidationResult] = useState<any>(null);
-  const [isWaitingForValidation, setIsWaitingForValidation] = useState(false);
-
-  // Feedback messages
   const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
 
-  // Debug state for video element
+  // Only used when NEXT_PUBLIC_CAMERA_DEBUG=true
   const [videoDebug, setVideoDebug] = useState({
     streaming: false,
     readyState: 0,
@@ -71,15 +64,10 @@ export default function GuidedCapture({
     };
   }, [requestPermission, startStream, stopStream, reset]);
 
-  // Handle feedback based on validation
+  // Reset guide feedback when advancing to a new step
   useEffect(() => {
-    const message = getFeedbackMessage(
-      currentStepIndex,
-      isWaitingForValidation,
-      validationResult
-    );
-    setFeedback(message);
-  }, [currentStepIndex, isWaitingForValidation, validationResult]);
+    setFeedback(null);
+  }, [currentStepIndex]);
 
   const handleStartCamera = async () => {
     const hasPermission = await requestPermission();
@@ -90,69 +78,69 @@ export default function GuidedCapture({
 
   const handleCapture = async () => {
     if (isCapturing) return;
-
-    setIsWaitingForValidation(true);
-    setValidationResult(null);
+    setIsCapturing(true);
 
     try {
       const result = await captureImage();
-      setIsCapturing(true);
 
-      // Store captured image data for this step
-      setCapturedImages((prev) => [
-        ...prev,
-        {
-          image: result.image,
-          blob: result.blob,
-          stepIndex: currentStepIndex,
-          timestamp: Date.now(),
-        },
-      ]);
+      // Compute the new array immediately — do NOT rely on the state update
+      // settling before handleNextStep reads it. The stale-closure bug caused
+      // the 4th image to be missing: setCapturedImages schedules a re-render
+      // but does not mutate `capturedImages` in this closure.
+      const newImage: CapturedImage = {
+        image: result.image,
+        blob: result.blob,
+        stepIndex: currentStepIndex,
+        timestamp: Date.now(),
+      };
+      const nextImages = [...capturedImages, newImage];
+      setCapturedImages(nextImages);
 
-      // Simulate validation delay
+      console.log(
+        'Captured images:',
+        nextImages.length,
+        '— angle:',
+        CAPTURE_STEPS[currentStepIndex]?.title,
+      );
+
       setTimeout(() => {
-        setIsWaitingForValidation(false);
-        setIsCapturing(false); // reset so user can capture again
-        setValidationResult({
-          vehicleDetected: true,
-          vehicleSize: 0.55, // Simulate valid size
-          vehicleCentered: true,
-          wheelsVisible: true,
-          horizonLevel: true,
-          cameraAngle: 'flat',
-        });
-      }, 800);
+        setIsCapturing(false);
+        handleNextStep(nextImages);
+      }, 600);
     } catch (error) {
       console.error('Failed to capture:', error);
       setIsCapturing(false);
-      setIsWaitingForValidation(false);
       setFeedback({
         type: 'error',
-        message: 'Failed to capture image. Please try again.',
+        message: t('smartPhotoGuide.feedback.error'),
         priority: 'high',
       });
     }
   };
 
   const handleRetake = () => {
-    setValidationResult(null);
     setFeedback(null);
   };
 
-  const handleNextStep = () => {
+  // images is passed explicitly to avoid reading stale state in handleComplete
+  const handleNextStep = (images: CapturedImage[]) => {
     if (currentStepIndex < CAPTURE_STEPS.length - 1) {
       setCurrentStepIndex((prev) => prev + 1);
-      setValidationResult(null);
-      setFeedback(null);
     } else {
-      handleComplete();
+      handleComplete(images);
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = (images: CapturedImage[]) => {
+    console.log(
+      'Generated projects:',
+      images.length,
+      '— angles:',
+      images.map((img) => CAPTURE_STEPS[img.stepIndex]?.title).join(', '),
+    );
     stopStream();
     reset();
-    onCaptureComplete(capturedImages);
+    onCaptureComplete(images);
   };
 
   const updateVideoDebug = () => {
@@ -170,9 +158,6 @@ export default function GuidedCapture({
 
   // Single unified render — the <video> element is ALWAYS in the DOM so that
   // videoRef.current is non-null when startStream() is called from useEffect.
-  // Previously each UI state was a separate early return, which meant the video
-  // element only existed when isStreaming=true — making it impossible to ever
-  // call startStream() with a valid element (circular dependency).
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       <div className="relative flex-1 flex items-center justify-center overflow-hidden">
@@ -190,68 +175,72 @@ export default function GuidedCapture({
           onPause={updateVideoDebug}
         />
 
-        {/* Streaming active: vehicle guides + debug panel */}
+        {/* Streaming active: vehicle guides */}
         {state.isStreaming && (
           <>
-            <div className="absolute top-4 left-4 z-40 bg-black/80 backdrop-blur text-white p-2 rounded-lg text-xs font-mono overflow-hidden max-w-[200px]">
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">streaming:</span>
-                  <span className={videoDebug.streaming ? 'text-green-400' : 'text-red-400'}>
-                    {videoDebug.streaming ? 'true' : 'false'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">readyState:</span>
-                  <span className="text-blue-400">{videoDebug.readyState}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">width:</span>
-                  <span className="text-yellow-400">{videoDebug.videoWidth}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">height:</span>
-                  <span className="text-yellow-400">{videoDebug.videoHeight}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">paused:</span>
-                  <span className={videoDebug.paused ? 'text-red-400' : 'text-green-400'}>
-                    {videoDebug.paused ? 'true' : 'false'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">srcObject:</span>
-                  <span className={videoDebug.srcObjectExists ? 'text-green-400' : 'text-red-400'}>
-                    {videoDebug.srcObjectExists ? 'exists' : 'null'}
-                  </span>
+            {/* Debug diagnostics — explicit flag only, never shown to users in production */}
+            {process.env.NEXT_PUBLIC_CAMERA_DEBUG === 'true' && (
+              <div className="absolute top-4 left-4 z-40 bg-black/80 backdrop-blur text-white p-2 rounded-lg text-xs font-mono overflow-hidden max-w-[200px]">
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">streaming:</span>
+                    <span className={videoDebug.streaming ? 'text-green-400' : 'text-red-400'}>
+                      {videoDebug.streaming ? 'true' : 'false'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">readyState:</span>
+                    <span className="text-blue-400">{videoDebug.readyState}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">width:</span>
+                    <span className="text-yellow-400">{videoDebug.videoWidth}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">height:</span>
+                    <span className="text-yellow-400">{videoDebug.videoHeight}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">paused:</span>
+                    <span className={videoDebug.paused ? 'text-red-400' : 'text-green-400'}>
+                      {videoDebug.paused ? 'true' : 'false'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">srcObject:</span>
+                    <span className={videoDebug.srcObjectExists ? 'text-green-400' : 'text-red-400'}>
+                      {videoDebug.srcObjectExists ? 'exists' : 'null'}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
             <GuidedCaptureOverlay
               step={CAPTURE_STEPS[currentStepIndex]}
               feedback={feedback}
-              isValidating={isWaitingForValidation}
+              isValidating={isCapturing}
               onCapture={handleCapture}
               onRetake={handleRetake}
             />
           </>
         )}
 
-        {/* Permission granted but not yet streaming — shown only as a fallback */}
+        {/* Permission granted but not yet streaming — fallback */}
         {state.hasPermission && !state.isStreaming && !state.error && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 p-6">
             <div className="mb-8 text-center">
-              <h2 className="text-white text-xl font-bold mb-2">Camera Ready</h2>
+              <h2 className="text-white text-xl font-bold mb-2">
+                {t('smartPhotoGuide.step.title_frontLeft45')}
+              </h2>
               <p className="text-white/70 mb-6">
-                {currentStepIndex === 0
-                  ? 'Ready to start capturing your vehicle photos'
-                  : `Step ${currentStepIndex + 1} of 4 ready to go`}
+                {t('smartPhotoGuide.step.description_frontLeft45')}
               </p>
               <button
                 onClick={handleStartCamera}
                 className="bg-red-600 text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-red-700 transition-colors shadow-xl shadow-red-600/30"
               >
-                Start Camera
+                {t('smartPhotoGuide.startGuidedCapture')}
               </button>
             </div>
           </div>

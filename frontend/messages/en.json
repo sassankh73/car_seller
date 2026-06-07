@@ -207,7 +207,7 @@
         "fallback": "You can still upload existing photos if needed."
       },
       "step": {
-        "stepOf": "Step {{current}} of {{total}}",
+        "stepOf": "Step {current} of {total}",
         "title_frontLeft45": "Front Left 45°",
         "title_side": "Side View",
         "title_rearLeft45": "Rear Left 45°",
@@ -221,10 +221,14 @@
         "requirement_eyeLevel": "Camera at eye level",
         "requirement_centered": "Vehicle centered in frame",
         "requirement_aligned": "Vehicle aligned with frame",
-        "requirement_symmetrical": "Symmetrical framing"
+        "requirement_symmetrical": "Symmetrical framing",
+        "requirement_fullLength": "Full vehicle length visible",
+        "requirement_rearAndSide": "Rear and side visible",
+        "requirement_insideFrame": "Full vehicle inside frame",
+        "requirement_cleanBackground": "Clean background preferred"
       },
       "feedback": {
-        "validating": "Validating position...",
+        "validating": "Capturing photo...",
         "positioning": "Position your vehicle inside the guide",
         "vehicleNotDetected": "Vehicle not detected. Ensure vehicle is in frame.",
         "tooFar": "Move closer to fill the frame",

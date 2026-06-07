@@ -1,9 +1,15 @@
+import type { Viewport } from "next";
 import "../globals.css";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { locales } from "../../i18n/config";
 import AuthProviderWrapper from "../../components/AuthProviderWrapper";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));

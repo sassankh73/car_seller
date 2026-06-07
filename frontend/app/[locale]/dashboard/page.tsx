@@ -47,6 +47,7 @@ export default function Dashboard() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [processingStatus, setProcessingStatus] = useState<string>("idle");
+  const [batchLabel, setBatchLabel] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -163,6 +164,62 @@ export default function Dashboard() {
       clearInterval(statusInterval);
       setProcessing(false);
     }
+  };
+
+  const handleGenerateAll = async (images: { blob: Blob; stepIndex: number }[]) => {
+    if (images.length === 0) return;
+    setProcessing(true);
+    setResultImage(null);
+    setApiError(null);
+
+    for (let i = 0; i < images.length; i++) {
+      setBatchLabel(`Processing photo ${i + 1} of ${images.length}…`);
+
+      const imageFile = blobToFile(
+        images[i].blob,
+        `photo_step${images[i].stepIndex + 1}_${Date.now()}.jpg`
+      );
+      const formData = new FormData();
+      formData.append("file", imageFile);
+      formData.append("studio_key", selectedStudio);
+      formData.append("enhance_wheels", enhanceWheels.toString());
+      formData.append("enhance_paint", enhancePaint.toString());
+      formData.append("export_quality", exportQuality);
+
+      try {
+        const authHeaders = getAuthHeaders();
+        const response = await fetch("/api/studio/process", {
+          method: "POST",
+          headers: authHeaders,
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error(`Photo ${i + 1} failed:`, errorData.detail);
+          continue;
+        }
+
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        setResultImage(imageUrl);
+
+        const angleNames = ["Front Left 45°", "Side View", "Rear Left 45°", "Rear/Front View"];
+        const newProject: Project = {
+          id: `${Date.now()}-${i}`,
+          name: angleNames[images[i].stepIndex] ?? `Photo ${i + 1}`,
+          background: selectedStudio,
+          result_image: imageUrl,
+        };
+        setProjects((prev) => [newProject, ...prev]);
+      } catch (error) {
+        console.error(`Photo ${i + 1} processing error:`, error);
+      }
+    }
+
+    setBatchLabel(null);
+    setProcessing(false);
+    setProcessingStatus("completed");
   };
 
   const handleDownload = () => {
@@ -403,10 +460,15 @@ export default function Dashboard() {
                           setCapturedImages(images);
                           setUseGuidedCapture(false);
                           if (images.length > 0) {
-                            const file = images[images.length - 1].blob as unknown as File;
-                            setFile(file);
-                            const url = URL.createObjectURL(file);
-                            setPreviewUrl(url);
+                            // Show preview of last captured image in the upload form
+                            const lastFile = blobToFile(
+                              images[images.length - 1].blob,
+                              `photo_step${images[images.length - 1].stepIndex + 1}.jpg`
+                            );
+                            setFile(lastFile);
+                            setPreviewUrl(URL.createObjectURL(lastFile));
+                            // Auto-process all captured images
+                            handleGenerateAll(images);
                           }
                         }}
                         onCancel={() => {
@@ -547,7 +609,7 @@ export default function Dashboard() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      {t(`generate.status.${processingStatus}`)}
+                      {batchLabel ?? t(`generate.status.${processingStatus}`)}
                     </span>
                   ) : (
                     t("generate.button")

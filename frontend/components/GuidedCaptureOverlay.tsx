@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 
 // Capture step definitions
 export interface CaptureStep {
@@ -327,20 +328,63 @@ export default function GuidedCaptureOverlay({
   onCapture: () => void;
   onRetake: () => void;
 }) {
+  const t = useTranslations('dashboard');
+
+  // Translated step titles, subtitles, and requirements keyed by step id
+  const stepTitle: Record<string, string> = {
+    step1: t('smartPhotoGuide.step.title_frontLeft45'),
+    step2: t('smartPhotoGuide.step.title_side'),
+    step3: t('smartPhotoGuide.step.title_rearLeft45'),
+    step4: t('smartPhotoGuide.step.title_rearOrFront'),
+  };
+  const stepSubtitle: Record<string, string> = {
+    step1: t('smartPhotoGuide.step.stepOf', { current: 1, total: 4 }),
+    step2: t('smartPhotoGuide.step.stepOf', { current: 2, total: 4 }),
+    step3: t('smartPhotoGuide.step.stepOf', { current: 3, total: 4 }),
+    step4: t('smartPhotoGuide.step.stepOf', { current: 4, total: 4 }),
+  };
+  const stepRequirements: Record<string, string[]> = {
+    step1: [
+      t('smartPhotoGuide.step.requirement_fullVehicle'),
+      t('smartPhotoGuide.step.requirement_allWheels'),
+      t('smartPhotoGuide.step.requirement_eyeLevel'),
+      t('smartPhotoGuide.step.requirement_centered'),
+    ],
+    step2: [
+      t('smartPhotoGuide.step.requirement_fullLength'),
+      t('smartPhotoGuide.step.requirement_allWheels'),
+      t('smartPhotoGuide.step.requirement_aligned'),
+    ],
+    step3: [
+      t('smartPhotoGuide.step.requirement_rearAndSide'),
+      t('smartPhotoGuide.step.requirement_insideFrame'),
+      t('smartPhotoGuide.step.requirement_allWheels'),
+    ],
+    step4: [
+      t('smartPhotoGuide.step.requirement_fullVehicle'),
+      t('smartPhotoGuide.step.requirement_symmetrical'),
+      t('smartPhotoGuide.step.requirement_cleanBackground'),
+    ],
+  };
+
+  const displayTitle = stepTitle[step.id] ?? step.title;
+  const displaySubtitle = stepSubtitle[step.id] ?? step.subtitle;
+  const displayRequirements = stepRequirements[step.id] ?? step.requirements;
+
   const currentFeedback = useMemo((): FeedbackMessage => {
     if (isValidating) {
       return {
         type: 'validating',
-        message: 'Validating position...',
+        message: t('smartPhotoGuide.feedback.validating'),
         priority: 'medium',
       };
     }
     return feedback || {
       type: 'positioning',
-      message: 'Position your vehicle inside the guide',
+      message: t('smartPhotoGuide.feedback.positioning'),
       priority: 'high',
     };
-  }, [feedback, isValidating]);
+  }, [feedback, isValidating, t]);
 
   return (
     <div className="relative w-full h-full pointer-events-none z-10">
@@ -348,10 +392,10 @@ export default function GuidedCaptureOverlay({
       <div className="absolute top-0 left-0 right-0 p-4 z-20 flex justify-between items-center">
         <div className="flex flex-col">
           <span className="text-white font-medium text-sm bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
-            {step.subtitle}
+            {displaySubtitle}
           </span>
           <span className="text-white font-bold text-lg bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm mt-1">
-            {step.title}
+            {displayTitle}
           </span>
         </div>
       </div>
@@ -359,52 +403,83 @@ export default function GuidedCaptureOverlay({
       {/* Vehicle guide frame */}
       <VehicleGuideFrame positionType={step.positionType} />
 
-      {/* Requirements display (bottom) */}
-      <div className="absolute bottom-24 left-0 right-0 px-4 z-20">
-        <div className="bg-black/50 backdrop-blur-md rounded-xl p-4 mx-auto max-w-md">
-          <h3 className="text-white font-medium text-sm mb-2">Requirements:</h3>
-          <ul className="text-white/80 text-xs space-y-1">
-            {step.requirements.map((req, idx) => (
-              <li key={idx} className="flex items-start gap-2">
-                <svg
-                  className="w-3 h-3 text-green-400 mt-0.5 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span>{req}</span>
-              </li>
-            ))}
-          </ul>
+      {/* Mobile: feedback toast — floats above the control bar, pointer-events-none so it never blocks touches */}
+      <div className="sm:hidden absolute bottom-32 left-0 right-0 px-4 z-20 flex justify-center pointer-events-none">
+        <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm max-w-[260px] text-center ${
+          currentFeedback.priority === 'high'
+            ? 'bg-red-600/60 text-white'
+            : currentFeedback.priority === 'medium'
+            ? 'bg-amber-600/60 text-white'
+            : 'bg-green-700/60 text-white'
+        }`}>
+          {currentFeedback.message}
         </div>
       </div>
 
-      {/* Feedback indicator (bottom) */}
-      <div className="absolute bottom-4 left-0 right-0 px-4 z-20">
-        <FeedbackIndicator feedback={currentFeedback} />
-      </div>
+      {/* Bottom control bar — responsive */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-auto">
 
-      {/* Action buttons (bottom) */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 z-30 flex gap-3 pointer-events-auto">
-        <button
-          onClick={onRetake}
-          className="flex-1 py-3 bg-black/60 backdrop-blur-md text-white font-medium rounded-xl hover:bg-black/70 transition-colors"
-        >
-          Retake
-        </button>
-        <button
-          onClick={onCapture}
-          className="flex-[2] py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-600/30"
-        >
-          Capture Photo
-        </button>
+        {/* ── Mobile: transparent ghost overlay ── */}
+        <div className="sm:hidden">
+          {/* Ghost requirements — 40% opacity, no background */}
+          <div className="px-4 pt-2 pb-1">
+            <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
+              {displayRequirements.map((req, idx) => (
+                <div key={idx} className="flex items-center gap-1 min-w-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-white/40 flex-none" />
+                  <span className="text-white/40 text-[11px] leading-tight truncate">{req}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Touch-friendly buttons — large targets, subtle dark bg for contrast */}
+          <div className="px-4 pb-8 pt-2 flex gap-3">
+            <button
+              onClick={onRetake}
+              className="flex-1 py-4 bg-black/50 border border-white/20 text-white font-medium rounded-xl active:scale-[0.97] transition-transform text-sm"
+            >
+              {t('smartPhotoGuide.captureButtons.retake')}
+            </button>
+            <button
+              onClick={onCapture}
+              className="flex-[2] py-4 bg-red-600 text-white font-semibold rounded-xl active:scale-[0.97] transition-transform shadow-lg shadow-red-600/30 text-sm"
+            >
+              {t('smartPhotoGuide.captureButtons.capture')}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Tablet+: full dark card with requirements, feedback, buttons ── */}
+        <div className="hidden sm:block bg-black/80 backdrop-blur-md border-t border-white/10">
+          <div className="px-4 pt-3 pb-2">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+              {displayRequirements.map((req, idx) => (
+                <div key={idx} className="flex items-center gap-1.5 min-w-0">
+                  <div className="w-2 h-2 rounded-full border border-white/30 flex-none bg-white/10" />
+                  <span className="text-white/60 text-xs truncate">{req}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="px-4 pb-2">
+            <FeedbackIndicator feedback={currentFeedback} />
+          </div>
+          <div className="px-4 pb-5 flex gap-3">
+            <button
+              onClick={onRetake}
+              className="flex-1 py-3 bg-white/10 border border-white/20 text-white font-medium rounded-xl hover:bg-white/20 transition-colors"
+            >
+              {t('smartPhotoGuide.captureButtons.retake')}
+            </button>
+            <button
+              onClick={onCapture}
+              className="flex-[2] py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-600/30"
+            >
+              {t('smartPhotoGuide.captureButtons.capture')}
+            </button>
+          </div>
+        </div>
+
       </div>
 
       {/* Step progress indicator */}
