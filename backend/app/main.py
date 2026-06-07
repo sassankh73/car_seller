@@ -161,10 +161,13 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # Add trailing slash middleware BEFORE CORS
 app.add_middleware(TrailingSlashMiddleware)
 
-# CORS configuration to allow frontend requests
+# CORS configuration — explicit allow-list driven by ALLOWED_ORIGINS env var
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+_allowed_origins: list[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TODO: restrict to your frontend domain in production
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
