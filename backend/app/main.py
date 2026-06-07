@@ -9,14 +9,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
-from typing import List
 
 from .api import auth, projects, studio
 from .api.billing import routes as billing_routes
 from .api.admin import router as admin_router
 from .middleware.auth import authenticate_middleware, get_current_user
 from .models import init_db, SessionLocal, Role, User, engine
-from .api.studio import StudioOut
 from .schemas.auth import UserResponse
 from .services.auth import hash_password, get_user_by_email
 
@@ -69,19 +67,19 @@ def ensure_admin_user():
 
 class TrailingSlashMiddleware(BaseHTTPMiddleware):
     """
-    Middleware to normalize paths by stripping trailing slashes for API routes.
-    This prevents FastAPI from issuing redirects that leak internal hostnames.
+    Normalize paths by stripping trailing slashes for API routes, using exact-segment
+    matching to avoid false positives on similarly-named future routes.
     """
+
+    # Exact paths (without trailing slash) that should NOT be stripped
+    _skip_exact = {"/api/projects", "/api/studio", "/api/billing"}
 
     async def dispatch(self, request: Request, call_next):
         path = request.scope.get("path", "")
-        # Only normalize API routes that have trailing slash
-        # But skip paths that are meant to have trailing slashes (like /api/projects/)
-        skip_paths = ["/api/projects", "/api/studio", "/api/billing"]
-        if path.startswith("/api/") and path.endswith("/") and not any(path.startswith(sp) for sp in skip_paths):
-            # Strip trailing slash
-            normalized_path = path.rstrip("/")
-            request.scope["path"] = normalized_path
+        if path.startswith("/api/") and path.endswith("/"):
+            stripped = path.rstrip("/")
+            if stripped not in self._skip_exact:
+                request.scope["path"] = stripped
         response = await call_next(request)
         return response
 
@@ -204,12 +202,6 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
 app.include_router(studio.router, prefix="/api/studio", tags=["studio"])
-
-@app.get("/api/studio", response_model=List[StudioOut])
-def direct_studio_list():
-    """Direct route for /api/studio without trailing slash."""
-    return studio.list_studios()
-
 app.include_router(billing_routes.router, prefix="/api/billing", tags=["billing"])
 app.include_router(admin_router, prefix="/api", tags=["admin"])
 
