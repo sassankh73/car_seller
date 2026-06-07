@@ -135,6 +135,14 @@ async def on_startup():
         )
         raise RuntimeError("DATABASE_URL environment variable is required but not set.")
 
+    secret_key = os.getenv("SECRET_KEY", "")
+    if not secret_key or len(secret_key) < 32:
+        logger.critical(
+            "FATAL: SECRET_KEY is not set or is too short (must be >= 32 characters). "
+            "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
+        raise RuntimeError("SECRET_KEY environment variable must be set and at least 32 characters long.")
+
     # --- Test database connectivity ---
     try:
         from sqlalchemy import text

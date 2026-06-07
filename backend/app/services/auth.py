@@ -18,8 +18,8 @@ from sqlalchemy.orm import Session
 from app.models import User
 from app.schemas.auth import TokenPayload
 
-# JWT Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+# JWT Configuration — SECRET_KEY must be set via environment variable (no fallback)
+SECRET_KEY = os.getenv("SECRET_KEY", "")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
