@@ -25,13 +25,20 @@ logger = logging.getLogger(__name__)
 
 def ensure_admin_user():
     """
-    Ensure the bootstrap admin account exists.
+    Bootstrap admin account from environment variables.
 
-    Creates admin@autostudio.local with ADMIN role if it doesn't exist.
-    Password is read from the ADMIN_PASSWORD environment variable.
+    Requires ADMIN_EMAIL and ADMIN_PASSWORD to be explicitly set.
+    Skips creation (with a warning) if either is missing — never uses hardcoded credentials.
     """
-    admin_email = "admin@autostudio.local"
-    admin_password = os.getenv("ADMIN_PASSWORD", "AdminPass123")
+    admin_email = os.getenv("ADMIN_EMAIL", "").strip()
+    admin_password = os.getenv("ADMIN_PASSWORD", "").strip()
+
+    if not admin_email or not admin_password:
+        logger.warning(
+            "ADMIN_EMAIL or ADMIN_PASSWORD not set — skipping admin bootstrap. "
+            "Set both env vars and restart to create the admin account."
+        )
+        return
 
     db = SessionLocal()
     try:
@@ -53,8 +60,9 @@ def ensure_admin_user():
         db.commit()
         logger.info(f"Created admin user: {admin_email} with role ADMIN")
     except Exception as e:
-        logger.error(f"Failed to create admin user: {e}")
+        logger.critical(f"CRITICAL: Failed to create admin user — {e}")
         db.rollback()
+        raise
     finally:
         db.close()
 
