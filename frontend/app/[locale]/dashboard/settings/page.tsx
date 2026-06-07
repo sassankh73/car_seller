@@ -88,15 +88,16 @@ export default function SettingsPage() {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      alert("File size must be less than 2 MB");
+      setError(notificationT("logoFileTooLarge"));
       return;
     }
     const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml"];
     if (!validTypes.includes(file.type)) {
-      alert("Only PNG, JPG, and SVG files are supported");
+      setError(notificationT("logoFileTypeInvalid"));
       return;
     }
 
+    setError(null);
     // Show preview immediately
     const reader = new FileReader();
     reader.onloadend = () => setLogoPreview(reader.result as string);
@@ -112,12 +113,12 @@ export default function SettingsPage() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.detail || "Upload failed");
+        throw new Error(body.detail || notificationT("logoUploadError"));
       }
       const data = await res.json();
       setAccount((prev) => prev ? { ...prev, has_logo: data.has_logo } : prev);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Logo upload failed");
+      setError(err instanceof Error ? err.message : notificationT("logoUploadError"));
       setLogoPreview(null);
     } finally {
       setLogoUploading(false);
