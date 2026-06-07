@@ -13,6 +13,8 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "whsec_placeholder")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
+# In production, Stripe keys must be real — validated at startup via main.py
+
 # Re-export PlanTier from models so existing billing route imports continue to work
 from app.models import PlanTier  # noqa: E402
 

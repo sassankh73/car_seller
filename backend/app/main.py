@@ -151,6 +151,17 @@ async def on_startup():
         )
         raise RuntimeError("SECRET_KEY environment variable must be set and at least 32 characters long.")
 
+    environment = os.getenv("ENVIRONMENT", "production").lower()
+    if environment == "production":
+        stripe_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder")
+        stripe_webhook = os.getenv("STRIPE_WEBHOOK_SECRET", "whsec_placeholder")
+        if stripe_key in ("sk_test_placeholder", "") or stripe_webhook in ("whsec_placeholder", ""):
+            logger.critical(
+                "FATAL: STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET must be set in production. "
+                "Set ENVIRONMENT=development to bypass this check for local dev."
+            )
+            raise RuntimeError("Stripe keys are required in production mode.")
+
     # --- Test database connectivity ---
     try:
         from sqlalchemy import text
