@@ -97,12 +97,6 @@ export default function GuidedCapture({
       const nextImages = [...capturedImages, newImage];
       setCapturedImages(nextImages);
 
-      console.log(
-        'Captured images:',
-        nextImages.length,
-        '— angle:',
-        CAPTURE_STEPS[currentStepIndex]?.title,
-      );
 
       setTimeout(() => {
         setIsCapturing(false);
@@ -133,12 +127,6 @@ export default function GuidedCapture({
   };
 
   const handleComplete = (images: CapturedImage[]) => {
-    console.log(
-      'Generated projects:',
-      images.length,
-      '— angles:',
-      images.map((img) => CAPTURE_STEPS[img.stepIndex]?.title).join(', '),
-    );
     stopStream();
     reset();
     onCaptureComplete(images);
