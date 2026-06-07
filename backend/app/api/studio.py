@@ -419,7 +419,7 @@ async def process_image(
         )
     except Exception as e:
         logger.exception("Processing failed for studio %s, generation %s", studio_key, generation_id)
-        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Image processing failed. Please try again or contact support.")
 
     # Preserve transparent vehicle image (background-removed) to filesystem
     # Uses the cached transparent_image from the pipeline (avoids double rembg call)
