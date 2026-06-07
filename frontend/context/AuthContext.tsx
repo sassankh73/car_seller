@@ -145,17 +145,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (data.force_password_reset) {
             setNeedsPasswordReset(true);
           }
+          router.push(`/${locale}/dashboard`);
         } else {
-          // Fallback: use what we have from the login response
-          setUser({
-            id: 0,
-            email: data.email,
-            name: data.name,
-            role: "FREE",
-            is_active: true,
-          });
+          // /me failed — don't fabricate a fake user, show an error instead
+          localStorage.removeItem("auth_token");
+          setError("Could not load your account. Please try signing in again.");
+          setLoading(false);
         }
-        router.push(`/${locale}/dashboard`);
       } else {
         const data = await response.json();
         setError(data.detail || t("loginFailed"));
@@ -188,17 +184,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userData = await fetchCurrentUser(data.access_token);
         if (userData) {
           setUser(userData);
+          router.push(`/${locale}/dashboard`);
         } else {
-          // Fallback: use what we have from the register response
-          setUser({
-            id: 0,
-            email: data.email,
-            name: data.name,
-            role: "FREE",
-            is_active: true,
-          });
+          // /me failed — don't fabricate a fake user, show an error instead
+          localStorage.removeItem("auth_token");
+          setError("Could not load your account. Please try signing in again.");
+          setLoading(false);
         }
-        router.push(`/${locale}/dashboard`);
       } else {
         const data = await response.json();
         setError(data.detail || t("registerFailed"));
