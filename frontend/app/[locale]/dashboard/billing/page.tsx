@@ -51,13 +51,13 @@ export default function BillingPage() {
   const { user, isAuthenticated } = useAuth();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
-  // Currency formatter based on locale
-  const formatCurrency = (amount: number) => {
-    if (locale === "sv") {
-      return `${amount} kr`;
-    }
-    return `${amount} SEK`;
-  };
+  // Always use SEK ISO code for unambiguous currency display regardless of UI locale
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat(locale === "sv" ? "sv-SE" : "en-US", {
+      style: "currency",
+      currency: "SEK",
+      maximumFractionDigits: 0,
+    }).format(amount);
 
   useEffect(() => {
     // Load plans (public endpoint)
