@@ -461,9 +461,9 @@ export default function AccountPage() {
 
               <button
                 type="submit"
-                disabled={passwordSaving || !currentPassword || !newPassword || !confirmPassword}
+                disabled={passwordSaving || !currentPassword || !newPassword || !confirmPassword || newPassword.length < 8}
                 className={`px-5 py-2.5 rounded-lg font-medium text-sm transition ${
-                  passwordSaving || !currentPassword || !newPassword || !confirmPassword
+                  passwordSaving || !currentPassword || !newPassword || !confirmPassword || newPassword.length < 8
                     ? "bg-stone-300 text-stone-500 cursor-not-allowed"
                     : "bg-red-600 hover:bg-red-700 text-white"
                 }`}
