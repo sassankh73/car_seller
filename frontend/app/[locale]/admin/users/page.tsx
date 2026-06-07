@@ -35,6 +35,13 @@ interface UserDetail {
   force_password_reset?: boolean;
 }
 
+interface Project {
+  id: number;
+  name: string;
+  studio_key?: string;
+  created_at?: string;
+}
+
 const ROLES = ["ADMIN", "PREMIUM", "FREE"];
 
 export default function AdminUsers() {
@@ -63,6 +70,11 @@ export default function AdminUsers() {
   const [editPlan, setEditPlan] = useState("");
   const [editActive, setEditActive] = useState(true);
   const [editSaving, setEditSaving] = useState(false);
+
+  // Projects Modal
+  const [showProjectsModal, setShowProjectsModal] = useState(false);
+  const [projectsModalUser, setProjectsModalUser] = useState<string | null>(null);
+  const [projectsList, setProjectsList] = useState<Project[]>([]);
 
   // Password Reset Modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -271,12 +283,14 @@ export default function AdminUsers() {
     }
   };
 
-  const handleViewProjects = async (userId: number) => {
+  const handleViewProjects = async (userId: number, userEmail: string) => {
     try {
       const response = await authFetch(`/api/admin/users/${userId}/projects`);
       if (!response.ok) throw new Error("Failed to load projects");
-      const projects = await response.json();
-      alert(projects.length > 0 ? projects.map((p: any) => p.name).join(", ") : t("noProjects"));
+      const projects: Project[] = await response.json();
+      setProjectsList(projects);
+      setProjectsModalUser(userEmail);
+      setShowProjectsModal(true);
     } catch (error: any) {
       setError(error.message || t("errors.loadProjects"));
     }
@@ -440,7 +454,7 @@ export default function AdminUsers() {
                               {u.is_disabled ? t("enable") : t("disable")}
                             </button>
                           )}
-                          <button onClick={() => handleViewProjects(u.id)} className="text-gray-400 hover:text-gray-300">{t("projects")}</button>
+                          <button onClick={() => handleViewProjects(u.id, u.email)} className="text-gray-400 hover:text-gray-300">{t("projects")}</button>
                         </div>
                       </td>
                     </tr>
@@ -592,6 +606,38 @@ export default function AdminUsers() {
                 <button onClick={handlePasswordAction} disabled={passwordSaving || (passwordOption === "manual" && newPassword.length < 6)} className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg disabled:opacity-50">
                   {passwordSaving ? t("saving") : passwordOption === "force" ? t("forceReset") : t("setPassword")}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* View Projects Modal */}
+        {showProjectsModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-xl max-w-lg w-full flex flex-col max-h-[80vh]">
+              <div className="p-6 border-b border-gray-700 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">{t("projects")}</h3>
+                  {projectsModalUser && <p className="text-sm text-gray-400">{projectsModalUser}</p>}
+                </div>
+                <button onClick={() => setShowProjectsModal(false)} className="text-gray-400 hover:text-white transition">{commonT("close")}</button>
+              </div>
+              <div className="overflow-y-auto flex-1 p-6">
+                {projectsList.length === 0 ? (
+                  <p className="text-gray-400 text-sm">{t("noProjects")}</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {projectsList.map((p) => (
+                      <li key={p.id} className="flex items-center justify-between bg-gray-700/50 rounded-lg px-4 py-3">
+                        <span className="text-white text-sm">{p.name}</span>
+                        {p.studio_key && <span className="text-xs text-gray-400">{p.studio_key}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="p-4 border-t border-gray-700 flex justify-end">
+                <button onClick={() => setShowProjectsModal(false)} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">{commonT("close")}</button>
               </div>
             </div>
           </div>
