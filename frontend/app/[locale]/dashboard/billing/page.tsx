@@ -40,6 +40,7 @@ interface Usage {
 export default function BillingPage() {
   const t = useTranslations("billing");
   const commonT = useTranslations("common");
+  const notificationT = useTranslations("notifications");
   const locale = useLocale();
 
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -49,6 +50,7 @@ export default function BillingPage() {
   const [currentPlan, setCurrentPlan] = useState<string>("");
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(true);
+  const [billingError, setBillingError] = useState<string | null>(null);
   const { user, isAuthenticated } = useAuth();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
@@ -90,9 +92,10 @@ export default function BillingPage() {
 
   const handleSubscribe = async (planTier: string) => {
     if (!isAuthenticated || !user) {
-      alert(t("manageSubscription.subtitle"));
+      setBillingError(notificationT("subscriptionLoginRequired"));
       return;
     }
+    setBillingError(null);
     setCheckoutLoading(planTier);
 
     try {
@@ -110,19 +113,19 @@ export default function BillingPage() {
       if (!response.ok) throw new Error("Checkout failed");
       const data = await response.json();
 
-      // Redirect to Stripe Checkout
       if (data.checkout_url) {
         window.location.href = data.checkout_url;
       }
     } catch (error) {
       console.error("Checkout failed:", error);
-      alert(commonT("error"));
+      setBillingError(notificationT("subscriptionError"));
     } finally {
       setCheckoutLoading(null);
     }
   };
 
   const handleManageSubscription = async () => {
+    setBillingError(null);
     try {
       const response = await authFetch("/api/billing/portal");
       if (!response.ok) throw new Error("Portal access failed");
@@ -132,15 +135,15 @@ export default function BillingPage() {
       }
     } catch (error) {
       console.error("Portal access failed:", error);
-      alert(commonT("error"));
+      setBillingError(notificationT("portalError"));
     }
   };
 
-  const getFeatureIcon = (included: boolean) =>
+  const getFeatureIcon = (included: boolean, featureLabel: string) =>
     included ? (
-      <span className="text-green-500">✓</span>
+      <span className="text-green-500" role="img" aria-label={`${featureLabel} included`}>✓</span>
     ) : (
-      <span className="text-gray-600">—</span>
+      <span className="text-gray-600" role="img" aria-label={`${featureLabel} not included`}>—</span>
     );
 
   const formatNumber = (num: number) => {
@@ -188,6 +191,12 @@ export default function BillingPage() {
           <h1 className="text-4xl font-bold text-white mb-2">{t("title")}</h1>
           <p className="text-gray-400">{t("subtitle")}</p>
         </header>
+
+        {billingError && (
+          <div className="mb-6 bg-red-500/10 border border-red-500 rounded-xl p-4">
+            <p className="text-red-300 text-sm">{billingError}</p>
+          </div>
+        )}
 
         {/* Current Usage */}
         {usage && (
@@ -350,13 +359,13 @@ export default function BillingPage() {
                       {formatNumber(plan.features.generations_per_month)}{" "}
                       {t("billingCycle.monthly").toLowerCase()}
                     </span>
-                    {getFeatureIcon(true)}
+                    {getFeatureIcon(true, t("features.generationsPerMonth"))}
                   </li>
                   <li className="flex items-center justify-between text-gray-300">
                     <span>
                       Max {plan.features.max_resolution.toUpperCase()}
                     </span>
-                    {getFeatureIcon(true)}
+                    {getFeatureIcon(true, t("features.maxResolution"))}
                   </li>
                   <li className="flex items-center justify-between text-gray-300">
                     <span>
@@ -365,19 +374,19 @@ export default function BillingPage() {
                         count: plan.features.studios_included.length,
                       })}
                     </span>
-                    {getFeatureIcon(true)}
+                    {getFeatureIcon(true, t("features.studiosIncluded"))}
                   </li>
                   <li className="flex items-center justify-between text-gray-300">
                     <span>{t("plans.starter.logoBranding")}</span>
-                    {getFeatureIcon(plan.features.logo_branding)}
+                    {getFeatureIcon(plan.features.logo_branding, t("plans.starter.logoBranding"))}
                   </li>
                   <li className="flex items-center justify-between text-gray-300">
                     <span>{t("plans.starter.premiumAI")}</span>
-                    {getFeatureIcon(plan.features.premium_ai)}
+                    {getFeatureIcon(plan.features.premium_ai, t("plans.starter.premiumAI"))}
                   </li>
                   <li className="flex items-center justify-between text-gray-300">
                     <span>{t("plans.starter.priorityProcessing")}</span>
-                    {getFeatureIcon(plan.features.priority_processing)}
+                    {getFeatureIcon(plan.features.priority_processing, t("plans.starter.priorityProcessing"))}
                   </li>
                   <li className="flex items-center justify-between text-gray-300">
                     <span>
@@ -385,7 +394,7 @@ export default function BillingPage() {
                         level: plan.features.support_level,
                       })}
                     </span>
-                    {getFeatureIcon(true)}
+                    {getFeatureIcon(true, t("features.support"))}
                   </li>
                 </ul>
 
