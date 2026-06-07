@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { authFetch } from "@/context/AuthContext";
+import { authFetch, useAuth } from "@/context/AuthContext";
 
 interface AccountData {
   profile: {
@@ -46,6 +46,7 @@ export default function SettingsPage() {
   const commonT = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
+  const { updateProfile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [account, setAccount] = useState<AccountData | null>(null);
@@ -161,16 +162,17 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await authFetch("/api/auth/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: profileName, email: profileEmail }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-      alert(notificationT("profileUpdateSuccess"));
-    } catch {
-      alert("Failed to save profile");
+      const result = await updateProfile(profileName, profileEmail);
+      if (!result.success) throw new Error(result.detail || "Failed to save");
+      // Update local account state so the page reflects the new name/email immediately
+      if (result.user) {
+        setAccount((prev) => prev ? { ...prev, profile: { ...prev.profile, name: result.user!.name || "", email: result.user!.email } } : prev);
+      }
+      setError(null);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save profile");
     } finally {
       setLoading(false);
     }
