@@ -301,36 +301,14 @@ async def process_image(
             detail=f"Invalid studio key. Available: {list(studios.keys())}",
         )
 
-    # Optional auth: studio is publicly callable but authenticated users get their plan features.
-    # The middleware skips /api/studio, so we resolve the token manually here.
+    # Auth middleware now requires a valid token for POST /api/studio/process.
+    # get_current_user reads from request.state set by the middleware.
     current_user = get_current_user(request)
     if current_user is None:
-        auth_header = request.headers.get("Authorization", "")
-        parts = auth_header.split()
-        if len(parts) == 2 and parts[0].lower() == "bearer":
-            try:
-                from ..services.auth import decode_access_token, get_user_by_email
-                from ..models import SessionLocal
-                payload = decode_access_token(parts[1])
-                if payload and payload.sub:
-                    _db = SessionLocal()
-                    try:
-                        _user = get_user_by_email(_db, email=payload.sub)
-                        if _user:
-                            # Eagerly access lazy-loaded relationships before session closes
-                            _ = _user.subscription
-                            _ = _user.logo_data
-                            current_user = _user
-                    finally:
-                        _db.close()
-            except Exception as _e:
-                logger.debug("Optional auth failed in studio /process: %s", _e)
+        from fastapi import HTTPException as _HTTPException
+        raise _HTTPException(status_code=401, detail="Not authenticated")
 
-    if current_user is not None:
-        plan_features = get_plan_features(current_user)
-    else:
-        from ..services.billing import PLAN_FEATURES
-        plan_features = PLAN_FEATURES["free"]
+    plan_features = get_plan_features(current_user)
 
     apply_watermark: bool = plan_features.get("watermark", True)
 

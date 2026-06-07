@@ -21,8 +21,8 @@ async def authenticate_middleware(request: Request, call_next):
     2. Validates the JWT token
     3. Adds the current user to the request state
     """
-    # Skip authentication for public routes
-    public_paths = [
+    # Skip authentication for public routes — exact-path or explicit prefix matches only
+    public_exact = {
         "/api/auth/login",
         "/api/auth/register",
         "/api/auth/forgot-password",
@@ -31,13 +31,25 @@ async def authenticate_middleware(request: Request, call_next):
         "/docs",
         "/openapi.json",
         "/health",
-        "/static",
-        "/api/studio",
+    }
+    # Prefix matches for static assets and public plan listing
+    public_prefixes = [
+        "/static/",
         "/api/billing/plans",
+        "/api/studio/",   # GET /api/studio/* (listing/details) — public; POST /process requires auth
+        "/api/studio",    # exact GET /api/studio listing
     ]
 
     path = request.url.path
-    is_public = any(path.startswith(p) for p in public_paths)
+    # POST /api/studio/process is NOT public — require auth
+    is_public = (
+        path in public_exact
+        or (
+            request.method != "POST"
+            and any(path == p or (p.endswith("/") and path.startswith(p)) for p in public_prefixes)
+        )
+        or (request.method in ("GET",) and path in {"/api/studio"})
+    )
 
     if is_public:
         return await call_next(request)
