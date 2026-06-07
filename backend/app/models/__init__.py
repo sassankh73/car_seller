@@ -1,11 +1,5 @@
 """
 Database models for AutoStudio AI.
-
-This module contains SQLAlchemy models for:
-- User: Authentication and user profile
-- Project: Studio project ownership
-- Subscription: Plan subscriptions
-- Usage: Billing usage tracking
 """
 
 import os
@@ -19,8 +13,10 @@ from sqlalchemy import (
     Column,
     DateTime,
     Enum as SQLEnum,
+    Float,
     ForeignKey,
     Integer,
+    LargeBinary,
     String,
     Text,
     create_engine,
@@ -28,8 +24,6 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
-# SQLAlchemy configuration - read from environment variable (set via .env)
-# DATABASE_URL MUST be set in the environment; no hardcoded fallback.
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 if not SQLALCHEMY_DATABASE_URL:
     raise RuntimeError(
@@ -46,29 +40,32 @@ Base = declarative_base()
 
 
 class Role(str, Enum):
-    """User role for access control.
+    """User role — controls access only, NOT entitlements.
 
-    These values MUST match the PostgreSQL enum type exactly:
-      ADMIN  - Full administrative access
-      PREMIUM - Premium/paid features
-      FREE  - Default free-tier user
-
-    Migration plan (future): If more granular roles are needed, the
-    PostgreSQL enum must be altered via:
-      ALTER TYPE role ADD VALUE 'new_value';
+    Entitlements (watermark, logo, generations) come from PlanTier only.
+      USER  — all registered users
+      ADMIN — full administrative access
+    Legacy values PREMIUM and FREE are kept as aliases so existing DB rows
+    remain valid; all business logic should compare against USER / ADMIN.
     """
 
     ADMIN = "ADMIN"
+    USER = "USER"
+    # Legacy aliases — present in DB, treated as USER everywhere in code
     PREMIUM = "PREMIUM"
     FREE = "FREE"
 
 
 class PlanTier(str, Enum):
-    """Subscription plan tiers."""
+    """Subscription plan tier — single source of truth for feature entitlements."""
 
+    FREE = "free"
+    STARTER = "starter"
+    PRO = "pro"
+    ENTERPRISE = "enterprise"
+    # Legacy aliases kept for backward compat during migration
     BASIC = "basic"
     PROFESSIONAL = "professional"
-    ENTERPRISE = "enterprise"
 
 
 class User(Base):
@@ -80,7 +77,7 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     name = Column(String(255), nullable=True)
-    role = Column(SQLEnum(Role, name="role"), default=Role.FREE)
+    role = Column(SQLEnum(Role, name="role"), default=Role.USER)
     is_active = Column(Boolean, default=True)
     is_disabled = Column(Boolean, default=False)
     is_superuser = Column(Boolean, default=False)
@@ -89,6 +86,12 @@ class User(Base):
     password_changed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Logo branding (PRO / ENTERPRISE only)
+    logo_data = Column(LargeBinary, nullable=True)
+    logo_mime_type = Column(String(50), nullable=True)
+    logo_placement = Column(String(20), default="bottom_right")
+    logo_scale = Column(Float, default=0.12)
 
     # Relationships
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
@@ -100,16 +103,16 @@ class User(Base):
 
 
 class Subscription(Base):
-    """Subscription model for tracking user plan subscriptions."""
+    """Subscription model — plan_tier is the only source of feature entitlements."""
 
     __tablename__ = "subscriptions"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    plan_tier = Column(SQLEnum(PlanTier), nullable=False)
+    plan_tier = Column(String(50), nullable=False, default="free")
     stripe_subscription_id = Column(String(255), unique=True, nullable=True)
     stripe_customer_id = Column(String(255), nullable=True)
-    status = Column(String(50), default="active")  # active, past_due, canceled, etc.
+    status = Column(String(50), default="active")
     current_period_start = Column(DateTime, nullable=True)
     current_period_end = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -151,9 +154,10 @@ class Project(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(255), nullable=False)
-    background = Column(String(255), nullable=False)  # studio key
+    background = Column(String(255), nullable=False)
     image_url = Column(Text, nullable=True)
     original_format = Column(String(50), nullable=True)
+    watermark_applied = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -174,30 +178,116 @@ def get_db():
 
 
 def init_db():
-    """Initialize database tables."""
+    """Initialize database tables and apply incremental column migrations."""
     Base.metadata.create_all(bind=engine)
 
-    # Auto-migrate: add columns that may not exist yet in older databases
     from sqlalchemy import text, inspect
     inspector = inspect(engine)
-    user_columns = [col["name"] for col in inspector.get_columns("users")]
 
     with engine.connect() as conn:
-        if "last_login" not in user_columns:
-            conn.execute(text("ALTER TABLE users ADD COLUMN last_login TIMESTAMP"))
+        # users table — incremental columns
+        user_cols = [c["name"] for c in inspector.get_columns("users")]
+        _add_col_if_missing(conn, "users", "last_login", "TIMESTAMP", user_cols)
+        _add_col_if_missing(conn, "users", "password_changed_at", "TIMESTAMP", user_cols)
+        _add_col_if_missing(conn, "users", "is_disabled", "BOOLEAN DEFAULT FALSE", user_cols)
+        _add_col_if_missing(conn, "users", "force_password_reset", "BOOLEAN DEFAULT FALSE", user_cols)
+        _add_col_if_missing(conn, "users", "logo_data", "BYTEA", user_cols)
+        _add_col_if_missing(conn, "users", "logo_mime_type", "VARCHAR(50)", user_cols)
+        _add_col_if_missing(conn, "users", "logo_placement", "VARCHAR(20) DEFAULT 'bottom_right'", user_cols)
+        _add_col_if_missing(conn, "users", "logo_scale", "FLOAT DEFAULT 0.12", user_cols)
+
+        # Migrate plan_tier column from native PG enum to plain VARCHAR (idempotent)
+        try:
+            conn.execute(text(
+                "ALTER TABLE subscriptions ALTER COLUMN plan_tier TYPE VARCHAR(50) USING plan_tier::text"
+            ))
             conn.commit()
-            logger.info("Added last_login column to users table")
-        if "password_changed_at" not in user_columns:
-            conn.execute(text("ALTER TABLE users ADD COLUMN password_changed_at TIMESTAMP"))
+            logger.info("Migrated subscriptions.plan_tier from enum to VARCHAR(50)")
+        except Exception:
+            conn.rollback()
+
+        # Backfill legacy plan tier names (guard against native PG enum constraints)
+        for old, new in [("basic", "starter"), ("professional", "pro")]:
+            try:
+                conn.execute(text(
+                    f"UPDATE subscriptions SET plan_tier='{new}' WHERE plan_tier::text='{old}'"
+                ))
+                conn.commit()
+            except Exception:
+                conn.rollback()
+
+        # Ensure every user has a FREE subscription row.
+        # ON CONFLICT DO NOTHING is safe with the uq_subscriptions_user_id constraint.
+        try:
+            conn.execute(text("""
+                INSERT INTO subscriptions (user_id, plan_tier, status, created_at, updated_at)
+                SELECT u.id, 'free', 'active', NOW(), NOW()
+                FROM users u
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM subscriptions s WHERE s.user_id = u.id
+                )
+                ON CONFLICT (user_id) DO NOTHING
+            """))
             conn.commit()
-            logger.info("Added password_changed_at column to users table")
+        except Exception:
+            conn.rollback()
+
+        # Add USER enum value to the role enum type (safe, idempotent on PG)
+        try:
+            conn.execute(text("ALTER TYPE role ADD VALUE IF NOT EXISTS 'USER'"))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+
+        # Add UNIQUE(user_id) to subscriptions — deduplicate first, then constrain
+        try:
+            dup_rows = conn.execute(text(
+                "SELECT user_id FROM subscriptions GROUP BY user_id HAVING COUNT(*) > 1"
+            )).fetchall()
+            tier_priority = {"enterprise": 5, "pro": 4, "professional": 4,
+                             "starter": 3, "basic": 3, "free": 1}
+            for (uid,) in dup_rows:
+                rows = conn.execute(text(
+                    "SELECT id, plan_tier FROM subscriptions WHERE user_id = :uid ORDER BY id"
+                ), {"uid": uid}).fetchall()
+                best_id = max(rows, key=lambda r: (tier_priority.get(r[1], 0), r[0]))[0]
+                conn.execute(text(
+                    "DELETE FROM subscriptions WHERE user_id = :uid AND id != :keep"
+                ), {"uid": uid, "keep": best_id})
+            conn.commit()
+        except Exception:
+            conn.rollback()
+
+        try:
+            exists = conn.execute(text(
+                "SELECT 1 FROM pg_constraint WHERE conname = 'uq_subscriptions_user_id'"
+            )).fetchone()
+            if not exists:
+                conn.execute(text(
+                    "ALTER TABLE subscriptions ADD CONSTRAINT uq_subscriptions_user_id UNIQUE (user_id)"
+                ))
+                conn.commit()
+                logger.info("Added UNIQUE(user_id) constraint to subscriptions")
+        except Exception:
+            conn.rollback()
+
+        # projects table — incremental columns
+        proj_cols = [c["name"] for c in inspector.get_columns("projects")]
+        _add_col_if_missing(conn, "projects", "watermark_applied", "BOOLEAN DEFAULT FALSE", proj_cols)
+        _add_col_if_missing(conn, "projects", "original_format", "VARCHAR(50)", proj_cols)
+
+
+def _add_col_if_missing(conn, table: str, col: str, definition: str, existing: list):
+    from sqlalchemy import text
+    if col not in existing:
+        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {definition}"))
+        conn.commit()
+        logger.info("Added column %s.%s", table, col)
 
 
 def get_engine():
-    """Get SQLAlchemy engine."""
     return engine
 
 
 def get_session():
-    """Get database session."""
     return SessionLocal()

@@ -147,7 +147,7 @@ def _get_user_detail(db: Session, user: User) -> UserDetail:
         created_at=user.created_at,
         updated_at=user.updated_at,
         project_count=project_count or 0,
-        subscription_plan=subscription.plan_tier.value if subscription else None,
+        subscription_plan=getattr(subscription.plan_tier, "value", subscription.plan_tier) if subscription else None,
         subscription_status=subscription.status if subscription else None,
         subscription_end_date=subscription.current_period_end if subscription else None,
     )
@@ -255,7 +255,7 @@ async def search_users(
     results = []
     for u in users:
         subscription = db.query(Subscription).filter(Subscription.user_id == u.id).first()
-        subscription_plan = subscription.plan_tier.value if subscription else None
+        subscription_plan = getattr(subscription.plan_tier, "value", subscription.plan_tier) if subscription else None
         project_count = db.query(func.count(Project.id)).filter(Project.user_id == u.id).scalar()
 
         results.append(UserSearchResult(

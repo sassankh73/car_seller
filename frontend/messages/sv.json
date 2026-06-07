@@ -195,6 +195,8 @@
   "dashboard": {
     "title": "AutoStudio Instrumentpanel",
     "subtitle": "Förvandla dina bildbilder till professionella studioskott",
+    "billing": "Fakturering",
+    "settings": "Inställningar",
     "smartPhotoGuide": {
       "title": "Smart Foto Guide",
       "description": "Ta fordonsfoton med guided kamerahjälp för bästa AI-resultat",
@@ -520,6 +522,12 @@
       "topRight": "Upp höger",
       "topLeft": "Upp vänster",
       "center": "Centrerad"
+    },
+    "logoScale": {
+      "title": "Logotypstorlek",
+      "description": "Justera logotypens storlek i förhållande till bildens bredd",
+      "small": "Liten",
+      "large": "Stor"
     }
   },
   "profile": {

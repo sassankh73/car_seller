@@ -227,6 +227,12 @@ export default function AccountPage() {
                 {dashboardT("navigation.billing")}
               </Link>
               <Link
+                href={`/${locale}/dashboard/settings`}
+                className="text-stone-500 hover:text-stone-900 transition text-sm font-medium"
+              >
+                {dashboardT("navigation.settings")}
+              </Link>
+              <Link
                 href={`/${locale}/dashboard/account`}
                 className="text-stone-900 font-medium transition text-sm border-b-2 border-red-500 pb-1"
               >

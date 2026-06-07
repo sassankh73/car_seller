@@ -139,7 +139,39 @@ export default function BillingPage() {
   };
 
   return (
-    <main className="p-8 min-h-screen bg-gray-900">
+    <main className="min-h-screen bg-gray-900">
+      {/* Navigation */}
+      <nav className="border-b border-gray-700 bg-gray-800/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center space-x-8">
+              <Link href={`/${locale}`} className="text-xl font-bold text-white">
+                AutoStudio AI
+              </Link>
+              <Link href={`/${locale}/dashboard`} className="text-gray-400 hover:text-white transition text-sm font-medium">
+                {commonT("dashboard") || "Dashboard"}
+              </Link>
+              <span className="text-white font-medium text-sm border-b-2 border-indigo-400 pb-1">
+                {t("title") || "Billing"}
+              </span>
+              <Link href={`/${locale}/dashboard/settings`} className="text-gray-400 hover:text-white transition text-sm font-medium">
+                {commonT("settings") || "Settings"}
+              </Link>
+              <Link href={`/${locale}/dashboard/account`} className="text-gray-400 hover:text-white transition text-sm font-medium">
+                {commonT("account") || "Account"}
+              </Link>
+            </div>
+            <div className="flex items-center space-x-4">
+              <LanguageSwitcher />
+              <Link href={`/${locale}/dashboard`} className="text-indigo-400 hover:text-indigo-300 transition text-sm">
+                ← {commonT("backToHome")}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <header className="mb-12">
@@ -473,14 +505,7 @@ export default function BillingPage() {
           </div>
         </section>
 
-        <div className="mt-12">
-          <Link
-            href={`/${locale}/dashboard`}
-            className="text-indigo-400 hover:text-indigo-300 hover:underline"
-          >
-            ← {commonT("backToHome")}
-          </Link>
-        </div>
+      </div>
       </div>
     </main>
   );

@@ -195,6 +195,8 @@
   "dashboard": {
     "title": "AutoStudio Dashboard",
     "subtitle": "Transform your car photos into professional studio shots",
+    "billing": "Billing",
+    "settings": "Settings",
     "smartPhotoGuide": {
       "title": "Smart Photo Guide",
       "description": "Capture vehicle photos with guided camera assistance for best AI results",
@@ -537,6 +539,12 @@
       "topRight": "Top Right",
       "topLeft": "Top Left",
       "center": "Center"
+    },
+    "logoScale": {
+      "title": "Logo Scale",
+      "description": "Adjust the size of your logo relative to the image width",
+      "small": "Small",
+      "large": "Large"
     }
   },
   "profile": {

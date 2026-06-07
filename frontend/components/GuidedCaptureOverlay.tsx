@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 // Capture step definitions
 export interface CaptureStep {
@@ -329,6 +330,7 @@ export default function GuidedCaptureOverlay({
   onRetake: () => void;
 }) {
   const t = useTranslations('dashboard');
+  const isMobile = useIsMobile();
 
   // Translated step titles, subtitles, and requirements keyed by step id
   const stepTitle: Record<string, string> = {
@@ -404,81 +406,86 @@ export default function GuidedCaptureOverlay({
       <VehicleGuideFrame positionType={step.positionType} />
 
       {/* Mobile: feedback toast — floats above the control bar, pointer-events-none so it never blocks touches */}
-      <div className="sm:hidden absolute bottom-32 left-0 right-0 px-4 z-20 flex justify-center pointer-events-none">
-        <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm max-w-[260px] text-center ${
-          currentFeedback.priority === 'high'
-            ? 'bg-red-600/60 text-white'
-            : currentFeedback.priority === 'medium'
-            ? 'bg-amber-600/60 text-white'
-            : 'bg-green-700/60 text-white'
-        }`}>
-          {currentFeedback.message}
+      {/* Mobile: feedback toast — floats above buttons, never blocks touches */}
+      {isMobile && (
+        <div className="absolute bottom-32 left-0 right-0 px-4 z-20 flex justify-center pointer-events-none">
+          <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm max-w-[260px] text-center ${
+            currentFeedback.priority === 'high'
+              ? 'bg-red-600/60 text-white'
+              : currentFeedback.priority === 'medium'
+              ? 'bg-amber-600/60 text-white'
+              : 'bg-green-700/60 text-white'
+          }`}>
+            {currentFeedback.message}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Bottom control bar — responsive */}
+      {/* Bottom control bar — layout chosen by device type, not viewport width */}
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-auto">
 
-        {/* ── Mobile: transparent ghost overlay ── */}
-        <div className="sm:hidden">
-          {/* Ghost requirements — 40% opacity, no background */}
-          <div className="px-4 pt-2 pb-1">
-            <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
-              {displayRequirements.map((req, idx) => (
-                <div key={idx} className="flex items-center gap-1 min-w-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-white/40 flex-none" />
-                  <span className="text-white/40 text-[11px] leading-tight truncate">{req}</span>
-                </div>
-              ))}
+        {isMobile ? (
+          /* ── Phone (portrait AND landscape): transparent ghost overlay ── */
+          <div>
+            {/* Ghost requirements — 40% opacity, no background card */}
+            <div className="px-4 pt-2 pb-1">
+              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
+                {displayRequirements.map((req, idx) => (
+                  <div key={idx} className="flex items-center gap-1 min-w-0">
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/40 flex-none" />
+                    <span className="text-white/40 text-[11px] leading-tight truncate">{req}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Touch-friendly buttons */}
+            <div className="px-4 pb-8 pt-2 flex gap-3">
+              <button
+                onClick={onRetake}
+                className="flex-1 py-4 bg-black/50 border border-white/20 text-white font-medium rounded-xl active:scale-[0.97] transition-transform text-sm"
+              >
+                {t('smartPhotoGuide.captureButtons.retake')}
+              </button>
+              <button
+                onClick={onCapture}
+                className="flex-[2] py-4 bg-red-600 text-white font-semibold rounded-xl active:scale-[0.97] transition-transform shadow-lg shadow-red-600/30 text-sm"
+              >
+                {t('smartPhotoGuide.captureButtons.capture')}
+              </button>
             </div>
           </div>
-          {/* Touch-friendly buttons — large targets, subtle dark bg for contrast */}
-          <div className="px-4 pb-8 pt-2 flex gap-3">
-            <button
-              onClick={onRetake}
-              className="flex-1 py-4 bg-black/50 border border-white/20 text-white font-medium rounded-xl active:scale-[0.97] transition-transform text-sm"
-            >
-              {t('smartPhotoGuide.captureButtons.retake')}
-            </button>
-            <button
-              onClick={onCapture}
-              className="flex-[2] py-4 bg-red-600 text-white font-semibold rounded-xl active:scale-[0.97] transition-transform shadow-lg shadow-red-600/30 text-sm"
-            >
-              {t('smartPhotoGuide.captureButtons.capture')}
-            </button>
-          </div>
-        </div>
-
-        {/* ── Tablet+: full dark card with requirements, feedback, buttons ── */}
-        <div className="hidden sm:block bg-black/80 backdrop-blur-md border-t border-white/10">
-          <div className="px-4 pt-3 pb-2">
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-              {displayRequirements.map((req, idx) => (
-                <div key={idx} className="flex items-center gap-1.5 min-w-0">
-                  <div className="w-2 h-2 rounded-full border border-white/30 flex-none bg-white/10" />
-                  <span className="text-white/60 text-xs truncate">{req}</span>
-                </div>
-              ))}
+        ) : (
+          /* ── Tablet / desktop: full dark card with requirements, feedback, buttons ── */
+          <div className="bg-black/80 backdrop-blur-md border-t border-white/10">
+            <div className="px-4 pt-3 pb-2">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                {displayRequirements.map((req, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 min-w-0">
+                    <div className="w-2 h-2 rounded-full border border-white/30 flex-none bg-white/10" />
+                    <span className="text-white/60 text-xs truncate">{req}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="px-4 pb-2">
+              <FeedbackIndicator feedback={currentFeedback} />
+            </div>
+            <div className="px-4 pb-5 flex gap-3">
+              <button
+                onClick={onRetake}
+                className="flex-1 py-3 bg-white/10 border border-white/20 text-white font-medium rounded-xl hover:bg-white/20 transition-colors"
+              >
+                {t('smartPhotoGuide.captureButtons.retake')}
+              </button>
+              <button
+                onClick={onCapture}
+                className="flex-[2] py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-600/30"
+              >
+                {t('smartPhotoGuide.captureButtons.capture')}
+              </button>
             </div>
           </div>
-          <div className="px-4 pb-2">
-            <FeedbackIndicator feedback={currentFeedback} />
-          </div>
-          <div className="px-4 pb-5 flex gap-3">
-            <button
-              onClick={onRetake}
-              className="flex-1 py-3 bg-white/10 border border-white/20 text-white font-medium rounded-xl hover:bg-white/20 transition-colors"
-            >
-              {t('smartPhotoGuide.captureButtons.retake')}
-            </button>
-            <button
-              onClick={onCapture}
-              className="flex-[2] py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-600/30"
-            >
-              {t('smartPhotoGuide.captureButtons.capture')}
-            </button>
-          </div>
-        </div>
+        )}
 
       </div>
 

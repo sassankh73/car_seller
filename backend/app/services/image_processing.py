@@ -13,6 +13,7 @@ Feature flags (env vars):
 - ENABLE_LIGHTING_CORRECTION: Enable lighting correction (default: false)
 """
 
+import io
 import logging
 import math
 import os
@@ -21,7 +22,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 
 logger = logging.getLogger(__name__)
 
@@ -1092,6 +1093,10 @@ class AICompositingService:
         studio_color: str = "#1a1a1a",
         original_image: Optional[Image.Image] = None,
         shadow_profile: Optional[StudioShadowProfile] = None,
+        logo_image: Optional[Image.Image] = None,
+        logo_placement: str = "bottom_right",
+        logo_scale: float = 0.12,
+        apply_watermark: bool = False,
     ) -> Image.Image:
         """
         Process car image through production AI pipeline.
@@ -1317,6 +1322,14 @@ class AICompositingService:
         # 9e: Place vehicle on top of everything
         canvas.alpha_composite(vehicle, dest=(car_x, car_y))
 
+        # 9f: Composite user logo (PRO / ENTERPRISE only — caller gates this)
+        if logo_image is not None:
+            canvas = self._composite_logo(canvas, logo_image, logo_placement, logo_scale)
+
+        # 9g: Bake AutoStudio watermark for FREE plan
+        if apply_watermark:
+            canvas = self._composite_watermark(canvas)
+
         logger.info(
             "Compositing complete: vehicle at (%d, %d), floor_y=%d, "
             "wheel_contacts=%d, shadow_direction=%s, canvas=%s, vehicle_type=%s",
@@ -1344,6 +1357,87 @@ class AICompositingService:
                 vehicle_type=vehicle_type,
             )
 
+        return canvas
+
+    def _composite_logo(
+        self,
+        canvas: Image.Image,
+        logo_image: Image.Image,
+        placement: str,
+        scale: float,
+    ) -> Image.Image:
+        """Scale and composite user logo onto canvas at the specified placement."""
+        try:
+            c_w, c_h = canvas.size
+            logo_w = int(c_w * scale)
+            ratio = logo_w / logo_image.width
+            logo_h = int(logo_image.height * ratio)
+            logo_resized = logo_image.resize((logo_w, logo_h), Image.LANCZOS)
+            if logo_resized.mode != "RGBA":
+                logo_resized = logo_resized.convert("RGBA")
+
+            padding = int(c_w * 0.03)
+            positions = {
+                "bottom_right": (c_w - logo_w - padding, c_h - logo_h - padding),
+                "bottom_left":  (padding,                 c_h - logo_h - padding),
+                "top_right":    (c_w - logo_w - padding, padding),
+                "top_left":     (padding,                 padding),
+                "center":       ((c_w - logo_w) // 2,    (c_h - logo_h) // 2),
+            }
+            pos = positions.get(placement, positions["bottom_right"])
+            layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+            layer.paste(logo_resized, pos, logo_resized)
+            canvas = Image.alpha_composite(canvas, layer)
+        except Exception as e:
+            logger.warning("Logo composite failed (skipping): %s", e)
+        return canvas
+
+    def _composite_watermark(self, canvas: Image.Image) -> Image.Image:
+        """Bake an AutoStudio watermark into the canvas (FREE plan only).
+
+        Renders "AutoStudio" text centered horizontally at ~78% from top —
+        overlapping the lower body of the vehicle so it cannot be simply cropped.
+        Black semi-transparent band + bold red text.
+        """
+        try:
+            c_w, c_h = canvas.size
+            wm_layer = Image.new("RGBA", (c_w, c_h), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(wm_layer)
+
+            font_size = max(32, int(c_h * 0.045))
+            try:
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+            except OSError:
+                try:
+                    font = ImageFont.truetype("/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf", font_size)
+                except OSError:
+                    font = ImageFont.load_default()
+
+            text = "AutoStudio"
+            bbox = draw.textbbox((0, 0), text, font=font)
+            text_w = bbox[2] - bbox[0]
+            text_h = bbox[3] - bbox[1]
+
+            band_h = int(text_h * 2.2)
+            band_y = int(c_h * 0.78) - band_h // 2
+            band_x = (c_w - int(text_w * 1.2)) // 2
+            band_w = int(text_w * 1.2)
+
+            draw.rectangle(
+                [band_x, band_y, band_x + band_w, band_y + band_h],
+                fill=(0, 0, 0, 140),
+            )
+            text_x = band_x + (band_w - text_w) // 2
+            text_y = band_y + (band_h - text_h) // 2
+
+            # Black shadow offset
+            draw.text((text_x + 2, text_y + 2), text, font=font, fill=(0, 0, 0, 200))
+            # Red main text
+            draw.text((text_x, text_y), text, font=font, fill=(220, 30, 30, 230))
+
+            canvas = Image.alpha_composite(canvas, wm_layer)
+        except Exception as e:
+            logger.warning("Watermark composite failed (skipping): %s", e)
         return canvas
 
     def _save_debug_image(

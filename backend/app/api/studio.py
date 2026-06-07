@@ -5,12 +5,14 @@ import uuid
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from PIL import Image
 from pydantic import BaseModel
 
 from ..services.image_processing import AICompositingService, StudioShadowProfile, get_compositing_service
 from ..services.image_upload import validate_and_convert_upload, ImageUploadError, ImageValidationError
+from ..middleware.auth import get_current_user, get_db_session
+from ..services.billing import get_plan_features
 
 logger = logging.getLogger(__name__)
 
@@ -272,6 +274,7 @@ def load_studio_background(studio_key: str) -> Optional[Image.Image]:
 
 @router.post("/process")
 async def process_image(
+    request: Request,
     file: UploadFile = File(..., description="Car image to process"),
     studio_key: str = Form("white_corner_light_epoxy", description="Studio template key"),
     enhance_wheels: bool = Form(True, description="Enhance wheel details"),
@@ -297,6 +300,51 @@ async def process_image(
             status_code=400,
             detail=f"Invalid studio key. Available: {list(studios.keys())}",
         )
+
+    # Optional auth: studio is publicly callable but authenticated users get their plan features.
+    # The middleware skips /api/studio, so we resolve the token manually here.
+    current_user = get_current_user(request)
+    if current_user is None:
+        auth_header = request.headers.get("Authorization", "")
+        parts = auth_header.split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            try:
+                from ..services.auth import decode_access_token, get_user_by_email
+                from ..models import SessionLocal
+                payload = decode_access_token(parts[1])
+                if payload and payload.sub:
+                    _db = SessionLocal()
+                    try:
+                        _user = get_user_by_email(_db, email=payload.sub)
+                        if _user:
+                            # Eagerly access lazy-loaded relationships before session closes
+                            _ = _user.subscription
+                            _ = _user.logo_data
+                            current_user = _user
+                    finally:
+                        _db.close()
+            except Exception as _e:
+                logger.debug("Optional auth failed in studio /process: %s", _e)
+
+    if current_user is not None:
+        plan_features = get_plan_features(current_user)
+    else:
+        from ..services.billing import PLAN_FEATURES
+        plan_features = PLAN_FEATURES["free"]
+
+    apply_watermark: bool = plan_features.get("watermark", True)
+
+    # Load user logo if allowed
+    logo_img: Optional[Image.Image] = None
+    logo_placement = "bottom_right"
+    logo_scale = 0.12
+    if plan_features.get("logo_branding") and current_user is not None and current_user.logo_data:
+        try:
+            logo_img = Image.open(io.BytesIO(current_user.logo_data)).convert("RGBA")
+            logo_placement = current_user.logo_placement or "bottom_right"
+            logo_scale = current_user.logo_scale or 0.12
+        except Exception as e:
+            logger.warning("Failed to load user logo (skipping): %s", e)
 
     # Generate unique ID for this generation
     generation_id = str(uuid.uuid4())
@@ -386,6 +434,10 @@ async def process_image(
             studio_color=studio_config["floor_color"],
             original_image=original_image if enhance_wheels else None,
             shadow_profile=shadow_profile,
+            logo_image=logo_img,
+            logo_placement=logo_placement,
+            logo_scale=logo_scale,
+            apply_watermark=apply_watermark,
         )
     except Exception as e:
         logger.exception("Processing failed for studio %s, generation %s", studio_key, generation_id)

@@ -1,25 +1,24 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import EmailStr
 from sqlalchemy.orm import Session
 
-from app.models import User, get_db, Role, Subscription, Usage, PlanTier
+from app.models import User, get_db, Role, Subscription, Usage
 from app.schemas.auth import (
+    AccountResponse,
     ChangePasswordRequest,
     ChangePasswordWithTokenRequest,
     ForgotPasswordRequest,
+    LogoUploadResponse,
     ProfileUpdateRequest,
     ProfileResponse,
-    AccountResponse,
     SubscriptionInfoResponse,
     UsageInfoResponse,
     TokenResponse,
     UserCreate,
     UserLogin,
-    UserResponse,
 )
 from app.services.auth import (
     authenticate_user,
@@ -30,48 +29,94 @@ from app.services.auth import (
     verify_password,
 )
 from app.middleware.auth import get_current_user, get_db_session
+from app.services.billing import get_plan_features, get_plan_tier_str, PLAN_NAMES
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Maximum logo file size (2 MB)
+MAX_LOGO_SIZE = 2 * 1024 * 1024
+ALLOWED_LOGO_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/svg+xml"}
 
-# Plan tier display names
-PLAN_NAMES = {
-    PlanTier.BASIC: "Basic",
-    PlanTier.PROFESSIONAL: "Professional",
-    PlanTier.ENTERPRISE: "Enterprise",
-}
 
-# Free plan limits
-FREE_PLAN_LIMITS = {
-    "generations_limit": 5,
-    "extra_studios_limit": 0,
-    "logo_branding": False,
-    "premium_ai": False,
-    "four_k_exports_limit": 0,
-}
+def _build_subscription_info(db_user: User) -> SubscriptionInfoResponse:
+    """Build subscription info from user's subscription row (single source of truth)."""
+    tier = get_plan_tier_str(db_user)
+    features = get_plan_features(db_user)
+    plan_name = PLAN_NAMES.get(tier, tier.capitalize())
+
+    if db_user.subscription:
+        sub = db_user.subscription
+        return SubscriptionInfoResponse(
+            plan_tier=tier,
+            plan_name=plan_name,
+            status=sub.status,
+            current_period_start=sub.current_period_start,
+            current_period_end=sub.current_period_end,
+            watermark=features["watermark"],
+            logo_branding=features["logo_branding"],
+            custom_branding=features["custom_branding"],
+        )
+    return SubscriptionInfoResponse(
+        plan_tier="free",
+        plan_name="Free",
+        status="active",
+        watermark=True,
+        logo_branding=False,
+        custom_branding=False,
+    )
+
+
+def _build_usage_info(db_user: User) -> UsageInfoResponse:
+    """Build usage info, limits from plan features only (no role checks)."""
+    features = get_plan_features(db_user)
+    generations_limit = features["generations_per_month"]
+
+    if db_user.usage:
+        u = db_user.usage
+        remaining = (
+            max(0, generations_limit - u.generation_count)
+            if generations_limit > 0
+            else -1
+        )
+        return UsageInfoResponse(
+            generation_count=u.generation_count,
+            generations_limit=generations_limit,
+            remaining=remaining,
+            extra_studios_used=u.extra_studios_used,
+            logo_branding_used=u.logo_branding_used,
+            premium_ai_uses=u.premium_ai_uses,
+            four_k_exports=u.four_k_exports,
+        )
+
+    remaining = generations_limit if generations_limit > 0 else -1
+    return UsageInfoResponse(
+        generation_count=0,
+        generations_limit=generations_limit,
+        remaining=remaining,
+    )
 
 
 @router.post("/register", response_model=TokenResponse)
 def register(user: UserCreate, db: Session = Depends(get_db)):
-    """
-    Register a new user.
-
-    Checks if the email already exists and creates a new user
-    with a hashed password.
-    """
     existing_user = get_user_by_email(db, email=user.email)
     if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered",
-        )
+        raise HTTPException(status_code=400, detail="Email already registered")
 
     new_user = create_user(db, email=user.email, password=user.password, name=user.name)
 
-    access_token = create_access_token(data={"sub": new_user.email})
+    # Every new user gets a FREE subscription row — ensures tier is always defined
+    free_sub = Subscription(user_id=new_user.id, plan_tier="free", status="active")
+    db.add(free_sub)
 
+    # Create empty usage record
+    usage_record = Usage(user_id=new_user.id)
+    db.add(usage_record)
+
+    db.commit()
+
+    access_token = create_access_token(data={"sub": new_user.email})
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
@@ -82,12 +127,6 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    """
-    Authenticate a user and return a JWT token.
-
-    If the user has force_password_reset set, the response will include
-    a flag indicating that the user must change their password.
-    """
     db_user = authenticate_user(db, email=user.email, password=user.password)
     if not db_user:
         raise HTTPException(
@@ -96,14 +135,11 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Update last_login
     db_user.last_login = datetime.utcnow()
     db.commit()
 
     access_token = create_access_token(data={"sub": db_user.email})
-
-    # Check if user needs to force password reset
-    force_reset = getattr(db_user, 'force_password_reset', False)
+    force_reset = getattr(db_user, "force_password_reset", False)
 
     return TokenResponse(
         access_token=access_token,
@@ -115,140 +151,74 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 
 
 @router.post("/change-password")
-def change_password(
-    payload: ChangePasswordRequest,
-    db: Session = Depends(get_db),
-):
-    """
-    Change password for the current user. Used when force_password_reset is True.
-
-    Requires the current password for verification.
-    """
+def change_password(payload: ChangePasswordRequest, db: Session = Depends(get_db)):
     db_user = authenticate_user(db, email=payload.email, password=payload.current_password)
     if not db_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Current password is incorrect",
-        )
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
 
     if len(payload.new_password) < 8:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must be at least 8 characters",
-        )
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
 
     db_user.hashed_password = hash_password(payload.new_password)
     db_user.force_password_reset = False
     db_user.password_changed_at = datetime.utcnow()
     db.commit()
-    db.refresh(db_user)
-
     return {"detail": "Password changed successfully", "force_password_reset": False}
 
 
 @router.post("/change-password-token")
-def change_password_with_token(
-    payload: ChangePasswordWithTokenRequest,
-    request: Request,
-):
-    """
-    Change password using JWT token authentication.
-
-    Requires:
-    - current_password: the user's current password
-    - new_password: the new password (min 8 characters)
-    - confirm_password: must match new_password
-    """
+def change_password_with_token(payload: ChangePasswordWithTokenRequest, request: Request):
     user = get_current_user(request)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-        )
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
-    # Get db session from request state
-    db = get_db_session(request)
-    if not db:
-        db = next(get_db())
+    db = get_db_session(request) or next(get_db())
 
     try:
-        # Verify current password
         db_user = db.query(User).filter(User.id == user.id).first()
         if not db_user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+            raise HTTPException(status_code=404, detail="User not found")
 
         if not verify_password(payload.current_password, db_user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Current password is incorrect",
-            )
+            raise HTTPException(status_code=401, detail="Current password is incorrect")
 
-        # Verify new password matches confirmation
         if payload.new_password != payload.confirm_password:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="New password and confirmation do not match",
-            )
+            raise HTTPException(status_code=400, detail="Passwords do not match")
 
-        # Update password
         db_user.hashed_password = hash_password(payload.new_password)
         db_user.password_changed_at = datetime.utcnow()
         if db_user.force_password_reset:
             db_user.force_password_reset = False
         db.commit()
-        db.refresh(db_user)
 
-        return {
-            "detail": "Password changed successfully. Please log in again.",
-            "require_relogin": True,
-        }
+        return {"detail": "Password changed successfully. Please log in again.", "require_relogin": True}
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
         logger.error(f"Error changing password: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to change password",
-        )
+        raise HTTPException(status_code=500, detail="Failed to change password")
 
 
 @router.get("/account", response_model=AccountResponse)
 def get_account_info(request: Request):
-    """
-    Get full account information for the authenticated user.
-
-    Returns profile, subscription, usage, and security information.
-    """
+    """Full account info — plan entitlements from subscription tier only."""
     user = get_current_user(request)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-        )
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
-    db = get_db_session(request)
-    if not db:
-        db = next(get_db())
+    db = get_db_session(request) or next(get_db())
 
     try:
-        # Get full user from DB to access relationships
         db_user = db.query(User).filter(User.id == user.id).first()
         if not db_user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+            raise HTTPException(status_code=404, detail="User not found")
 
-        # Build profile response
         profile = ProfileResponse(
             id=db_user.id,
             email=db_user.email,
             name=db_user.name,
-            role=db_user.role.value if db_user.role else "FREE",
+            role=db_user.role.value if db_user.role else "USER",
             is_active=db_user.is_active,
             is_disabled=db_user.is_disabled,
             created_at=db_user.created_at,
@@ -256,70 +226,16 @@ def get_account_info(request: Request):
             password_changed_at=db_user.password_changed_at,
         )
 
-        # Build subscription info
-        subscription_info = None
-        if db_user.subscription:
-            sub = db_user.subscription
-            plan_name = PLAN_NAMES.get(sub.plan_tier, sub.plan_tier.value if sub.plan_tier else "Free")
-            subscription_info = SubscriptionInfoResponse(
-                plan_tier=sub.plan_tier.value if sub.plan_tier else None,
-                plan_name=plan_name,
-                status=sub.status,
-                current_period_start=sub.current_period_start,
-                current_period_end=sub.current_period_end,
-            )
-        else:
-            # No subscription = FREE plan based on role
-            if db_user.role == Role.PREMIUM:
-                subscription_info = SubscriptionInfoResponse(
-                    plan_tier="professional",
-                    plan_name="Professional",
-                    status="active",
-                )
-            else:
-                subscription_info = SubscriptionInfoResponse(
-                    plan_tier=None,
-                    plan_name="Free",
-                    status="active",
-                )
+        subscription_info = _build_subscription_info(db_user)
+        usage_info = _build_usage_info(db_user)
 
-        # Build usage info
-        usage_info = None
-        if db_user.usage:
-            u = db_user.usage
-            # Determine limits based on plan
-            if db_user.role == Role.PREMIUM:
-                generations_limit = 100
-            elif db_user.role == Role.ADMIN:
-                generations_limit = -1  # Unlimited
-            else:
-                generations_limit = FREE_PLAN_LIMITS["generations_limit"]
-
-            remaining = max(0, generations_limit - u.generation_count) if generations_limit > 0 else -1
-
-            usage_info = UsageInfoResponse(
-                generation_count=u.generation_count,
-                generations_limit=generations_limit,
-                remaining=remaining,
-                extra_studios_used=u.extra_studios_used,
-                logo_branding_used=u.logo_branding_used,
-                premium_ai_uses=u.premium_ai_uses,
-                four_k_exports=u.four_k_exports,
-            )
-        else:
-            # Default usage for FREE user with no usage record
-            generations_limit = FREE_PLAN_LIMITS["generations_limit"] if db_user.role == Role.FREE else (100 if db_user.role == Role.PREMIUM else -1)
-            usage_info = UsageInfoResponse(
-                generation_count=0,
-                generations_limit=generations_limit,
-                remaining=generations_limit if generations_limit > 0 else -1,
-            )
-
-        # Build security info
         security = {
             "last_login": db_user.last_login.isoformat() if db_user.last_login else None,
             "password_changed_at": db_user.password_changed_at.isoformat() if db_user.password_changed_at else None,
-            "account_status": "active" if db_user.is_active and not db_user.is_disabled else ("disabled" if db_user.is_disabled else "inactive"),
+            "account_status": (
+                "active" if db_user.is_active and not db_user.is_disabled
+                else ("disabled" if db_user.is_disabled else "inactive")
+            ),
             "force_password_reset": db_user.force_password_reset,
         }
 
@@ -328,59 +244,37 @@ def get_account_info(request: Request):
             subscription=subscription_info,
             usage=usage_info,
             security=security,
+            has_logo=db_user.logo_data is not None,
+            logo_placement=db_user.logo_placement or "bottom_right",
+            logo_scale=db_user.logo_scale or 0.12,
         )
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting account info: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get account information",
-        )
+        raise HTTPException(status_code=500, detail="Failed to get account information")
 
 
 @router.put("/profile", response_model=ProfileResponse)
-def update_profile(
-    payload: ProfileUpdateRequest,
-    request: Request,
-):
-    """
-    Update the authenticated user's profile (name and/or email).
-
-    Validates email uniqueness before updating.
-    """
+def update_profile(payload: ProfileUpdateRequest, request: Request):
     user = get_current_user(request)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-        )
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
-    db = get_db_session(request)
-    if not db:
-        db = next(get_db())
+    db = get_db_session(request) or next(get_db())
 
     try:
         db_user = db.query(User).filter(User.id == user.id).first()
         if not db_user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
+            raise HTTPException(status_code=404, detail="User not found")
 
-        # Update name if provided
         if payload.name is not None:
             db_user.name = payload.name
 
-        # Update email if provided and different
         if payload.email is not None and payload.email != db_user.email:
-            # Check email uniqueness
             existing = db.query(User).filter(User.email == payload.email).first()
             if existing:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Email address is already in use",
-                )
+                raise HTTPException(status_code=409, detail="Email address is already in use")
             db_user.email = payload.email
 
         db_user.updated_at = datetime.utcnow()
@@ -391,7 +285,7 @@ def update_profile(
             id=db_user.id,
             email=db_user.email,
             name=db_user.name,
-            role=db_user.role.value if db_user.role else "FREE",
+            role=db_user.role.value if db_user.role else "USER",
             is_active=db_user.is_active,
             is_disabled=db_user.is_disabled,
             created_at=db_user.created_at,
@@ -403,29 +297,157 @@ def update_profile(
     except Exception as e:
         db.rollback()
         logger.error(f"Error updating profile: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update profile",
+        raise HTTPException(status_code=500, detail="Failed to update profile")
+
+
+@router.put("/profile/logo", response_model=LogoUploadResponse)
+async def upload_logo(request: Request, file: UploadFile = File(...)):
+    """Upload a custom wall logo (PRO / ENTERPRISE only).
+
+    Stores the raw image bytes on the user row. The compositing pipeline reads
+    it directly from the DB at render time.
+    """
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    db = get_db_session(request) or next(get_db())
+
+    try:
+        db_user = db.query(User).filter(User.id == user.id).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Check plan entitlement
+        features = get_plan_features(db_user)
+        if not features.get("logo_branding"):
+            raise HTTPException(
+                status_code=403,
+                detail="Logo branding requires a Pro or Enterprise plan.",
+            )
+
+        # Validate MIME type
+        mime = file.content_type or ""
+        if mime not in ALLOWED_LOGO_TYPES:
+            raise HTTPException(
+                status_code=415,
+                detail=f"Unsupported file type '{mime}'. Use PNG, JPEG, or SVG.",
+            )
+
+        # Read and size-check
+        data = await file.read()
+        if len(data) > MAX_LOGO_SIZE:
+            raise HTTPException(status_code=413, detail="Logo file must be under 2 MB.")
+
+        db_user.logo_data = data
+        db_user.logo_mime_type = mime
+        db_user.updated_at = datetime.utcnow()
+        db.commit()
+
+        return LogoUploadResponse(
+            success=True,
+            has_logo=True,
+            logo_placement=db_user.logo_placement or "bottom_right",
+            logo_scale=db_user.logo_scale or 0.12,
+            logo_mime_type=mime,
         )
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error uploading logo: {e}")
+        raise HTTPException(status_code=500, detail="Failed to upload logo")
+
+
+@router.delete("/profile/logo", response_model=LogoUploadResponse)
+def delete_logo(request: Request):
+    """Remove the user's custom wall logo."""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    db = get_db_session(request) or next(get_db())
+
+    try:
+        db_user = db.query(User).filter(User.id == user.id).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        db_user.logo_data = None
+        db_user.logo_mime_type = None
+        db_user.updated_at = datetime.utcnow()
+        db.commit()
+
+        return LogoUploadResponse(
+            success=True,
+            has_logo=False,
+            logo_placement=db_user.logo_placement or "bottom_right",
+            logo_scale=db_user.logo_scale or 0.12,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting logo: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete logo")
+
+
+@router.put("/profile/logo-settings", response_model=LogoUploadResponse)
+def update_logo_settings(
+    request: Request,
+    placement: str = "bottom_right",
+    scale: float = 0.12,
+):
+    """Update logo placement and scale without re-uploading the image."""
+    valid_placements = {"bottom_right", "bottom_left", "top_right", "top_left", "center"}
+    if placement not in valid_placements:
+        raise HTTPException(status_code=400, detail=f"Invalid placement. Choose: {valid_placements}")
+    if not (0.05 <= scale <= 0.40):
+        raise HTTPException(status_code=400, detail="Scale must be between 0.05 and 0.40")
+
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    db = get_db_session(request) or next(get_db())
+
+    try:
+        db_user = db.query(User).filter(User.id == user.id).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        features = get_plan_features(db_user)
+        if not features.get("logo_branding"):
+            raise HTTPException(status_code=403, detail="Logo branding requires Pro or Enterprise.")
+
+        db_user.logo_placement = placement
+        db_user.logo_scale = scale
+        db_user.updated_at = datetime.utcnow()
+        db.commit()
+
+        return LogoUploadResponse(
+            success=True,
+            has_logo=db_user.logo_data is not None,
+            logo_placement=placement,
+            logo_scale=scale,
+            logo_mime_type=db_user.logo_mime_type,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating logo settings: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update logo settings")
 
 
 @router.post("/forgot-password")
 def forgot_password(payload: ForgotPasswordRequest):
-    """
-    Request a password reset.
-
-    For security, always returns success even if the user does not exist,
-    to prevent email enumeration attacks.
-    """
-    # In production, this would send a reset link via email
-    return {
-        "detail": "If an account with that email exists, a reset link has been sent."
-    }
+    return {"detail": "If an account with that email exists, a reset link has been sent."}
 
 
 @router.post("/signup")
 def signup_legacy(user: UserCreate, db: Session = Depends(get_db)):
-    """Legacy endpoint - use /register instead"""
+    """Legacy endpoint — use /register instead."""
     return register(user, db)
 
 
@@ -434,11 +456,6 @@ def login_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    """
-    OAuth2 compatible token login endpoint.
-
-    Accepts username (email) and password from form data.
-    """
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -446,6 +463,5 @@ def login_access_token(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
