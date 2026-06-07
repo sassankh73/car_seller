@@ -7,6 +7,7 @@ export interface CameraState {
   hasPermission: boolean;
   isStreaming: boolean;
   error: string | null;
+  activeFacingMode: 'user' | 'environment';
 }
 
 export interface CaptureOptions {
@@ -27,38 +28,68 @@ const RESOLUTIONS = {
   high: { width: 1920, height: 1080 },
 };
 
+async function logDeviceInfo(stream: MediaStream, requestedFacingMode: string) {
+  const track = stream.getVideoTracks()[0];
+  const settings = track?.getSettings() ?? {};
+
+  let deviceLabels: { id: string; label: string }[] = [];
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    deviceLabels = devices
+      .filter((d) => d.kind === 'videoinput')
+      .map((d) => ({ id: d.deviceId.slice(0, 8), label: d.label || '(unlabeled)' }));
+  } catch {}
+
+  console.log('[Camera] Available video devices:', deviceLabels);
+  console.log('[Camera] Selected device:', track?.label ?? '(unknown)');
+  console.log('[Camera] FacingMode requested:', requestedFacingMode);
+  console.log('[Camera] FacingMode actual:', (settings as any).facingMode ?? '(not reported)');
+  console.log(
+    '[Camera] Active stream tracks:',
+    stream.getVideoTracks().map((t) => t.label),
+  );
+}
+
 export function useCameraCapture() {
   const [state, setState] = useState<CameraState>({
     isAvailable: false,
     hasPermission: false,
     isStreaming: false,
     error: null,
+    activeFacingMode: 'environment',
   });
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Tracks which facing mode is currently active so switchCamera knows what to toggle to
+  const activeFacingModeRef = useRef<'user' | 'environment'>('environment');
 
-  // Check if camera is available
-  const checkCameraAvailability = useCallback(async (): Promise<boolean> => {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      return false;
+  const stopStream = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
-    return true;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setState((prev) => ({ ...prev, isStreaming: false }));
   }, []);
 
-  // Request camera permission
   const requestPermission = useCallback(
     async (options: CaptureOptions = {}): Promise<boolean> => {
-      const { facingMode = 'user', resolution = 'medium' } = options;
+      // Default to rear camera — front camera (user) is useless for vehicle photography
+      const { facingMode = 'environment', resolution = 'medium' } = options;
 
       if (streamRef.current) {
-        stopStream();
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
       }
 
       try {
         const constraints: MediaStreamConstraints = {
           video: {
-            facingMode: facingMode,
+            // Use { ideal } so browsers without a rear camera (desktop) fall back gracefully
+            facingMode: { ideal: facingMode },
             width: { ideal: RESOLUTIONS[resolution].width },
             height: { ideal: RESOLUTIONS[resolution].height },
             aspectRatio: { ideal: 4 / 3 },
@@ -68,27 +99,28 @@ export function useCameraCapture() {
 
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         streamRef.current = stream;
+        activeFacingModeRef.current = facingMode;
 
-        // Test if we can get tracks
+        await logDeviceInfo(stream, facingMode);
+
         const hasVideoTrack = stream.getVideoTracks().length > 0;
         setState({
           isAvailable: true,
           hasPermission: hasVideoTrack,
           isStreaming: false,
           error: null,
+          activeFacingMode: facingMode,
         });
 
         return hasVideoTrack;
       } catch (error: any) {
         let errorMessage = 'Camera access denied or unavailable';
-        if (error.name === 'NotAllowedError') {
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
           errorMessage = 'Camera access denied. Please enable camera permissions.';
         } else if (error.name === 'NotFoundError') {
           errorMessage = 'No camera found on this device.';
         } else if (error.name === 'NotReadableError') {
           errorMessage = 'Camera is being used by another application.';
-        } else if (error.name === 'PermissionDeniedError') {
-          errorMessage = 'Please enable camera permissions in your browser settings.';
         }
 
         setState({
@@ -96,65 +128,43 @@ export function useCameraCapture() {
           hasPermission: false,
           isStreaming: false,
           error: errorMessage,
+          activeFacingMode: facingMode,
         });
 
         return false;
       }
     },
-    []
+    [],
   );
 
-  // Start camera stream
   const startStream = useCallback(
     async (videoElement: HTMLVideoElement): Promise<boolean> => {
-      console.log('[useCameraCapture] startStream called');
-      
+      console.log('[Camera] startStream called');
+
       if (!streamRef.current) {
-        console.log('[useCameraCapture] No existing stream, requesting permission...');
+        console.log('[Camera] No existing stream, requesting permission...');
         const hasPermission = await requestPermission();
         if (!hasPermission) {
-          console.log('[useCameraCapture] Permission not granted');
+          console.log('[Camera] Permission not granted');
           return false;
         }
-        console.log('[useCameraCapture] Permission granted, stream created');
       }
 
       if (videoElement && streamRef.current) {
-        console.log('[useCameraCapture] Assigning stream to video.srcObject');
+        console.log('[Camera] Assigning stream to video element');
         videoElement.srcObject = streamRef.current;
-        
-        // Log video element properties
-        console.log('[useCameraCapture] videoRef:', videoElement);
-        console.log('[useCameraCapture] video.srcObject:', videoElement.srcObject);
-        console.log('[useCameraCapture] video.readyState:', videoElement.readyState);
-        console.log('[useCameraCapture] video.videoWidth:', videoElement.videoWidth);
-        console.log('[useCameraCapture] video.videoHeight:', videoElement.videoHeight);
-        
+
         try {
           await videoElement.play();
-          console.log('[useCameraCapture] Video play() succeeded');
-          console.log('[useCameraCapture] video.readyState after play:', videoElement.readyState);
-          console.log('[useCameraCapture] video.videoWidth after play:', videoElement.videoWidth);
-          console.log('[useCameraCapture] video.videoHeight after play:', videoElement.videoHeight);
-          
-          // Wait a moment for dimensions to be available
-          setTimeout(() => {
-            console.log('[useCameraCapture] Final video dimensions:', {
-              width: videoElement.videoWidth,
-              height: videoElement.videoHeight,
-              readyState: videoElement.readyState,
-              playing: !videoElement.paused && !videoElement.ended,
-            });
-          }, 100);
-          
-          setState((prev) => ({
-            ...prev,
-            isStreaming: true,
-            error: null,
-          }));
+          console.log('[Camera] play() succeeded, dimensions:', {
+            width: videoElement.videoWidth,
+            height: videoElement.videoHeight,
+          });
+
+          setState((prev) => ({ ...prev, isStreaming: true, error: null }));
           return true;
         } catch (error) {
-          console.error('[useCameraCapture] Failed to start video stream:', error);
+          console.error('[Camera] play() failed:', error);
           setState((prev) => ({
             ...prev,
             isStreaming: false,
@@ -163,28 +173,65 @@ export function useCameraCapture() {
           return false;
         }
       }
-      console.log('[useCameraCapture] startStream: No video element or stream available');
+
+      console.warn('[Camera] startStream: no video element or stream available');
       return false;
     },
-    [requestPermission]
+    [requestPermission],
   );
 
-  // Stop camera stream
-  const stopStream = useCallback(() => {
+  // Switch between front and rear camera without a page reload
+  const switchCamera = useCallback(async (): Promise<boolean> => {
+    const newFacingMode =
+      activeFacingModeRef.current === 'environment' ? 'user' : 'environment';
+
+    console.log('[Camera] Switching camera to facingMode:', newFacingMode);
+
+    // Stop current tracks before opening the new camera
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
+
+    try {
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: newFacingMode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      activeFacingModeRef.current = newFacingMode;
+
+      await logDeviceInfo(stream, newFacingMode);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      setState((prev) => ({
+        ...prev,
+        activeFacingMode: newFacingMode,
+        isStreaming: true,
+        error: null,
+      }));
+
+      return true;
+    } catch (error: any) {
+      console.error('[Camera] Failed to switch camera:', error);
+      setState((prev) => ({
+        ...prev,
+        error: 'Failed to switch camera. Your device may not support this.',
+      }));
+      return false;
     }
-    setState((prev) => ({
-      ...prev,
-      isStreaming: false,
-    }));
   }, []);
 
-  // Capture image from camera
   const captureImage = useCallback(async (): Promise<CaptureResult> => {
     if (!videoRef.current || !streamRef.current) {
       throw new Error('Camera is not streaming');
@@ -198,64 +245,47 @@ export function useCameraCapture() {
       throw new Error('Failed to get canvas context');
     }
 
-    // Set canvas dimensions to match video
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
-    // Draw video frame to canvas
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Get image as data URL
     const image = canvas.toDataURL('image/jpeg', 0.95);
-
-    // Convert to blob
     const response = await fetch(image);
     const blob = await response.blob();
 
-    // Store reference to canvas for reuse
     canvasRef.current = canvas;
 
     return {
       image,
       blob,
       timestamp: Date.now(),
-      dimensions: {
-        width: canvas.width,
-        height: canvas.height,
-      },
+      dimensions: { width: canvas.width, height: canvas.height },
     };
   }, []);
 
-  // Check for camera permission status
   const getPermissionStatus = useCallback(async (): Promise<boolean> => {
     try {
-      // Try to query permission without actually requesting it
-      // Note: This only works in some browsers
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const hasCamera = devices.some((d) => d.kind === 'videoinput');
-      return hasCamera;
+      return devices.some((d) => d.kind === 'videoinput');
     } catch {
       return false;
     }
   }, []);
 
-  // Get available cameras
   const getCameras = useCallback(async (): Promise<{ id: string; label: string }[]> => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const cameras = devices
+      return devices
         .filter((d) => d.kind === 'videoinput')
         .map((d) => ({
           id: d.deviceId,
           label: d.label || `Camera ${d.deviceId.slice(0, 8)}`,
         }));
-      return cameras;
     } catch {
       return [];
     }
   }, []);
 
-  // Reset hook state
   const reset = useCallback(() => {
     stopStream();
     setState({
@@ -263,7 +293,9 @@ export function useCameraCapture() {
       hasPermission: false,
       isStreaming: false,
       error: null,
+      activeFacingMode: 'environment',
     });
+    activeFacingModeRef.current = 'environment';
   }, [stopStream]);
 
   return {
@@ -273,6 +305,7 @@ export function useCameraCapture() {
     requestPermission,
     startStream,
     stopStream,
+    switchCamera,
     captureImage,
     getPermissionStatus,
     getCameras,

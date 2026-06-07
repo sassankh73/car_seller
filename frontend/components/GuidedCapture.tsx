@@ -29,6 +29,7 @@ export default function GuidedCapture({
     requestPermission,
     startStream,
     stopStream,
+    switchCamera,
     captureImage,
     reset,
   } = useCameraCapture();
@@ -296,6 +297,38 @@ export default function GuidedCapture({
           </div>
         )}
       </div>
+
+      {/* Switch Camera button — only when streaming, top-left */}
+      {state.isStreaming && (
+        <div className="absolute top-4 left-4 z-30">
+          <button
+            onClick={switchCamera}
+            className="bg-black/50 backdrop-blur text-white px-3 py-2 rounded-lg hover:bg-black/70 transition-colors flex items-center gap-2"
+            aria-label="Switch camera"
+          >
+            {/* Rotate/flip camera icon */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-5 h-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20 7h-3a2 2 0 0 1-2-2V2" />
+              <path d="M9 2H5a2 2 0 0 0-2 2v4" />
+              <path d="M3 16v2a2 2 0 0 0 2 2h4" />
+              <path d="M16 22h3a2 2 0 0 0 2-2v-4" />
+              <path d="M14 11a4 4 0 0 1-8 0 4 4 0 0 1 8 0" />
+            </svg>
+            <span className="text-sm font-medium">
+              {state.activeFacingMode === 'environment' ? 'Front' : 'Rear'}
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* Cancel button — always visible */}
       <div className="absolute top-4 right-4 z-30">
