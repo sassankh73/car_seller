@@ -35,6 +35,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+def _validate_password_strength(password: str):
+    """Raise 400 if password does not meet minimum requirements (>= 8 characters)."""
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
 # Maximum logo file size (2 MB)
 MAX_LOGO_SIZE = 2 * 1024 * 1024
 ALLOWED_LOGO_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/svg+xml"}
@@ -156,8 +162,7 @@ def change_password(payload: ChangePasswordRequest, db: Session = Depends(get_db
     if not db_user:
         raise HTTPException(status_code=401, detail="Current password is incorrect")
 
-    if len(payload.new_password) < 8:
-        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+    _validate_password_strength(payload.new_password)
 
     db_user.hashed_password = hash_password(payload.new_password)
     db_user.force_password_reset = False
@@ -185,6 +190,7 @@ def change_password_with_token(payload: ChangePasswordWithTokenRequest, request:
         if payload.new_password != payload.confirm_password:
             raise HTTPException(status_code=400, detail="Passwords do not match")
 
+        _validate_password_strength(payload.new_password)
         db_user.hashed_password = hash_password(payload.new_password)
         db_user.password_changed_at = datetime.utcnow()
         if db_user.force_password_reset:
