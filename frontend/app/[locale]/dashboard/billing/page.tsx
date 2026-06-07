@@ -44,7 +44,7 @@ export default function BillingPage() {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">(
     "monthly",
   );
-  const [currentPlan, setCurrentPlan] = useState<string>("professional");
+  const [currentPlan, setCurrentPlan] = useState<string>("");
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(true);
   const { user, isAuthenticated } = useAuth();
@@ -65,7 +65,7 @@ export default function BillingPage() {
       .then((data) => setPlans(data))
       .catch(console.error);
 
-    // Load usage (authenticated endpoint)
+    // Load usage and real plan tier for authenticated users
     if (isAuthenticated && user) {
       authFetch(`/api/billing/usage/${user.id}`)
         .then((res) => {
@@ -73,6 +73,15 @@ export default function BillingPage() {
           throw new Error("Failed to load usage");
         })
         .then((data) => setUsage(data))
+        .catch(console.error);
+
+      authFetch("/api/auth/account")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.subscription?.plan_tier) {
+            setCurrentPlan(data.subscription.plan_tier);
+          }
+        })
         .catch(console.error);
     }
     setLoading(false);
@@ -114,7 +123,7 @@ export default function BillingPage() {
 
   const handleManageSubscription = async () => {
     try {
-      const response = await authFetch("/api/billing/portal?stripe_customer_id=cus_demo_123");
+      const response = await authFetch("/api/billing/portal");
       if (!response.ok) throw new Error("Portal access failed");
       const data = await response.json();
       if (data.portal_url) {
