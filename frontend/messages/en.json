@@ -427,6 +427,12 @@
       "perLogoBranding": "per logo branding",
       "perFourKExport": "per 4K export"
     },
+    "features": {
+      "generationsPerMonth": "Generations per month",
+      "maxResolution": "Max resolution",
+      "studiosIncluded": "Studios included",
+      "support": "Support"
+    },
     "faq": {
       "title": "Frequently Asked Questions",
       "changePlans": {
@@ -458,6 +464,7 @@
     "downloadError": "Failed to download image",
     "subscriptionSuccess": "Subscription updated successfully",
     "subscriptionError": "Failed to update subscription. Please try again.",
+    "subscriptionLoginRequired": "Please log in to subscribe to a plan.",
     "portalError": "Failed to open customer portal. Please try again.",
     "loginSuccess": "Login successful",
     "loginError": "Failed to login. Please check your credentials.",
@@ -468,6 +475,8 @@
     "passwordResetError": "Failed to send reset link",
     "logoUploadSuccess": "Logo uploaded successfully",
     "logoUploadError": "Failed to upload logo",
+    "logoFileTooLarge": "File size must be less than 2 MB",
+    "logoFileTypeInvalid": "Only PNG, JPG, and SVG files are supported",
     "profileUpdateSuccess": "Profile updated successfully",
     "profileUpdateError": "Failed to update profile"
   },

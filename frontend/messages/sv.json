@@ -410,6 +410,12 @@
       "perLogoBranding": "per logotypbranding",
       "perFourKExport": "per 4K-export"
     },
+    "features": {
+      "generationsPerMonth": "Genereringar per månad",
+      "maxResolution": "Maximal upplösning",
+      "studiosIncluded": "Inkluderade studior",
+      "support": "Support"
+    },
     "faq": {
       "title": "Vanliga frågor",
       "changePlans": {
@@ -441,6 +447,7 @@
     "downloadError": "Misslyckades att ladda ner bild",
     "subscriptionSuccess": "Prenumeration uppdaterad",
     "subscriptionError": "Misslyckades att uppdatera prenumeration. Försök igen.",
+    "subscriptionLoginRequired": "Vänligen logga in för att prenumerera på ett abonnemang.",
     "portalError": "Misslyckades att öppna kundportalen. Försök igen.",
     "loginSuccess": "Inloggning lyckades",
     "loginError": "Inloggning misslyckades. Kontrollera dina inloggningsuppgifter.",
@@ -451,6 +458,8 @@
     "passwordResetError": "Misslyckades att skicka återställningslänk",
     "logoUploadSuccess": "Logotyp uppladdad",
     "logoUploadError": "Misslyckades att ladda upp logotyp",
+    "logoFileTooLarge": "Filstorleken måste vara mindre än 2 MB",
+    "logoFileTypeInvalid": "Endast PNG, JPG och SVG-filer stöds",
     "profileUpdateSuccess": "Profil uppdaterad",
     "profileUpdateError": "Misslyckades att uppdatera profil"
   },
