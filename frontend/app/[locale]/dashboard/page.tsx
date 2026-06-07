@@ -49,6 +49,16 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [processingStatus, setProcessingStatus] = useState<string>("idle");
   const [batchLabel, setBatchLabel] = useState<string | null>(null);
+  const resultBlobUrlRef = useRef<string | null>(null);
+
+  // Revoke blob URL on unmount to prevent memory leak
+  useEffect(() => {
+    return () => {
+      if (resultBlobUrlRef.current) {
+        URL.revokeObjectURL(resultBlobUrlRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -145,7 +155,9 @@ export default function Dashboard() {
       }
 
       const blob = await response.blob();
+      if (resultBlobUrlRef.current) URL.revokeObjectURL(resultBlobUrlRef.current);
       const imageUrl = URL.createObjectURL(blob);
+      resultBlobUrlRef.current = imageUrl;
       setResultImage(imageUrl);
 
       const newProject: Project = {
@@ -202,7 +214,9 @@ export default function Dashboard() {
         }
 
         const blob = await response.blob();
+        if (resultBlobUrlRef.current) URL.revokeObjectURL(resultBlobUrlRef.current);
         const imageUrl = URL.createObjectURL(blob);
+        resultBlobUrlRef.current = imageUrl;
         setResultImage(imageUrl);
 
         const angleNames = ["Front Left 45°", "Side View", "Rear Left 45°", "Rear/Front View"];
