@@ -6,6 +6,7 @@ import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useAuth, authFetch } from "@/context/AuthContext";
 import Spinner from "@/components/ui/Spinner";
+import { formatLocaleNumber, toFormatLocale } from "@/utils/formatLocale";
 
 interface Plan {
   tier: string;
@@ -51,9 +52,8 @@ export default function BillingPage() {
   const { user, isAuthenticated } = useAuth();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
-  // Always use SEK ISO code for unambiguous currency display regardless of UI locale
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat(locale === "sv" ? "sv-SE" : "en-US", {
+    new Intl.NumberFormat(toFormatLocale(locale), {
       style: "currency",
       currency: "SEK",
       maximumFractionDigits: 0,
@@ -145,7 +145,7 @@ export default function BillingPage() {
 
   const formatNumber = (num: number) => {
     if (num < 0) return t("unlimited");
-    return num.toLocaleString(locale === "sv" ? "sv-SE" : "en-US");
+    return formatLocaleNumber(locale, num);
   };
 
   return (

@@ -6,6 +6,7 @@ import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useAuth, authFetch } from "@/context/AuthContext";
 import Spinner from "@/components/ui/Spinner";
+import { formatLocaleNumber, formatLocaleDate } from "@/utils/formatLocale";
 
 interface DashboardStats {
   total_users: number;
@@ -163,7 +164,7 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
             <h3 className="text-gray-400 text-sm mb-2">{t("stats.totalRevenue")}</h3>
-            <p className="text-4xl font-bold text-white">{stats.total_revenue.toLocaleString(locale === "sv" ? "sv-SE" : "en-US")} SEK</p>
+            <p className="text-4xl font-bold text-white">{formatLocaleNumber(locale, stats.total_revenue)} SEK</p>
           </div>
         </div>
 
@@ -198,7 +199,7 @@ export default function AdminDashboard() {
                         {reg.name || "-"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                        {new Date(reg.registered_at).toLocaleDateString(locale === "sv" ? "sv-SE" : "en-US", { year: "numeric", month: "long", day: "numeric" })}
+                        {formatLocaleDate(locale, reg.registered_at, { year: "numeric", month: "long", day: "numeric" })}
                       </td>
                     </tr>
                   ))}
@@ -213,13 +214,13 @@ export default function AdminDashboard() {
           <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
             <h3 className="text-gray-400 text-sm mb-4">{t("stats.revenueLast30Days")}</h3>
             <p className="text-3xl font-bold text-green-400">
-              {stats.revenue_last_30_days.toLocaleString(locale === "sv" ? "sv-SE" : "en-US")} SEK
+              {formatLocaleNumber(locale, stats.revenue_last_30_days)} SEK
             </p>
           </div>
           <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
             <h3 className="text-gray-400 text-sm mb-4">{t("stats.revenueLast7Days")}</h3>
             <p className="text-3xl font-bold text-green-400">
-              {stats.revenue_last_7_days.toLocaleString(locale === "sv" ? "sv-SE" : "en-US")} SEK
+              {formatLocaleNumber(locale, stats.revenue_last_7_days)} SEK
             </p>
           </div>
         </div>

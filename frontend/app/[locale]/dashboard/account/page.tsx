@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useAuth, authFetch } from "@/context/AuthContext";
+import { formatLocaleDate } from "@/utils/formatLocale";
 
 interface AccountData {
   profile: {
@@ -171,7 +172,7 @@ export default function AccountPage() {
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return t("never");
     try {
-      return new Date(dateStr).toLocaleDateString(locale === "sv" ? "sv-SE" : "en-US", {
+      return formatLocaleDate(locale, dateStr, {
         year: "numeric",
         month: "long",
         day: "numeric",
