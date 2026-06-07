@@ -8,6 +8,7 @@ import Image from "next/image";
 import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { authFetch, useAuth } from "@/context/AuthContext";
+import Spinner from "@/components/ui/Spinner";
 
 interface AccountData {
   profile: {
@@ -189,7 +190,10 @@ export default function SettingsPage() {
   if (accountLoading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-gray-400">Loading...</div>
+        <div className="text-gray-400 text-center">
+          <Spinner size="lg" className="mx-auto mb-3" />
+          <p>{commonT("loading")}</p>
+        </div>
       </div>
     );
   }
