@@ -164,11 +164,38 @@ class UsageRecord(BaseModel):
     last_reset: datetime = datetime.utcnow()
 
 
+class PlanInfo:
+    """Lightweight plan descriptor returned by BillingService.get_all_plans()."""
+
+    def __init__(self, tier_str: str):
+        self._tier_str = tier_str
+        features = PLAN_FEATURES[tier_str]
+        self.name = PLAN_NAMES.get(tier_str, tier_str.title())
+        price_sek = features.get("price_monthly_sek", 0)
+        self.price_monthly = price_sek * 100  # store in öre like Stripe convention
+        self.price_yearly = price_sek * 100 * 10  # simple 2-month discount
+        self.features = features
+
+    class _TierWrapper:
+        def __init__(self, value):
+            self.value = value
+
+    @property
+    def tier(self):
+        return self._TierWrapper(self._tier_str)
+
+
+_CANONICAL_TIERS = ["free", "starter", "pro", "enterprise"]
+
+
 class BillingService:
     """Service for handling all billing-related operations."""
 
     def __init__(self):
         self.usage_cache: Dict[str, UsageRecord] = {}
+
+    def get_all_plans(self) -> List["PlanInfo"]:
+        return [PlanInfo(t) for t in _CANONICAL_TIERS]
 
     def get_plan_features(self, tier: str) -> Dict[str, Any]:
         return PLAN_FEATURES.get(tier, PLAN_FEATURES["free"])
