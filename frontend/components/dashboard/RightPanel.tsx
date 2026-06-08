@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
+import { authFetch } from "@/context/AuthContext";
 
 interface Project {
   id: number | string;
@@ -10,6 +11,8 @@ interface Project {
   background: string;
   image_url?: string;
   result_image?: string;
+  created_at?: string;
+  watermark_applied?: boolean;
   processing?: boolean;
 }
 
@@ -24,11 +27,34 @@ interface RightPanelProps {
   usage: UsageData | null;
   planName: string;
   studioLabel: (key: string) => string;
+  onProjectDeleted?: (id: number | string) => void;
 }
 
-export default function RightPanel({ projects, usage, planName, studioLabel }: RightPanelProps) {
+export default function RightPanel({ projects, usage, planName, studioLabel, onProjectDeleted }: RightPanelProps) {
   const t = useTranslations("dashboard.redesign.right");
   const locale = useLocale();
+
+  const handleDownload = (project: Project) => {
+    const url = project.image_url || project.result_image;
+    if (!url) return;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `autostudio_${project.name}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleDelete = async (project: Project) => {
+    if (typeof project.id !== "number") {
+      onProjectDeleted?.(project.id);
+      return;
+    }
+    try {
+      const res = await authFetch(`/api/projects/${project.id}`, { method: "DELETE" });
+      if (res.ok) onProjectDeleted?.(project.id);
+    } catch {}
+  };
 
   const isUnlimited = usage ? usage.generations_limit <= 0 : false;
 
@@ -98,6 +124,29 @@ export default function RightPanel({ projects, usage, planName, studioLabel }: R
                       </p>
                     )}
                   </div>
+                  {/* Download + Delete */}
+                  {isDone && (
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDownload(project); }}
+                        title="Download"
+                        className="w-6 h-6 flex items-center justify-center rounded hover:bg-[#e8e8e8] text-[#666]"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(project); }}
+                        title="Delete"
+                        className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 text-[#999] hover:text-red-500"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}

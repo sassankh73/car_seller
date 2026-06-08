@@ -291,13 +291,21 @@
       },
       "step": {
         "stepOf": "Steg {current} av {total}",
-        "title_frontLeft45": "Fram Left 45°",
+        "title_frontLeft45": "Fram vänster 45°",
+        "title_leftSide": "Vänster sida",
+        "title_rearLeft45": "Bak vänster 45°",
+        "title_rearView": "Bakifrån",
+        "title_rightSide": "Höger sida",
+        "title_frontView": "Framifrån",
         "title_side": "Sidovy",
-        "title_rearLeft45": "Bak Left 45°",
         "title_rearOrFront": "Bak eller Fram",
         "description_frontLeft45": "Positionera ditt fordon så att du ser fronten och vänster sida tydligt",
-        "description_side": "Ta hela längden på ditt fordon",
+        "description_leftSide": "Ta hela vänster längd på ditt fordon",
         "description_rearLeft45": "Positionera ditt fordon så att du ser baken och vänster sida",
+        "description_rearView": "Fotografera bakdelen av ditt fordon rakt framifrån",
+        "description_rightSide": "Ta hela höger längd på ditt fordon",
+        "description_frontView": "Fotografera fronten av ditt fordon rakt framifrån",
+        "description_side": "Ta hela längden på ditt fordon",
         "description_rearOrFront": "Välj antingen bak eller fram för symmetri",
         "requirement_fullVehicle": "Hela fordonet syns",
         "requirement_allWheels": "Alla hjul syns",
@@ -308,12 +316,18 @@
         "requirement_fullLength": "Hela fordonets längd synlig",
         "requirement_rearAndSide": "Bak och sida synlig",
         "requirement_insideFrame": "Hela fordonet innanför ramen",
-        "requirement_cleanBackground": "Ren bakgrund föredras"
+        "requirement_cleanBackground": "Ren bakgrund föredras",
+        "requirement_fillGuide": "Fordonet fyller 75–90% av guideområdet",
+        "requirement_bothAxles": "Båda axlarna (fram- och bakhjul) synliga"
       },
       "feedback": {
         "validating": "Tar foto...",
         "positioning": "Positionera fordonet i guiden",
+        "modelLoading": "Laddar detekteringsmodell...",
         "vehicleNotDetected": "Fordonet inte upptäckt. Se till att fordonet är i bilden.",
+        "vehicleDetected": "Fordon upptäckt",
+        "vehicleCentered": "Fordon centrerat",
+        "readyToCapture": "Redo! Tryck för att ta foto",
         "tooFar": "Närmare för att fylla bilden",
         "tooClose": "Tillbaka, fordonet är för nära",
         "notCentered": "Centrera fordonet i bilden",
@@ -327,7 +341,22 @@
       },
       "captureButtons": {
         "retake": "Gör om",
-        "capture": "Ta Foto"
+        "capture": "Ta Foto",
+        "switchCamera": "Byt kamera"
+      },
+      "session": {
+        "resumeTitle": "Föregående session hittad",
+        "resumeMessage": "Du har {count} foto(n) från en tidigare session. Fortsätta?",
+        "resume": "Fortsätt",
+        "startFresh": "Börja om"
+      },
+      "cameraSelect": {
+        "label": "Kamera",
+        "rearWide": "Bak bred",
+        "rearUltraWide": "Bak ultrabred",
+        "rearTelephoto": "Bak tele",
+        "front": "Fram",
+        "unknown": "Kamera {n}"
       },
       "requirementsTitle": "Krav:"
     },

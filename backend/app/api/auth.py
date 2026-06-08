@@ -339,6 +339,23 @@ def update_profile(payload: ProfileUpdateRequest, request: Request):
         raise HTTPException(status_code=500, detail="Failed to update profile")
 
 
+@router.get("/profile/logo-preview")
+def get_logo_preview(request: Request):
+    """Return the user's stored logo as an image response (for Settings preview)."""
+    from fastapi.responses import Response as FastAPIResponse
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    db = get_db_session(request)
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database session unavailable")
+    db_user = db.query(User).filter(User.id == user.id).first()
+    if not db_user or not db_user.logo_data:
+        raise HTTPException(status_code=404, detail="No logo uploaded")
+    mime = db_user.logo_mime_type or "image/png"
+    return FastAPIResponse(content=db_user.logo_data, media_type=mime)
+
+
 @router.put("/profile/logo", response_model=LogoUploadResponse)
 async def upload_logo(request: Request, file: UploadFile = File(...)):
     """Upload a custom wall logo (PRO / ENTERPRISE only).

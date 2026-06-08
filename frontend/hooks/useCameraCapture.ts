@@ -15,6 +15,7 @@ export interface CameraState {
 export interface CaptureOptions {
   facingMode?: 'user' | 'environment';
   resolution?: 'low' | 'medium' | 'high';
+  deviceId?: string;
 }
 
 export interface CaptureResult {
@@ -80,7 +81,7 @@ export function useCameraCapture() {
   const requestPermission = useCallback(
     async (options: CaptureOptions = {}): Promise<boolean> => {
       // Default to rear camera — front camera (user) is useless for vehicle photography
-      const { facingMode = 'environment', resolution = 'medium' } = options;
+      const { facingMode = 'environment', resolution = 'medium', deviceId } = options;
 
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
@@ -88,14 +89,21 @@ export function useCameraCapture() {
       }
 
       try {
+        const videoConstraints: MediaTrackConstraints = deviceId
+          ? {
+              deviceId: { exact: deviceId },
+              width: { ideal: RESOLUTIONS[resolution].width },
+              height: { ideal: RESOLUTIONS[resolution].height },
+            }
+          : {
+              facingMode: { ideal: facingMode },
+              width: { ideal: RESOLUTIONS[resolution].width },
+              height: { ideal: RESOLUTIONS[resolution].height },
+              aspectRatio: { ideal: 4 / 3 },
+            };
+
         const constraints: MediaStreamConstraints = {
-          video: {
-            // Use { ideal } so browsers without a rear camera (desktop) fall back gracefully
-            facingMode: { ideal: facingMode },
-            width: { ideal: RESOLUTIONS[resolution].width },
-            height: { ideal: RESOLUTIONS[resolution].height },
-            aspectRatio: { ideal: 4 / 3 },
-          },
+          video: videoConstraints,
           audio: false,
         };
 

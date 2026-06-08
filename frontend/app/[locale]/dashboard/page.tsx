@@ -16,6 +16,8 @@ interface Project {
   background: string;
   image_url?: string;
   result_image?: string;
+  created_at?: string;
+  watermark_applied?: boolean;
 }
 
 interface Studio {
@@ -165,13 +167,21 @@ export default function Dashboard() {
         body: formData,
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || "Processing failed");
+      const projectId = res.headers.get("X-Project-Id");
+      const resultUrl = res.headers.get("X-Result-Url");
       const blob = await res.blob();
       if (resultBlobUrlRef.current) URL.revokeObjectURL(resultBlobUrlRef.current);
       const url = URL.createObjectURL(blob);
       resultBlobUrlRef.current = url;
       setResultImage(url);
       setProjects((prev) => [
-        { id: Date.now().toString(), name: file.name, background: selectedStudio, result_image: url },
+        {
+          id: projectId ? parseInt(projectId, 10) : Date.now().toString(),
+          name: file.name,
+          background: selectedStudio,
+          result_image: url,
+          image_url: resultUrl || undefined,
+        },
         ...prev,
       ]);
       setProcessingStatus("completed");
@@ -184,14 +194,19 @@ export default function Dashboard() {
     }
   };
 
+  const angleNames = [
+    "Front Left 45°", "Left Side", "Rear Left 45°",
+    "Rear View", "Right Side", "Front View",
+  ];
+
   const handleGenerateAll = async (images: { blob: Blob; stepIndex: number }[]) => {
     if (!images.length) return;
     setProcessing(true);
     setResultImage(null);
     setApiError(null);
-    const angleNames = ["Front Left 45°", "Side View", "Rear Left 45°", "Rear/Front View"];
     for (let i = 0; i < images.length; i++) {
       setBatchLabel(`Processing photo ${i + 1} of ${images.length}…`);
+      const name = angleNames[images[i].stepIndex] ?? `Photo ${i + 1}`;
       const imgFile = blobToFile(images[i].blob, `photo_step${images[i].stepIndex + 1}_${Date.now()}.jpg`);
       const formData = new FormData();
       formData.append("file", imgFile);
@@ -202,13 +217,21 @@ export default function Dashboard() {
       try {
         const res = await fetch("/api/studio/process", { method: "POST", credentials: "include", body: formData });
         if (!res.ok) continue;
+        const projectId = res.headers.get("X-Project-Id");
+        const resultUrl = res.headers.get("X-Result-Url");
         const blob = await res.blob();
         if (resultBlobUrlRef.current) URL.revokeObjectURL(resultBlobUrlRef.current);
         const url = URL.createObjectURL(blob);
         resultBlobUrlRef.current = url;
         setResultImage(url);
         setProjects((prev) => [
-          { id: `${Date.now()}-${i}`, name: angleNames[images[i].stepIndex] ?? `Photo ${i + 1}`, background: selectedStudio, result_image: url },
+          {
+            id: projectId ? parseInt(projectId, 10) : `${Date.now()}-${i}`,
+            name,
+            background: selectedStudio,
+            result_image: url,
+            image_url: resultUrl || undefined,
+          },
           ...prev,
         ]);
       } catch { /* continue batch */ }
@@ -721,6 +744,7 @@ export default function Dashboard() {
             usage={account?.usage ?? null}
             planName={account?.subscription?.plan_name ?? "Free"}
             studioLabel={studioLabel}
+            onProjectDeleted={(id) => setProjects((prev) => prev.filter((p) => p.id !== id))}
           />
         </div>
 

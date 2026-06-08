@@ -13,11 +13,16 @@ from ..services.image_processing import AICompositingService, StudioShadowProfil
 from ..services.image_upload import validate_and_convert_upload, ImageUploadError, ImageValidationError
 from ..middleware.auth import get_current_user, get_db_session
 from ..services.billing import get_plan_features
+from ..models import Project
 
 logger = logging.getLogger(__name__)
 
 # Storage directory for preserving original and transparent images
 STORAGE_DIR = Path(__file__).parent.parent / "storage"
+
+# Static results directory (accessible via /static/results/)
+RESULTS_DIR = Path(__file__).parent.parent / "static" / "results"
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Static studios directory
 STUDIOS_DIR = Path(__file__).parent.parent / "static" / "studios"
@@ -439,22 +444,64 @@ async def process_image(
     result_image.save(output_buffer, format="PNG", quality=95)
     output_buffer.seek(0)
 
+    # Persist result image to static/results for project history
+    result_url: Optional[str] = None
+    try:
+        result_filename = f"{generation_id}.png"
+        result_path = RESULTS_DIR / result_filename
+        result_image.save(result_path, format="PNG")
+        result_url = f"/static/results/{result_filename}"
+    except Exception as e:
+        logger.warning("Failed to save result image to static dir: %s (non-fatal)", e)
+
+    # Create project record in DB (TASK-8)
+    project_id: Optional[int] = None
+    db = get_db_session(request)
+    if current_user and db and result_url:
+        try:
+            file_base = (file.filename or "upload").rsplit(".", 1)[0]
+            project_name = file_base if file_base else f"Photo {studio_key}"
+            proj = Project(
+                name=project_name,
+                background=studio_key,
+                image_url=result_url,
+                original_format=original_format,
+                watermark_applied=apply_watermark,
+                user_id=current_user.id,
+            )
+            db.add(proj)
+            db.commit()
+            db.refresh(proj)
+            project_id = proj.id
+        except Exception as e:
+            logger.warning("Failed to save project record: %s (non-fatal)", e)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+
     # Track whether rembg was actually used
     rembg_used = compositing_service.rembg_used
 
     # Return as file response
     from fastapi.responses import StreamingResponse
 
+    resp_headers = {
+        "Content-Disposition": f'attachment; filename="autostudio_{studio_key}.png"',
+        "X-Studio-Key": studio_key,
+        "X-Export-Quality": export_quality,
+        "X-Generation-Id": generation_id,
+        "X-Rembg-Used": str(rembg_used).lower(),
+    }
+    if result_url:
+        resp_headers["X-Result-Url"] = result_url
+    if project_id:
+        resp_headers["X-Project-Id"] = str(project_id)
+
     return StreamingResponse(
         output_buffer,
         media_type="image/png",
-        headers={
-            "Content-Disposition": f'attachment; filename="autostudio_{studio_key}.png"',
-            "X-Studio-Key": studio_key,
-            "X-Export-Quality": export_quality,
-            "X-Generation-Id": generation_id,
-            "X-Rembg-Used": str(rembg_used).lower(),
-        },
+        headers=resp_headers,
     )
 
 

@@ -292,12 +292,20 @@
       "step": {
         "stepOf": "Step {current} of {total}",
         "title_frontLeft45": "Front Left 45°",
-        "title_side": "Side View",
+        "title_leftSide": "Left Side",
         "title_rearLeft45": "Rear Left 45°",
+        "title_rearView": "Rear View",
+        "title_rightSide": "Right Side",
+        "title_frontView": "Front View",
+        "title_side": "Side View",
         "title_rearOrFront": "Rear or Front View",
         "description_frontLeft45": "Position your vehicle so you can see the front and left side clearly",
-        "description_side": "Capture the full length of your vehicle",
+        "description_leftSide": "Capture the full left length of your vehicle",
         "description_rearLeft45": "Position your vehicle so you can see the rear and left side",
+        "description_rearView": "Photograph the rear of your vehicle straight on",
+        "description_rightSide": "Capture the full right length of your vehicle",
+        "description_frontView": "Photograph the front of your vehicle straight on",
+        "description_side": "Capture the full length of your vehicle",
         "description_rearOrFront": "Choose either rear or front view for symmetry",
         "requirement_fullVehicle": "Full vehicle visible",
         "requirement_allWheels": "All wheels visible",
@@ -308,12 +316,18 @@
         "requirement_fullLength": "Full vehicle length visible",
         "requirement_rearAndSide": "Rear and side visible",
         "requirement_insideFrame": "Full vehicle inside frame",
-        "requirement_cleanBackground": "Clean background preferred"
+        "requirement_cleanBackground": "Clean background preferred",
+        "requirement_fillGuide": "Vehicle fills 75–90% of guide area",
+        "requirement_bothAxles": "Both axles (front & rear wheels) visible"
       },
       "feedback": {
         "validating": "Capturing photo...",
         "positioning": "Position your vehicle inside the guide",
+        "modelLoading": "Loading detection model...",
         "vehicleNotDetected": "Vehicle not detected. Ensure vehicle is in frame.",
+        "vehicleDetected": "Vehicle detected",
+        "vehicleCentered": "Vehicle centered",
+        "readyToCapture": "Ready! Tap to capture",
         "tooFar": "Move closer to fill the frame",
         "tooClose": "Move back, vehicle is too close",
         "notCentered": "Center the vehicle in the frame",
@@ -327,7 +341,22 @@
       },
       "captureButtons": {
         "retake": "Retake",
-        "capture": "Capture Photo"
+        "capture": "Capture Photo",
+        "switchCamera": "Switch Camera"
+      },
+      "session": {
+        "resumeTitle": "Previous session found",
+        "resumeMessage": "You have {count} photo(s) from a previous session. Resume?",
+        "resume": "Resume",
+        "startFresh": "Start fresh"
+      },
+      "cameraSelect": {
+        "label": "Camera",
+        "rearWide": "Rear Wide",
+        "rearUltraWide": "Rear Ultra Wide",
+        "rearTelephoto": "Rear Telephoto",
+        "front": "Front",
+        "unknown": "Camera {n}"
       },
       "requirementsTitle": "Requirements:"
     },
