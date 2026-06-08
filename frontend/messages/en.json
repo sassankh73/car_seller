@@ -374,6 +374,86 @@
       "title": "Recent Projects",
       "noPreview": "No preview",
       "studio": "Studio"
+    },
+    "redesign": {
+      "sidebar": {
+        "title": "WORKFLOW",
+        "steps": {
+          "chooseStudio": "Choose Studio",
+          "uploadPhoto": "Upload Photo",
+          "photoGuide": "Photo Guide",
+          "processing": "Processing",
+          "resultDownload": "Result & Download"
+        },
+        "stats": {
+          "creditsRemaining": "Credits remaining",
+          "photosThisMonth": "Photos this month",
+          "unlimited": "Unlimited"
+        }
+      },
+      "step1": {
+        "heading": "Choose Your Studio",
+        "subtitle": "Select the environment for your vehicle photo"
+      },
+      "step2": {
+        "heading": "Photo Guide",
+        "subtitle": "Tips for the best AI results",
+        "tips": {
+          "lighting": "Good lighting — daylight or open shade",
+          "angle": "3/4 angle — front corner not straight-on",
+          "fullCar": "Full car in frame — don't crop any part",
+          "background": "Simple background — parking lot or road",
+          "resolution": "High resolution — phone main camera",
+          "exterior": "No interiors — exterior shots only"
+        }
+      },
+      "step3": {
+        "heading": "Good vs Bad Examples",
+        "good": "Good examples",
+        "bad": "Avoid these",
+        "badLabels": "Too dark · Cropped · Cluttered background"
+      },
+      "step4": {
+        "heading": "Upload Your Photo",
+        "deviceZone": {
+          "title": "Upload from device",
+          "hint": "Drag & drop or click — JPG / PNG"
+        },
+        "cameraZone": {
+          "title": "Use camera",
+          "hint": "Direct mobile camera capture"
+        }
+      },
+      "step5": {
+        "cta": "Process with AI",
+        "ctaInfo": "Uses 1 credit · ~15 seconds · Studio: {studio}",
+        "ctaSelectBoth": "Select a studio and upload a photo to continue",
+        "result": "Your result is ready",
+        "download": "Download Image",
+        "newGeneration": "New Generation"
+      },
+      "options": {
+        "title": "Enhancement Options",
+        "enhanceWheels": "Enhance Wheel Details",
+        "enhancePaint": "Enhance Paint Reflections",
+        "quality": "Export Quality"
+      },
+      "right": {
+        "recentProjects": "Recent Projects",
+        "noProjects": "No projects yet",
+        "done": "Done",
+        "usage": {
+          "creditsLeft": "Credits left",
+          "thisMonth": "This month",
+          "plan": "Plan",
+          "unlimited": "Unlimited"
+        },
+        "upgrade": {
+          "title": "Go Pro",
+          "subtitle": "Unlimited photos, priority & HD",
+          "button": "Upgrade Now"
+        }
+      }
     }
   },
   "billing": {

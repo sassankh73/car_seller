@@ -357,6 +357,86 @@
       "title": "Senaste projekt",
       "noPreview": "Ingen förhandsgranskning",
       "studio": "Studio"
+    },
+    "redesign": {
+      "sidebar": {
+        "title": "ARBETSFLÖDE",
+        "steps": {
+          "chooseStudio": "Välj Studio",
+          "uploadPhoto": "Ladda upp foto",
+          "photoGuide": "Fotoguide",
+          "processing": "Bearbetning",
+          "resultDownload": "Resultat & Nedladdning"
+        },
+        "stats": {
+          "creditsRemaining": "Credits kvar",
+          "photosThisMonth": "Foton denna månad",
+          "unlimited": "Obegränsat"
+        }
+      },
+      "step1": {
+        "heading": "Välj Din Studio",
+        "subtitle": "Välj miljö för ditt fordonsfoto"
+      },
+      "step2": {
+        "heading": "Fotoguide",
+        "subtitle": "Tips för bästa AI-resultat",
+        "tips": {
+          "lighting": "Bra belysning — dagsljus eller öppen skugga",
+          "angle": "3/4-vinkel — framt hörn inte rakt framifrån",
+          "fullCar": "Hela bilen i bild — beskär ingen del",
+          "background": "Enkel bakgrund — parkeringsplats eller väg",
+          "resolution": "Hög upplösning — telefonens huvudkamera",
+          "exterior": "Inga interiörer — bara exteriörbilder"
+        }
+      },
+      "step3": {
+        "heading": "Bra vs Dåliga Exempel",
+        "good": "Bra exempel",
+        "bad": "Undvik dessa",
+        "badLabels": "För mörkt · Beskuret · Rörig bakgrund"
+      },
+      "step4": {
+        "heading": "Ladda Upp Ditt Foto",
+        "deviceZone": {
+          "title": "Ladda upp från enhet",
+          "hint": "Dra och släpp eller klicka — JPG / PNG"
+        },
+        "cameraZone": {
+          "title": "Använd kamera",
+          "hint": "Direkt mobilkameraupptagning"
+        }
+      },
+      "step5": {
+        "cta": "Bearbeta med AI",
+        "ctaInfo": "Använder 1 credit · ~15 sekunder · Studio: {studio}",
+        "ctaSelectBoth": "Välj en studio och ladda upp ett foto för att fortsätta",
+        "result": "Ditt resultat är klart",
+        "download": "Ladda ner bild",
+        "newGeneration": "Ny generering"
+      },
+      "options": {
+        "title": "Förbättringsalternativ",
+        "enhanceWheels": "Förbättra hjuldetaljer",
+        "enhancePaint": "Förbättra färgreflektioner",
+        "quality": "Exportkvalitet"
+      },
+      "right": {
+        "recentProjects": "Senaste projekt",
+        "noProjects": "Inga projekt ännu",
+        "done": "Klar",
+        "usage": {
+          "creditsLeft": "Credits kvar",
+          "thisMonth": "Denna månad",
+          "plan": "Plan",
+          "unlimited": "Obegränsat"
+        },
+        "upgrade": {
+          "title": "Bli Pro",
+          "subtitle": "Obegränsade foton, prioritet & HD",
+          "button": "Uppgradera nu"
+        }
+      }
     }
   },
   "billing": {
