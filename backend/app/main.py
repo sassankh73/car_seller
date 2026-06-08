@@ -219,6 +219,18 @@ async def health_check():
     return {"status": "healthy", "message": "AutoStudio AI Backend is running"}
 
 
+@app.get("/api/version")
+async def get_version():
+    import subprocess
+    try:
+        commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+        branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], text=True).strip()
+    except Exception:
+        commit = "unknown"
+        branch = "unknown"
+    return {"commit": commit, "branch": branch}
+
+
 @app.get("/api/auth/me", response_model=UserResponse)
 async def get_current_user_info(request: Request):
     """

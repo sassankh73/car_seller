@@ -1,5 +1,25 @@
 # AutoStudio AI — Deployment Guide
 
+## Branch Policy
+
+**Always deploy from `main`.** Feature branches (e.g. `fix/dashboard-redesign`) must be merged into `main` before the VPS picks them up.
+
+To update the VPS after merging to main:
+
+```bash
+# On VPS (root@162.245.186.99):
+cd /root/car_seller
+git fetch origin
+git checkout main
+git reset --hard origin/main
+docker compose build --no-cache frontend backend
+docker compose up -d
+```
+
+Do NOT manually `git checkout <feature-branch>` on the VPS — it will fall behind as soon as main advances.
+
+---
+
 ## Quick Start (VPS)
 
 ```bash
