@@ -1,0 +1,155 @@
+{
+  "project": "AutoStudio AI — Dashboard Redesign (Clean & Modern UI)",
+  "scope": "FRONTEND ONLY. Do not change any backend code, API routes, or auth logic.",
+  "ground_truth_rule": "Do not report this as 'done' without screenshots/recordings of the actual rendered page in the browser at each step of the flow (Studio selection, Photo Guide, Upload, Process button state, Right panel data). Claims without visual proof will not be trusted.",
+  "git_workflow": {
+    "before_starting": "Commit and push current state first as a checkpoint (e.g. 'checkpoint: before dashboard redesign') so nothing is lost if something goes wrong.",
+    "branch": "Create and work on a dedicated branch, e.g. fix/dashboard-redesign.",
+    "commit_cadence": "Commit and push after each major section is completed and visually verified (Top Nav, Sidebar, Step 1 Studio cards, Step 2 Photo Guide, Step 3 Examples, Step 4 Upload zones, Step 5 CTA, Right Panel) — not as one giant commit at the end.",
+    "format": "<section>: <short description>, e.g. 'sidebar: add vertical step tracker with active/completed states'",
+    "rules": ["Never force-push or amend.", "If a push fails, stop and tell the user — do not retry blindly."]
+  },
+  "design_brief": {
+    "summary": "Redesign the dashboard page with a clean, modern, minimal white design. Frontend only — do not touch backend.",
+    "layout": "3 columns: Sidebar (200px) | Main Content (flex:1) | Right Panel (240px)",
+    "design_tokens": {
+      "--red": "#e63946",
+      "--navy": "#1a1a2e",
+      "--bg": "#f5f5f7",
+      "--white": "#ffffff",
+      "--border": "#e8e8e8",
+      "--text": "#111111",
+      "--muted": "#888888",
+      "--radius": "8px",
+      "--font": "'DM Sans', -apple-system, sans-serif"
+    },
+    "top_navigation": {
+      "requirements": [
+        "Keep existing links/routes, only improve styling — do not break navigation or auth-gated routes",
+        "Logo: 'AutoStudio AI' with red accent on 'AI'",
+        "Links: Projects (active state, red underline) · Billing · Settings · Account · Admin (styled red)",
+        "Right side: Plan badge as a pill shape · Language toggle · Logout",
+        "Sticky header, white background, subtle bottom border"
+      ]
+    },
+    "sidebar_step_tracker": {
+      "title": "WORKFLOW",
+      "steps": [
+        "1 Choose Studio",
+        "2 Upload Photo",
+        "3 Photo Guide",
+        "4 Processing",
+        "5 Result & Download"
+      ],
+      "states": {
+        "active": "red filled circle, red text, red left border on the row",
+        "completed": "green filled circle — turns green as the user actually completes that step (real state, not decorative)",
+        "default": "outlined circle, muted text"
+      },
+      "visual": "Steps connected by vertical lines between circles",
+      "footer": "Below the steps: small stats — credits remaining, photos this month (pull from real user/usage data already available in the app, do not hardcode placeholder numbers)"
+    },
+    "main_content_step_flow": [
+      {
+        "step": "STEP 1 — Choose Your Studio",
+        "requirements": [
+          "Section heading + subtitle",
+          "4 studio cards in a grid (2x2 or 4-in-a-row, responsive)",
+          "Each card: colored preview block on top, name, short description",
+          "Selected card: red border + checkmark badge in the corner",
+          "Studios: Dark Showroom (dark navy bg) · White Studio (light gray) · Urban Night (charcoal) · Sunrise (warm orange)",
+          "Clicking a card selects it (red border + checkmark) and deselects the others — single selection only"
+        ]
+      },
+      {
+        "step": "STEP 2 — Photo Guide",
+        "requirements": [
+          "White card containing 6 tips in a 2-row grid (3 per row)",
+          "Tips: '☀️ Good lighting — daylight or open shade', '📐 3/4 angle — front corner not straight-on', '🚗 Full car in frame — don't crop any part', '🧹 Simple background — parking lot or road', '📱 High resolution — phone main camera', '🚫 No interiors — exterior shots only'"
+        ]
+      },
+      {
+        "step": "STEP 3 — Good vs Bad Examples",
+        "requirements": [
+          "Two cards side by side",
+          "Left: '✅ Good examples' — 3 placeholder image boxes with a green tint",
+          "Right: '❌ Avoid these' — 3 placeholder boxes with a red tint, labeled 'Too dark · Cropped · Cluttered background'"
+        ]
+      },
+      {
+        "step": "STEP 4 — Upload Your Photo",
+        "requirements": [
+          "Two upload zones side by side, dashed border, hover effect",
+          "Zone 1: '📤 Upload from device — drag & drop or click, JPG/PNG'",
+          "Zone 2: '📷 Use camera (mobile) — direct camera capture'",
+          "Both zones: large icon, title, hint text",
+          "Hover state on upload zones: red dashed border + light red background"
+        ]
+      },
+      {
+        "step": "STEP 5 — CTA",
+        "requirements": [
+          "Large red button: '⚡ Process with AI →'",
+          "Below button: 'Uses 1 credit · ~15 seconds · Selected studio: [studio name]' — must reflect the actually-selected studio, not a placeholder",
+          "Right side: confirmation of selected studio name + current upload status",
+          "Button is disabled (greyed out) until BOTH a studio is selected AND a photo is uploaded — wire this to real component state, not visual-only"
+        ]
+      }
+    ],
+    "right_panel": {
+      "recent_projects": {
+        "requirement": "Loads from the EXISTING /api/projects endpoint — do not mock or hardcode this data. If the endpoint shape doesn't match the mockup exactly (thumbnail, name, studio, status), adapt the rendering to the real response shape rather than inventing fields.",
+        "example_rows": [
+          "[thumb] BMW 3-Series — Dark Showroom — ✓ Done",
+          "[thumb] Volvo XC60 — White Studio — ✓ Done",
+          "[thumb] Audi A4 — Sunrise — ⏳ Processing"
+        ]
+      },
+      "usage": {
+        "requirement": "Pull real values from the user's actual account/usage data already available in the app (credits left, photos this month, plan name) — do not hardcode '5', '3 photos', 'Free'.",
+        "fields": ["Credits left", "This month (photo count)", "Plan"]
+      },
+      "upgrade_card": {
+        "style": "dark navy → red gradient background",
+        "content": "🚀 Go Pro — 'Unlimited photos, priority & HD' — [Upgrade Now] button",
+        "requirement": "The Upgrade Now button must link to the real existing billing/upgrade flow — do not create a dead-end button"
+      }
+    },
+    "interactions": [
+      "Clicking a studio card selects it (red border + checkmark), deselecting others",
+      "Upload zones: hover = red dashed border + light red background",
+      "Process button: disabled (gray) until both a studio is selected AND a photo is uploaded — real state-driven, not just CSS",
+      "Step numbers in the sidebar turn green as the user actually completes each step (real progression state)",
+      "Right panel 'Recent Projects' loads live from /api/projects"
+    ]
+  },
+  "files_to_modify": [
+    "frontend/src/app/[locale]/dashboard/page.tsx (or the actual current path to the dashboard page — verify the real path first, the brief's path may not match the current repo structure)",
+    "New components may be created under frontend/src/components/dashboard/ as needed",
+    "Do NOT touch any API routes, backend files (backend/**), or authentication/middleware logic"
+  ],
+  "constraints": [
+    "Frontend-only change — zero backend modifications",
+    "Must preserve all existing routes, links, and auth-gated navigation behavior — only restyle, don't break functionality",
+    "Must respect the existing i18n setup (next-intl, sv/en locales) — all new UI text must be added to the locale files (en.json / sv.json), not hardcoded in English only, since hardcoded strings were already flagged as a defect in this project",
+    "Must remain responsive — verify the 3-column layout degrades sensibly on smaller viewports (does not have to be pixel-perfect mobile design, but must not break/overlap)",
+    "Real data only: usage stats, recent projects, and selected-studio confirmation must reflect actual application state/API data — no hardcoded placeholder numbers in the final shipped version (placeholder image boxes in Step 3's good/bad examples are the one explicit exception, since the brief calls for placeholders there)"
+  ],
+  "deliverable": "A fully working, visually polished dashboard that guides the user end-to-end: Studio → Photo Guide → Examples → Upload → Process → Result/Download, with no dead ends. Must be demonstrated with actual screenshots of each step in the running app (not mockup descriptions) plus confirmation that the existing /api/projects and billing/upgrade flows are wired to real endpoints, not mocked.",
+  "verification_checklist": [
+    "Screenshot: full 3-column dashboard layout on desktop width",
+    "Screenshot: studio card selected state (red border + checkmark) after clicking",
+    "Screenshot: Photo Guide step with all 6 tips visible",
+    "Screenshot: Good vs Bad examples cards",
+    "Screenshot: Upload zones in default and hover states",
+    "Screenshot: Process button in both disabled and enabled states",
+    "Screenshot/confirmation: Right panel showing real data pulled from /api/projects and the user's actual usage/plan",
+    "Confirmation that all new UI strings exist in both en.json and sv.json",
+    "Confirmation that no backend files were modified (git diff --stat showing only frontend/ paths touched)"
+  ],
+  "communication_rules": [
+    "If the actual current dashboard file path or component structure differs from what's described in the brief, say so and adapt — do not force a mismatch.",
+    "If real data sources (usage stats, plan info, projects) require an API shape that doesn't currently exist or doesn't match the mockup, surface that explicitly and ask before inventing or mocking data.",
+    "Do not claim 'done' without the screenshots listed in verification_checklist attached/described in the same message."
+  ]
+}

@@ -26,6 +26,8 @@ async def authenticate_middleware(request: Request, call_next):
         "/api/auth/login",
         "/api/auth/register",
         "/api/auth/forgot-password",
+        "/api/auth/reset-password",
+        "/api/auth/logout",
         "/api/auth/token",
         "/api/auth/signup",
         "/docs",
@@ -54,23 +56,23 @@ async def authenticate_middleware(request: Request, call_next):
     if is_public:
         return await call_next(request)
 
-    # Get authorization header
+    # Accept token from Authorization header or httpOnly cookie
     auth_header = request.headers.get("Authorization")
-    if not auth_header:
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"detail": "Not authenticated"},
-        )
-
-    # Validate token format
-    parts = auth_header.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"detail": "Invalid token format"},
-        )
-
-    token = parts[1]
+    if auth_header:
+        parts = auth_header.split()
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": "Invalid token format"},
+            )
+        token = parts[1]
+    else:
+        token = request.cookies.get("auth_token")
+        if not token:
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": "Not authenticated"},
+            )
 
     # Validate token with proper DB session management
     db: Session = SessionLocal()

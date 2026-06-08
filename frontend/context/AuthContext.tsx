@@ -34,29 +34,19 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
- * Create an authenticated fetch wrapper that attaches the JWT Authorization header.
+ * Authenticated fetch — credentials: 'include' sends the httpOnly auth cookie automatically.
+ * Falls back to Authorization header from in-memory token for requests that set it explicitly.
  */
 export function authFetch(input: string, init?: RequestInit): Promise<Response> {
-  const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-  const headers: Record<string, string> = {
-    ...(init?.headers as Record<string, string> || {}),
-  };
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  return fetch(input, { ...init, headers });
+  return fetch(input, { ...init, credentials: "include" });
 }
 
 /**
- * Create an axios-compatible request config with auth headers.
+ * Returns empty headers — auth is handled via httpOnly cookie, not Authorization headers.
+ * Kept for backward-compat call sites; callers can safely spread the result.
  */
 export function getAuthHeaders(): Record<string, string> {
-  const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  return headers;
+  return {};
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -70,12 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const locale = useLocale();
   const t = useTranslations("auth");
 
-  // Fetch current user from /api/auth/me using a token
-  const fetchCurrentUser = useCallback(async (authToken: string): Promise<User | null> => {
+  // Fetch current user from /api/auth/me using the httpOnly cookie (credentials: include)
+  const fetchCurrentUser = useCallback(async (): Promise<User | null> => {
     try {
-      const response = await fetch("/api/auth/me", {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
+      const response = await fetch("/api/auth/me", { credentials: "include" });
       if (response.ok) {
         const data = await response.json();
         return {
@@ -95,30 +83,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Check for existing auth on mount
+  // On mount, check session via cookie (no localStorage needed)
   useEffect(() => {
-    const storedToken = localStorage.getItem("auth_token");
-
-    if (storedToken) {
-      // Verify token with backend and get real user data
-      fetchCurrentUser(storedToken)
-        .then((userData) => {
-          if (userData) {
-            setUser(userData);
-            setToken(storedToken);
-          } else {
-            // Token invalid — clear it
-            localStorage.removeItem("auth_token");
+    fetchCurrentUser()
+      .then((userData) => {
+        if (userData) {
+          setUser(userData);
+          if (userData.force_password_reset) {
+            setNeedsPasswordReset(true);
           }
-          setLoading(false);
-        })
-        .catch(() => {
-          localStorage.removeItem("auth_token");
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
-    }
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
   }, [fetchCurrentUser]);
 
   const login = async (email: string, password: string) => {
@@ -129,17 +108,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        // Store token first
-        localStorage.setItem("auth_token", data.access_token);
+        // Keep token in memory for this session (httpOnly cookie is the real auth mechanism)
         setToken(data.access_token);
 
-        // Fetch real user data from /api/auth/me
-        const userData = await fetchCurrentUser(data.access_token);
+        const userData = await fetchCurrentUser();
         if (userData) {
           setUser(userData);
           if (data.force_password_reset) {
@@ -147,8 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           router.push(`/${locale}/dashboard`);
         } else {
-          // /me failed — don't fabricate a fake user, show an error instead
-          localStorage.removeItem("auth_token");
+          setToken(null);
           setError("Could not load your account. Please try signing in again.");
           setLoading(false);
         }
@@ -157,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(data.detail || t("loginFailed"));
         setLoading(false);
       }
-    } catch (err) {
+    } catch {
       setError(t("networkError"));
       setLoading(false);
     }
@@ -171,23 +148,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password, name }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        // Store token first
-        localStorage.setItem("auth_token", data.access_token);
         setToken(data.access_token);
 
-        // Fetch real user data from /api/auth/me
-        const userData = await fetchCurrentUser(data.access_token);
+        const userData = await fetchCurrentUser();
         if (userData) {
           setUser(userData);
           router.push(`/${locale}/dashboard`);
         } else {
-          // /me failed — don't fabricate a fake user, show an error instead
-          localStorage.removeItem("auth_token");
+          setToken(null);
           setError("Could not load your account. Please try signing in again.");
           setLoading(false);
         }
@@ -196,26 +170,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(data.detail || t("registerFailed"));
         setLoading(false);
       }
-    } catch (err) {
+    } catch {
       setError(t("networkError"));
       setLoading(false);
     }
   };
 
   const logout = useCallback(() => {
+    // Clear cookie server-side (fire-and-forget — don't block UI)
+    fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
     setUser(null);
     setToken(null);
     setNeedsPasswordReset(false);
-    localStorage.removeItem("auth_token");
     router.push("/");
     router.refresh();
   }, [router]);
 
   const changePassword = async (email: string, currentPassword: string, newPassword: string): Promise<boolean> => {
     try {
-      const response = await fetch("/api/auth/change-password", {
+      const response = await authFetch("/api/auth/change-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, current_password: currentPassword, new_password: newPassword }),
       });
       if (response.ok) {
@@ -268,8 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (response.ok) {
-        // Refresh user data
-        const updatedUser = await fetchCurrentUser(localStorage.getItem("auth_token") || "");
+        const updatedUser = await fetchCurrentUser();
         if (updatedUser) {
           setUser(updatedUser);
           return { success: true, user: updatedUser };
@@ -284,21 +258,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshUser = async (): Promise<User | null> => {
-    const storedToken = localStorage.getItem("auth_token");
-    if (!storedToken) return null;
-
-    const userData = await fetchCurrentUser(storedToken);
+    const userData = await fetchCurrentUser();
     if (userData) {
       setUser(userData);
     }
     return userData;
   };
 
-  // Redirect unauthenticated users away from protected routes
+  // Redirect unauthenticated users away from protected routes (client-side fallback)
   useEffect(() => {
     if (!loading && !user) {
       const currentPath = pathname || "";
-      // Match /<locale>/dashboard/* or /<locale>/admin/*
       const isProtected = /^\/[a-z]{2}(\/dashboard|\/admin)(\/|$)/.test(currentPath);
       if (isProtected) {
         router.push(`/${locale}/auth/login`);
@@ -306,11 +276,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, loading, pathname, router, locale]);
 
-  // Redirect authenticated users away from auth pages (exact auth-page segments only)
+  // Redirect authenticated users away from auth pages
   useEffect(() => {
     if (user && !loading) {
       const currentPath = pathname || "";
-      // Match /<locale>/auth/login, /register, /forgot-password — exact segment match
       const isAuthPage = /^\/[a-z]{2}\/auth\/(login|register|forgot-password)(\/|$)/.test(currentPath);
       if (isAuthPage) {
         router.push(`/${locale}/dashboard`);
@@ -332,7 +301,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refreshUser,
         loading,
         error,
-        isAuthenticated: !!user && !!token,
+        isAuthenticated: !!user,
         needsPasswordReset,
       }}
     >

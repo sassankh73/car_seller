@@ -1,0 +1,49 @@
+{
+  "project": "AutoStudio AI — VPS Live-Site Diagnosis & Fix",
+  "context": "The user is viewing the LIVE deployed site at https://autostudio.cc and still sees 'API Connection Error — Failed to process image. Please try again.' even after a recent commit (198786a) that your own terminal output reported as 'Deployed and confirmed on VPS' with all smoke tests passing. This is a contradiction that must be resolved with evidence, not assumptions. Additionally, confirm the VPS Postgres version matches local (docker-compose.yml pins postgres:15).",
+  "ground_truth_rule": "Do not report anything as 'fixed' or 'confirmed' unless you have pasted command output, HTTP response bodies, or container logs proving it. The user has explicitly said they no longer trust claims without evidence — every item below must be answered with actual command output, not inference.",
+  "instructions_for_claude_code": [
+    {
+      "id": "DIAG-1",
+      "title": "Reconcile the 'deployed and confirmed on VPS' claim with the live error the user is still seeing",
+      "steps": [
+        "SSH into the VPS (or use whatever access you already have).",
+        "Run `git log -1` and `git status` in the deployed repo directory on the VPS — confirm the running code is actually at commit 198786a (or later) and not stale.",
+        "Run `docker compose ps` — confirm which containers are actually running, and check `docker compose images` or `docker inspect <container> | grep Image` to confirm the frontend/backend containers were rebuilt AFTER the latest commit (check image creation timestamps vs commit timestamp).",
+        "Run `docker logs car_backend --tail 100` and `docker logs car_frontend --tail 100` (or whatever the VPS container names are) and paste the actual output.",
+        "From the VPS itself, run `curl -s -w '\\nHTTP %{http_code}\\n' https://autostudio.cc/api/studio` and `curl -s -w '\\nHTTP %{http_code}\\n' http://localhost:8001/health` and paste the raw output.",
+        "Reproduce the failure the way the user does: load https://autostudio.cc/en/dashboard, open the network tab equivalent (or replicate the exact frontend fetch call to /api/studio/process with a real auth token), and capture the exact status code + response body of the failing request.",
+        "State explicitly: was the smoke-test claim accurate at the time it was made, and if so, what changed between then and now that's causing the user to still see the error? (e.g., container not restarted, nginx/reverse-proxy caching, CDN cache, browser cache, a different code path than the one smoke-tested, a race condition, rate limiting, etc.)"
+      ],
+      "deliverable": "A root-cause explanation backed by pasted command output and the exact failing request/response — not a restated claim that it's 'fixed'."
+    },
+    {
+      "id": "DIAG-2",
+      "title": "Confirm Postgres version on VPS matches local (postgres:15)",
+      "steps": [
+        "On the VPS, run `docker exec car_postgres postgres --version` (or the equivalent container name) and paste the output.",
+        "Also run `docker exec car_postgres psql -U autostudio_user -d autostudio -c 'SELECT version();'` and paste the output.",
+        "Compare against local, where docker-compose.yml pins `image: postgres:15`.",
+        "If the VPS is running a different major version (e.g. 16), do NOT blindly change the image tag on a running database with existing data — that risks data loss/incompatibility. Instead: report the mismatch, and propose a safe migration path (pg_dump from the running version → spin up postgres:15 → pg_restore → verify row counts → cut over) and get explicit user approval before touching the database.",
+        "If versions already match, state that explicitly with the pasted version strings as proof."
+      ],
+      "deliverable": "Pasted version strings from the VPS Postgres container, a clear statement of match/mismatch, and — only if mismatched — a proposed safe migration plan awaiting user approval (do not execute the migration without that approval)."
+    },
+    {
+      "id": "DIAG-3",
+      "title": "Verify the fix end-to-end from the user's perspective on the live site",
+      "steps": [
+        "After any corrective action in DIAG-1, do a hard cache-bust: confirm the frontend container was rebuilt with the latest code (`docker compose build --no-cache frontend && docker compose up -d frontend`), and if there's an nginx/reverse proxy or CDN in front of autostudio.cc, purge its cache too.",
+        "From a clean/incognito browser session (or curl with a fresh session), actually perform the image upload → processing flow against https://autostudio.cc and capture a successful response (status 200 + the resulting image URL or processed result), not just a health check.",
+        "Paste that successful end-to-end transaction as proof.",
+        "Tell the user explicitly when it's safe to hard-refresh (Cmd+Shift+R) and retest, and what they should expect to see if it's truly fixed."
+      ],
+      "deliverable": "Proof of one full successful image-processing request against the live production URL, plus clear instructions for the user to verify it themselves."
+    }
+  ],
+  "communication_rules": [
+    "Do not say 'fixed' or 'confirmed' without pasting the evidence in the same message.",
+    "If you discover the earlier 'deployed and confirmed on VPS' smoke test was run against the wrong target (e.g. localhost instead of the live domain, or a staging container instead of production), say so plainly — that is itself a useful root cause to surface.",
+    "If anything requires the user's credentials, approval, or a decision (e.g. a database migration), stop and ask before proceeding — do not guess."
+  ]
+}

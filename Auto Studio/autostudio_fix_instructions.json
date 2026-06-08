@@ -1,0 +1,516 @@
+{
+  "project": "AutoStudio AI (car_seller)",
+  "generated": "2026-06-07",
+  "source_review": "Manual review of frontend (Next.js 14 + next-intl) and backend (FastAPI + SQLAlchemy/Postgres) at /Users/sassankhalebani/Projects/car_seller",
+  "instructions_for_claude_code": "Work through phases in order. Each phase is independently shippable. After each fix, run the relevant build/lint/test commands (frontend: npm run build / npm run lint; backend: pytest if present, plus manual curl checks) and confirm no regressions before moving on. Do not change unrelated code. Follow git_workflow exactly — commit before starting and after every single completed item, no exceptions.",
+  "git_workflow": {
+    "mandatory": true,
+    "rules": [
+      "BEFORE making any code change at all: run `git status` and `git add -A && git commit -m 'chore: checkpoint before AutoStudio fix pass — baseline before automated changes'` (if there are no uncommitted changes, create an empty checkpoint commit with `--allow-empty` so there is a clear 'before' marker in history). Push this commit to the remote (`git push`) so the baseline is safely on GitHub before anything is touched.",
+      "Work on a dedicated branch, not main/master directly: `git checkout -b fix/autostudio-launch-readiness` (or one branch per phase if preferred, e.g. fix/phase-1-backend-security).",
+      "After completing EACH individual item (e.g. SEC-1, FE-1, LAUNCH-1) — not each phase, EACH ITEM — stage and commit just that change: `git add -A && git commit -m '<ID>: <one-line description of what changed>'`. Then push immediately: `git push`.",
+      "Never batch multiple item IDs into a single commit. If a single code change happens to satisfy two items, commit once but reference both IDs in the message.",
+      "Never use `git commit --amend` or force-push on shared branches — history must stay intact so the user can trace exactly what changed for which finding.",
+      "If a change breaks the build or tests, do not commit broken code: fix it first, or commit a revert, so every commit on the branch is in a working state.",
+      "At the end of each phase, open or update a pull request from the working branch into main summarizing which item IDs were addressed, so the user can review before merging.",
+      "If git push fails (no remote access, auth issue, etc.), STOP and tell the user — do not silently continue without pushing, since the entire point is to never lose track of changes."
+    ]
+  },
+  "phases": [
+    {
+      "phase": 1,
+      "name": "Critical security fixes (backend) — do these first, before any deploy",
+      "items": [
+        {
+          "id": "SEC-1",
+          "severity": "critical",
+          "file": "backend/app/main.py",
+          "problem": "CORS configured with allow_origins=[\"*\"] and allow_credentials=True. Starlette will echo the request Origin back, letting any site make authenticated cross-origin requests with cookies/Authorization headers — CSRF/data-exfiltration risk.",
+          "fix": "Replace the wildcard with an explicit allow-list driven by an environment variable, e.g. ALLOWED_ORIGINS='https://autostudio.ai,https://www.autostudio.ai,http://localhost:3000'. Parse it into a list and pass to CORSMiddleware. Keep allow_credentials=True only because the explicit origin list makes it safe.",
+          "acceptance_check": "curl -H 'Origin: https://evil.example' -I http://localhost:8000/api/auth/me should NOT return Access-Control-Allow-Origin: https://evil.example"
+        },
+        {
+          "id": "SEC-2",
+          "severity": "critical",
+          "file": "backend/app/services/auth.py",
+          "problem": "SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production') — a publicly known fallback secret allows anyone to forge JWTs (including for the admin account) if the env var is missing.",
+          "fix": "Remove the hardcoded fallback. At startup (in main.py, alongside the existing DATABASE_URL check), assert SECRET_KEY is set and is sufficiently long/random (e.g. >= 32 chars); raise a fatal error and refuse to start if not. Document the requirement in DEPLOYMENT.md and .env.example.",
+          "acceptance_check": "Starting the app without SECRET_KEY set causes a clear startup failure, not a silent fallback."
+        },
+        {
+          "id": "SEC-3",
+          "severity": "critical",
+          "file": "backend/app/main.py (ensure_admin_user, lines ~31-33)",
+          "problem": "Default bootstrap admin credentials admin@autostudio.local / AdminPass123 are created automatically whenever ADMIN_PASSWORD is not set — a guessable default-admin account.",
+          "fix": "Require ADMIN_PASSWORD (and ideally ADMIN_EMAIL) to be explicitly set via environment variable for the admin bootstrap to run; if unset, skip admin creation and log a clear warning instructing the operator to create the admin via a separate one-time script. Never fall back to a hardcoded password.",
+          "acceptance_check": "Fresh deploy without ADMIN_PASSWORD does not create any admin account; deploy with it set creates exactly one admin with that password."
+        },
+        {
+          "id": "SEC-4",
+          "severity": "high",
+          "file": "backend/app/services/billing.py",
+          "problem": "STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET fall back to placeholder strings ('sk_test_placeholder' / 'whsec_placeholder'), causing silent webhook rejection (DoS on billing events) instead of a startup failure.",
+          "fix": "Add both to the same startup validation as SECRET_KEY/DATABASE_URL — fail fast with a clear error message if missing in a non-test environment (gate by an ENVIRONMENT=production flag if you need local dev to run without Stripe).",
+          "acceptance_check": "App refuses to start in production mode without real Stripe keys; local/dev mode can still run with placeholders if ENVIRONMENT=development."
+        },
+        {
+          "id": "SEC-5",
+          "severity": "high",
+          "file": "backend/app/api/billing/routes.py",
+          "problem": "GET /usage/{user_id}, POST /usage/{user_id}/record, POST /calculate-cost, GET /check-limits/{user_id}, and GET /portal?stripe_customer_id=... have no auth/ownership checks — any caller can read or mutate another user's billing/usage data, or open another user's Stripe portal session by guessing a customer id.",
+          "fix": "Add `current_user: User = Depends(get_current_user)` to every one of these endpoints and verify `current_user.id == user_id` (or that `stripe_customer_id` belongs to `current_user`) before proceeding; return 403 otherwise. For admin-level access (e.g. resetting another user's usage), require `Depends(get_current_admin)` explicitly and route it through the existing /api/admin/* namespace instead.",
+          "acceptance_check": "Authenticated user A gets 403 when requesting /api/billing/usage/{user_B_id} or /api/billing/portal?stripe_customer_id={B's id}."
+        },
+        {
+          "id": "SEC-6",
+          "severity": "high",
+          "file": "backend/app/api/billing/routes.py (get_user_usage)",
+          "problem": "get_user_usage hardcodes PlanTier.PROFESSIONAL for every user ('In production, get user's plan from database / For now, assume Professional plan'), so usage limits/remaining counts reported to the frontend are wrong for free/premium users.",
+          "fix": "Look up the user's actual subscription/plan tier from the database (join users -> subscriptions) and use that to compute limits. If no active subscription exists, default to the FREE tier limits, not PROFESSIONAL.",
+          "acceptance_check": "A FREE-tier test user sees FREE-tier limits in /api/billing/usage/{id}; a PROFESSIONAL subscriber sees PROFESSIONAL limits."
+        },
+        {
+          "id": "SEC-7",
+          "severity": "high",
+          "file": "backend/app/api/studio.py + middleware/auth.py public_paths",
+          "problem": "POST /api/studio/process is fully public (listed in public_paths) and runs the entire AI pipeline (including 4K export) for anonymous users with no rate limiting anywhere in the codebase — a major cost/DoS exposure, and usage is never recorded for these calls.",
+          "fix": "1) Remove '/api/studio' (or at least '/api/studio/process') from public_paths so a valid auth token is required to process images — keep GET /api/studio (listing) public if desired. 2) Add a rate limiter (e.g. slowapi or a simple Redis/in-memory token-bucket keyed by user id and IP) to /api/studio/process, with stricter limits for anonymous/free tiers. 3) Call billing_service.record_usage() on every successful generation so usage tracking and plan enforcement are actually connected to the pipeline.",
+          "acceptance_check": "Anonymous POST to /api/studio/process returns 401; authenticated free-tier users are throttled after their plan's per-day/per-hour limit; usage counters increment after each successful generation."
+        },
+        {
+          "id": "SEC-8",
+          "severity": "medium",
+          "file": "backend/app/api/studio.py (exception handler)",
+          "problem": "On pipeline failure the endpoint returns `detail=f\"Processing failed: {str(e)}\"`, leaking internal exception text (paths, library internals) to any caller including anonymous ones.",
+          "fix": "Return a generic message to the client (e.g. 'Image processing failed. Please try again or contact support.') and keep the detailed exception only in the server log via logger.exception(...).",
+          "acceptance_check": "Triggering a processing error returns a generic message in the HTTP response; full traceback only appears in server logs."
+        },
+        {
+          "id": "SEC-9",
+          "severity": "medium",
+          "file": "backend/app/main.py (logging.basicConfig)",
+          "problem": "logging.basicConfig(level=logging.DEBUG, force=True) is hardcoded globally, forcing verbose debug logs (including stack traces with file paths/line numbers) in every environment including production.",
+          "fix": "Read log level from an environment variable (LOG_LEVEL, default INFO in production / DEBUG only when ENVIRONMENT=development) and remove force=True so other configuration isn't clobbered.",
+          "acceptance_check": "Production deploy logs at INFO level by default; DEBUG only when explicitly requested."
+        },
+        {
+          "id": "SEC-10",
+          "severity": "medium",
+          "file": "backend/app/api/auth.py",
+          "problem": "Inconsistent password validation: /change-password enforces len >= 8, but /change-password-token (reset flow) only checks new_password == confirm_password, allowing 1-character passwords through the reset path.",
+          "fix": "Extract a shared `validate_password_strength(password: str)` helper (min length 8, optionally complexity rules) and call it from both endpoints so the rules are identical.",
+          "acceptance_check": "Both /change-password and /change-password-token reject passwords shorter than 8 characters with the same error message."
+        },
+        {
+          "id": "SEC-11",
+          "severity": "medium",
+          "file": "backend/app/api/auth.py (change_password_with_token, get_account_info, update_profile, upload_logo, delete_logo, update_logo_settings)",
+          "problem": "Pattern `db = get_db_session(request) or next(get_db())` — when the fallback branch executes, the generator from get_db() is abandoned without ever running its cleanup/close, leaking a DB connection.",
+          "fix": "Standardize on a single dependency-injected session: `db: Session = Depends(get_db)` as a function parameter, removing the manual `get_db_session(request) or next(get_db())` fallback entirely. Confirm the auth middleware actually sets request.state.db consistently, or drop that mechanism in favor of FastAPI's dependency injection everywhere.",
+          "acceptance_check": "grep for 'next(get_db())' in app/api returns no results outside of the canonical get_db dependency definition; connection pool does not grow under repeated calls to these endpoints."
+        },
+        {
+          "id": "SEC-12",
+          "severity": "low",
+          "file": "backend/app/main.py (ensure_admin_user)",
+          "problem": "Bootstrap failure is caught, logged, and swallowed — app continues starting with no admin account and no loud signal.",
+          "fix": "After catching and rolling back, re-raise (or at minimum emit a CRITICAL-level log + a startup health-check flag) so operators are not silently left without admin access.",
+          "acceptance_check": "Forcing ensure_admin_user to fail produces a clearly visible CRITICAL log entry (and, ideally, prevents the app from reporting healthy)."
+        },
+        {
+          "id": "SEC-13",
+          "severity": "low",
+          "file": "backend/app/api/auth.py (forgot_password)",
+          "problem": "forgot_password is fully stubbed — returns a generic success message but never generates a reset token or sends an email, so the 'forgot password' flow is non-functional end to end.",
+          "fix": "Implement real token generation (signed, time-limited, single-use), persistence (or stateless JWT with short expiry), and email delivery (use an existing mail provider/SMTP config — add one if none exists). Wire /change-password-token to validate that token. Keep returning the same generic message regardless of whether the email exists (anti-enumeration is correct as-is).",
+          "acceptance_check": "Submitting forgot-password with a real account email results in a working reset link that lands in the change-password-token flow and successfully changes the password."
+        },
+        {
+          "id": "SEC-14",
+          "severity": "low",
+          "file": "backend/app/main.py (TrailingSlashMiddleware, duplicate /api/studio route)",
+          "problem": "(a) skip_paths uses startswith() prefix matching which could false-positive on future similarly-named routes; (b) /api/studio is registered both via studio.router and a standalone @app.get('/api/studio') direct_studio_list, duplicating logic.",
+          "fix": "(a) Match on exact path or path + '/' rather than prefix. (b) Remove the standalone direct_studio_list handler and rely solely on the router-mounted GET / (which resolves to /api/studio).",
+          "acceptance_check": "Only one route definition serves GET /api/studio; skip_paths matching is exact-path based."
+        },
+        {
+          "id": "SEC-15",
+          "severity": "low",
+          "file": "backend/requirements.txt",
+          "problem": "Pinned dependencies (fastapi==0.109.0, python-jose==3.3.0, pillow==10.2.0, httpx==0.27.0, stripe==7.8.0) are dated; python-jose in particular has a history of JWT algorithm-confusion CVEs.",
+          "fix": "Run `pip-audit` (or `safety check`) against the pinned set, upgrade flagged packages to patched versions, and re-run the test suite + manual auth smoke tests after each upgrade.",
+          "acceptance_check": "pip-audit reports zero known vulnerabilities for the pinned versions."
+        },
+        {
+          "id": "SEC-16",
+          "severity": "low",
+          "file": "backend/app/models/__init__.py (_add_col_if_missing)",
+          "problem": "ALTER TABLE statement built via f-string interpolation of table/col/definition — currently only fed hardcoded internal constants, but the pattern is SQL-injection-shaped.",
+          "fix": "Wrap identifiers with sqlalchemy.sql.quoted_name or validate them against a fixed allow-list before interpolation, even though current call sites are safe — defends against future misuse.",
+          "acceptance_check": "Code review confirms identifiers are validated/quoted before being embedded in raw SQL."
+        },
+        {
+          "id": "SEC-17",
+          "severity": "low",
+          "file": "backend/app/main.py / admin.py / auth.py role fallbacks",
+          "problem": "Different endpoints fall back to different default-role strings when role is falsy ('FREE' in main.py/admin.py vs 'USER' in auth.py), inconsistent with the canonical Role enum (ADMIN/PREMIUM/FREE per ROLE_MIGRATION_PLAN.md).",
+          "fix": "Pick one canonical fallback (FREE, matching the DB default and the migration plan) and use it everywhere; better yet, since the DB column always has a default, remove the `if db_user.role else ...` fallback entirely and let it raise if role is ever genuinely null (which would indicate a data integrity bug worth surfacing).",
+          "acceptance_check": "grep for role fallback strings shows a single consistent value across main.py, admin.py, auth.py."
+        }
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "Critical/high frontend bugs affecting trust, billing accuracy, and core flows",
+      "items": [
+        {
+          "id": "FE-1",
+          "severity": "critical",
+          "file": "frontend/app/[locale]/dashboard/billing/page.tsx (line ~47)",
+          "problem": "`const [currentPlan, setCurrentPlan] = useState<string>(\"professional\")` is hardcoded and never updated from the real account/usage data — every user sees 'Professional' marked as their current plan regardless of their actual subscription.",
+          "fix": "Fetch the user's real plan from /api/billing/usage/{id} or /api/auth/me (once SEC-6 returns the correct tier) and set currentPlan from that response. Remove the hardcoded default.",
+          "acceptance_check": "A FREE-tier test account sees the Free card marked 'Current Plan'; a Professional subscriber sees Professional marked, not both/neither."
+        },
+        {
+          "id": "FE-2",
+          "severity": "critical",
+          "file": "frontend/app/[locale]/dashboard/billing/page.tsx (line ~117)",
+          "problem": "'Manage Subscription' calls `authFetch(\"/api/billing/portal?stripe_customer_id=cus_demo_123\")` — a hardcoded fake Stripe customer id sent for every user.",
+          "fix": "Remove the hardcoded id; fetch the authenticated user's real `stripe_customer_id` from their account/subscription record (returned by /api/auth/me or /api/billing/usage) and pass that. If the backend should derive it from the auth token instead (preferred — see SEC-5), drop the query param entirely and let the server resolve it from `current_user`.",
+          "acceptance_check": "Each user's 'Manage Subscription' opens *their own* Stripe portal session, verified by checking the session's customer id matches the logged-in account."
+        },
+        {
+          "id": "FE-3",
+          "severity": "critical",
+          "file": "frontend/app/[locale]/auth/register/page.tsx (lines ~177, 184)",
+          "problem": "Links to /${locale}/terms and /${locale}/privacy point to pages that do not exist — 404 at the moment users are agreeing to legal terms during signup.",
+          "fix": "Either create real Terms of Service and Privacy Policy pages (frontend/app/[locale]/terms/page.tsx and .../privacy/page.tsx) with actual legal copy reviewed by the user/counsel, or temporarily point the links to an external hosted policy URL until pages exist. Do not ship a signup flow with broken legal links.",
+          "acceptance_check": "Both links resolve to real pages with real content, in both locales (sv/en)."
+        },
+        {
+          "id": "FE-4",
+          "severity": "high",
+          "file": "frontend/context/AuthContext.tsx",
+          "problem": "JWT is stored in localStorage and read directly by authFetch/getAuthHeaders, exposing it to theft via any XSS on the site; middleware.ts cannot do server-side auth gating because it can't see localStorage.",
+          "fix": "Move to httpOnly, Secure, SameSite=strict cookies set by the backend on login/register/refresh, and have the Next.js middleware read the cookie to gate /dashboard and /admin routes server-side (this also resolves FE-5). This is a coordinated frontend+backend change: the backend must set/clear the cookie on login/logout/refresh, and the frontend must stop manually attaching Authorization headers from localStorage (rely on the cookie being sent automatically, or read a short-lived CSRF-safe token from a non-HttpOnly companion cookie for API calls if needed).",
+          "acceptance_check": "Auth token is not retrievable via `localStorage.getItem` or `document.cookie` from client-side JS (httpOnly); unauthenticated requests to /dashboard are redirected by middleware before any protected page HTML is sent."
+        },
+        {
+          "id": "FE-5",
+          "severity": "high",
+          "file": "frontend/middleware.ts",
+          "problem": "Middleware only wraps next-intl's locale routing and has no auth awareness — all /dashboard and /admin protection happens client-side in useEffect, after the bundle and a flash of protected layout has already been sent to the browser.",
+          "fix": "Once FE-4 moves the token to a cookie, add server-side checks in middleware.ts: read the auth cookie, verify/decode it (or call a lightweight /api/auth/verify), and redirect unauthenticated users away from /dashboard/** and unauthorized (non-admin) users away from /admin/** before rendering.",
+          "acceptance_check": "A logged-out user requesting /sv/dashboard receives a redirect response (3xx) from the server, not a client-side redirect after page load."
+        },
+        {
+          "id": "FE-6",
+          "severity": "high",
+          "file": "frontend/context/AuthContext.tsx (lines ~158, 201, 317-329)",
+          "problem": "Two separate redirect mechanisms (post-login router.push and a useEffect that redirects authenticated users off auth pages) can race; the effect matches paths with `.includes('/login')` etc., which would false-match future routes like /dashboard/login-history or /en/some-admin-page.",
+          "fix": "Replace substring `.includes()` checks with exact segment matching (e.g., split the pathname and compare segments, or use a regex anchored to the locale prefix: `/^\\/(en|sv)\\/(login|register|forgot-password)(\\/|$)/`). Consolidate to a single source of truth for post-auth redirects (prefer the effect-based guard and remove the manual router.push from login/register, or vice versa — pick one).",
+          "acceptance_check": "Navigating to a hypothetical /dashboard/login-history route as an authenticated user does not trigger an unwanted redirect; login/register only redirect once, not twice."
+        },
+        {
+          "id": "FE-7",
+          "severity": "high",
+          "file": "frontend/context/AuthContext.tsx (lines ~148-157, 191-199)",
+          "problem": "If /api/auth/me fails right after login/register, the app fabricates a fake user object with id: 0 and role: 'FREE', which then drives subsequent calls like /api/billing/usage/0 and hides admin/premium UI for real admin/premium users.",
+          "fix": "On /api/auth/me failure post-login, do not fabricate a user — instead show an error state ('Could not load your account, please refresh or sign in again') and avoid setting `user`. Optionally retry the /me call once with backoff before giving up.",
+          "acceptance_check": "Simulating a failed /me call after login shows an error/retry UI, not a logged-in state with id: 0."
+        },
+        {
+          "id": "FE-8",
+          "severity": "high",
+          "file": "frontend/app/[locale]/dashboard/settings/page.tsx (handleSaveProfile, ~line 162)",
+          "problem": "Profile save calls authFetch('/api/auth/profile', {PUT, ...}) directly instead of AuthContext's updateProfile(), so the cached `user` object (and everything that reads it — navbar email, role badge, etc.) goes stale until a full reload.",
+          "fix": "Replace the direct authFetch call with `const { updateProfile } = useAuth(); await updateProfile(payload);` mirroring how account/page.tsx already does it correctly, so global state refreshes immediately.",
+          "acceptance_check": "After saving on the settings page, the navbar/account page reflect the new name/email without a manual refresh."
+        }
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "Medium-priority UX/UI consistency and i18n fixes",
+      "items": [
+        {
+          "id": "FE-9",
+          "severity": "medium",
+          "file": "frontend/app/[locale]/dashboard/{page,billing/page,settings/page,account/page}.tsx",
+          "problem": "Three different visual styles/palettes/nav layouts coexist across dashboard sub-pages (warm-cream/charcoal vs. dark gray-900/indigo vs. stone/red), making the dashboard feel like three different apps.",
+          "fix": "Pick ONE design system (palette, spacing, nav component) — likely the one used on the main dashboard/account pages since they look most polished — and refactor billing/settings to match. Extract a shared DashboardLayout/DashboardNav component so all sub-pages inherit consistent chrome.",
+          "acceptance_check": "Visually navigating between dashboard, billing, settings, and account shows one consistent header/nav/color scheme."
+        },
+        {
+          "id": "FE-10",
+          "severity": "medium",
+          "file": "frontend/app/[locale]/dashboard/settings/page.tsx and billing/page.tsx, admin/users/page.tsx",
+          "problem": "Native blocking `alert()` is used for user feedback (errors, success, project lists) instead of the inline banner pattern used elsewhere (account/page.tsx profileMessage/passwordMessage, admin success/error banners) — also several alert strings are raw English, breaking i18n for Swedish users.",
+          "fix": "Replace every `alert(...)` with the existing inline message/banner component pattern (or a small shared Toast component if you want to introduce one). Move all user-facing strings into messages/en.json and messages/sv.json and reference them via `t(...)`.",
+          "acceptance_check": "grep for 'alert(' in frontend/app returns no user-facing feedback calls; all visible strings in settings/billing/admin flows are sourced from translation files and render correctly in both locales."
+        },
+        {
+          "id": "FE-11",
+          "severity": "medium",
+          "file": "frontend/app/[locale]/auth/{login,register,forgot-password}/page.tsx and dashboard/settings/page.tsx",
+          "problem": "Multiple hardcoded English strings bypass i18n ('Passwords do not match', 'File size must be less than 2 MB', 'An error occurred. Please try again.', 'Uploading...', etc.) even though Swedish is the default/primary market.",
+          "fix": "Move every one of these literal strings into messages/en.json + messages/sv.json under appropriate namespaces (auth.errors, settings.upload, common.status) and replace with t() calls. Cross-check with the flattened-key diff to ensure both locale files stay in sync (they currently match perfectly — keep it that way).",
+          "acceptance_check": "Switching the UI to Swedish shows zero English strings on the login/register/forgot-password/settings pages."
+        },
+        {
+          "id": "FE-12",
+          "severity": "medium",
+          "file": "frontend/app/[locale]/dashboard/billing/page.tsx (formatCurrency, ~line 54)",
+          "problem": "The same Swedish-krona amount is labeled 'kr' in Swedish and 'SEK' in English — implies two different currencies/values when it's the same number.",
+          "fix": "Use a single consistent currency label regardless of UI locale (recommend the ISO code 'SEK' for clarity to all audiences, or 'kr' if targeting Swedish users exclusively) — or properly use `Intl.NumberFormat(locale, {style:'currency', currency:'SEK'})` so formatting is locale-correct but the unit is unambiguous.",
+          "acceptance_check": "The same plan price displays as the same recognizable currency string in both locales, differing only in number formatting conventions if at all."
+        },
+        {
+          "id": "FE-13",
+          "severity": "medium",
+          "file": "frontend/app/[locale]/dashboard/page.tsx (lines ~146-156, 203-213)",
+          "problem": "Generated images are referenced via URL.createObjectURL blob URLs that are (a) never revoked — memory leak over a long session — and (b) lost on refresh because 'Recent Projects' implies persistence but the backend likely doesn't serve these freshly-generated blobs back.",
+          "fix": "Confirm with the backend whether processed images are persisted to storage and served via a stable URL (e.g., S3/static path) after generation. If yes, switch the frontend to use that URL instead of a local blob URL once the upload completes. If no, that's a backend gap — add persistence (store the result image and return a durable URL in the API response). Either way, call `URL.revokeObjectURL()` when a blob URL is no longer needed (component unmount or replaced by the durable URL).",
+          "acceptance_check": "Refreshing the dashboard after generating an image still shows that image in Recent Projects; browser memory does not grow unbounded after many generations (check via devtools memory profiler)."
+        },
+        {
+          "id": "FE-14",
+          "severity": "low",
+          "file": "frontend/components/GuidedCapture.tsx (lines ~100, ~136)",
+          "problem": "console.log('Captured images: ...') and console.log('Generated projects: ...') left in the user-facing capture flow.",
+          "fix": "Remove both console.log calls (or wrap in `if (process.env.NODE_ENV !== 'production')` if they're genuinely useful for local debugging).",
+          "acceptance_check": "grep for 'console.log' in components/GuidedCapture.tsx returns nothing (or only dev-gated calls)."
+        },
+        {
+          "id": "FE-15",
+          "severity": "low",
+          "file": "frontend/app/[locale]/dashboard/settings/page.tsx (~line 190)",
+          "problem": "Loading state renders a plain unstyled 'Loading...' string instead of the spinner + translated label pattern used elsewhere.",
+          "fix": "Replace with the shared spinner component (see FE-16) and `commonT('loading')`.",
+          "acceptance_check": "Settings page loading state visually matches dashboard/admin loading states."
+        },
+        {
+          "id": "FE-16",
+          "severity": "low",
+          "file": "multiple: auth/{login,register,forgot-password}, dashboard/page, admin/dashboard/page, admin/users/page, dashboard/billing/page",
+          "problem": "An identical ~15-line inline SVG spinner is duplicated verbatim across 7+ files.",
+          "fix": "Extract a shared `<Spinner size? className? />` component (e.g. components/ui/Spinner.tsx) and replace all duplicated inline SVGs with it.",
+          "acceptance_check": "grep for the duplicated SVG path data returns matches only inside the new shared component."
+        },
+        {
+          "id": "FE-17",
+          "severity": "low",
+          "file": "frontend/app/[locale]/dashboard/billing/page.tsx (getFeatureIcon, ~line 129)",
+          "problem": "Plain ✓ / — glyphs with no aria-label/role, so screen readers announce 'check mark'/'em dash' without context about which feature is (not) included.",
+          "fix": "Add `aria-label={included ? `${featureName} included` : `${featureName} not included`}` and `role=\"img\"` to each glyph span (requires passing the feature name into getFeatureIcon).",
+          "acceptance_check": "Screen reader announces e.g. '4K export included' / '4K export not included' for each pricing row."
+        },
+        {
+          "id": "FE-18",
+          "severity": "low",
+          "file": "frontend/app/[locale]/account/page.tsx (password strength meter) vs register page validation",
+          "problem": "The account page shows a 5-point password strength meter ('Weak'/'Strong' etc.) but the submit button is enabled for any non-empty password — the meter is purely decorative and disconnected from actual validation, which only requires length >= 8 (and inconsistently, the reset-token flow requires nothing — see SEC-10).",
+          "fix": "Tie the submit button's disabled state (or a confirmation step) to the same minimum strength threshold the meter visualizes, and make sure the displayed requirement text matches the actual server-side rule once SEC-10 standardizes it.",
+          "acceptance_check": "Entering a password the meter labels 'Weak' either blocks submission or shows an explicit warning requiring confirmation before proceeding."
+        },
+        {
+          "id": "FE-19",
+          "severity": "low",
+          "file": "frontend/app/[locale]/admin/users/page.tsx (~line 277)",
+          "problem": "'View Projects' shows a comma-joined list of project names in a blocking native alert() — unreadable for users with many projects, and uses `p: any` defeating TypeScript safety.",
+          "fix": "Replace with a proper modal/drawer component listing projects (with pagination if needed) and a typed `Project` interface instead of `any`.",
+          "acceptance_check": "Viewing projects for a user with 20+ projects shows a scrollable, readable list in a modal, not a giant native alert."
+        },
+        {
+          "id": "FE-20",
+          "severity": "low",
+          "file": "multiple: billing/page, account/page, admin/dashboard/page, admin/users/page",
+          "problem": "The ternary `locale === 'sv' ? 'sv-SE' : 'en-US'` for number formatting is duplicated ~8 times.",
+          "fix": "Extract a shared helper `formatLocaleNumber(locale, value, options?)` in a utils module and use it everywhere numbers/currency are displayed.",
+          "acceptance_check": "grep for \"'sv-SE' : 'en-US'\" returns matches only inside the new shared helper."
+        }
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "Verification and regression pass",
+      "items": [
+        {
+          "id": "VERIFY-1",
+          "severity": "n/a",
+          "description": "Run frontend build and lint: `cd frontend && npm run build && npm run lint`. Fix any new TypeScript/ESLint errors introduced by the above changes.",
+          "acceptance_check": "Build completes with zero errors; lint passes."
+        },
+        {
+          "id": "VERIFY-2",
+          "severity": "n/a",
+          "description": "Run backend test suite if present (`cd backend && pytest`), and manually smoke-test: signup, login, logout, forgot-password (end to end with a real test mailbox), profile update, logo upload, plan display accuracy for FREE/PREMIUM/ADMIN test accounts, billing portal link ownership, and image generation rate limiting.",
+          "acceptance_check": "All automated tests pass; manual smoke test checklist completed with no critical issues found."
+        },
+        {
+          "id": "VERIFY-3",
+          "severity": "n/a",
+          "description": "Re-run the en.json/sv.json key-diff check after adding the newly-extracted translation keys (FE-11) to ensure both locale files remain in sync.",
+          "acceptance_check": "Flattened-key diff between messages/en.json and messages/sv.json is empty."
+        },
+        {
+          "id": "VERIFY-4",
+          "severity": "n/a",
+          "description": "Confirm no secrets, debug flags, or demo IDs remain: grep the codebase for 'placeholder', 'demo_', 'change-in-production', 'AdminPass123', 'console.log', 'alert('.",
+          "acceptance_check": "No matches outside of documentation/comments explicitly marked as examples."
+        }
+      ]
+    },
+    {
+      "phase": 5,
+      "name": "Market-readiness: missing features, endpoints, and polish required before presenting to paying customers",
+      "description": "These are not bugs in existing code — they are gaps between the current state and a product you can confidently demo and sell. The README/IMPLEMENTATION_SUMMARY/PHASE_2 plan already name several of these as 'not yet built'; this phase makes them concrete, sequenced work items. Treat phases 1–4 as the prerequisite (a product that's broken and insecure cannot be 'market ready' no matter how many features it has).",
+      "items": [
+        {
+          "id": "LAUNCH-1",
+          "severity": "blocker",
+          "area": "backend — core product loop",
+          "problem": "The background-removal step uses `MockRemover` (per README's own configuration section), and there is no evidence the AI pipeline is connected to a real background-removal provider. A car-photo SaaS cannot launch on a mocked core feature.",
+          "fix": "Integrate a real background-removal provider (the README sketches a `RemoveBGRemover` using remove.bg; alternatives include Photoroom API, Clipdrop, or a self-hosted model like rembg/U2Net). Add the API key to settings/env, implement retries + timeouts + graceful fallback messaging if the provider is down, and add a cost-tracking hook so usage maps to your plan economics.",
+          "acceptance_check": "Uploading a real car photo through /api/studio/process returns a properly background-removed, composited result from the live provider — not the mock — and a provider outage produces a clear user-facing error rather than a broken image."
+        },
+        {
+          "id": "LAUNCH-2",
+          "severity": "blocker",
+          "area": "backend — storage & persistence",
+          "problem": "Generated images appear to be handled as ephemeral in-memory/blob artifacts (see FE-13) rather than durably stored — 'Recent Projects' implies persistence the system doesn't deliver, and there's no object-storage integration visible (S3/GCS/Azure Blob/Cloudflare R2).",
+          "fix": "Add an object-storage backend (S3-compatible is the safe default), persist every generated result (HD and 4K variants) with a stable URL, store that URL on the Project record, and serve it back via the projects API so the dashboard always shows real, durable images after refresh/relogin. Add lifecycle rules (e.g., auto-expire free-tier exports after N days) if storage cost matters for your pricing model.",
+          "acceptance_check": "Generate an image, log out, log back in (or reload) — the image is still present at a stable URL, sourced from object storage, not a blob: URL."
+        },
+        {
+          "id": "LAUNCH-3",
+          "severity": "blocker",
+          "area": "backend — billing/subscription sync",
+          "problem": "PHASE_2_IMPLEMENTATION_PLAN.md describes Stripe subscription sync (stripe_subscription_id, stripe_customer_id, plan_tier, status, current_period_start/end, stripe_webhook_logs table) as planned but, per SEC-6, the system currently hardcodes everyone to PROFESSIONAL — meaning subscription state is not actually synced from Stripe into the app's database.",
+          "fix": "Implement the subscription sync described in PHASE_2_IMPLEMENTATION_PLAN.md section 3: persist Stripe subscription id/customer id/tier/status/period dates on checkout completion and on every relevant webhook event (created, updated, deleted, payment_failed, trial_will_end), log raw events to stripe_webhook_logs for replay/debugging, and derive the user's effective plan from this synced data (not a hardcoded constant). Handle out-of-order webhook delivery (use event timestamps, not arrival order).",
+          "acceptance_check": "Subscribing, upgrading, downgrading, and cancelling in Stripe test mode correctly updates the user's plan/limits in the app within seconds, verified by inspecting the subscriptions table after each Stripe test event."
+        },
+        {
+          "id": "LAUNCH-4",
+          "severity": "high",
+          "area": "backend — branding feature (advertised but backend-less)",
+          "problem": "IMPLEMENTATION_SUMMARY.md states the logo-branding UI was built 'frontend only' and explicitly lists the required backend APIs (`POST/DELETE /api/branding/logo`, `PUT /api/branding/placement`) as not yet implemented — meaning a feature visible and clickable in the product (and presumably part of the paid-tier pitch) doesn't actually persist or function end-to-end.",
+          "fix": "Implement the three branding endpoints: logo upload (validate type/size server-side too, store in object storage from LAUNCH-2, associate with user), logo removal, and placement preference update. Wire the existing settings-page UI to these real endpoints (this also resolves the 'frontend-only' gap noted in FE-8's settings page).",
+          "acceptance_check": "A premium test user uploads a logo, selects a placement, generates an image, and the exported result actually contains their logo at the chosen position — and it persists across sessions."
+        },
+        {
+          "id": "LAUNCH-5",
+          "severity": "high",
+          "area": "backend — auth completeness",
+          "problem": "The README roadmap lists 'JWT authentication with Google OAuth' and 'PostgreSQL integration with SQLAlchemy' as unchecked/planned, and SEC-13 confirms forgot-password is fully stubbed. Email verification on signup also appears absent (no evidence of a verification email/flow).",
+          "fix": "1) Confirm/finish the SQLAlchemy+Postgres integration end-to-end (it appears mostly done — verify no remaining in-memory/mock data paths). 2) Decide whether Google OAuth is actually needed for launch — if yes, implement it via Authlib or similar; if not, remove it from the public roadmap so customers aren't promised something missing. 3) Implement real email verification on signup (send a verification link, block certain actions — e.g., billing — until verified, or at least flag unverified accounts). 4) Complete the forgot-password flow per SEC-13.",
+          "acceptance_check": "New signups receive a real verification email and the account is marked verified after clicking the link; password reset works end-to-end with a real email; the public roadmap accurately reflects what's actually shipped."
+        },
+        {
+          "id": "LAUNCH-6",
+          "severity": "high",
+          "area": "backend — transactional email infrastructure",
+          "problem": "Multiple features depend on sending real emails (password reset — SEC-13, email verification — LAUNCH-5, and presumably receipts/billing notifications) but no email-provider integration (SMTP/SendGrid/Postmark/SES/Resend) is evident in the codebase.",
+          "fix": "Add a transactional email service integration with templated emails (welcome, verify-email, password-reset, subscription receipt/renewal/cancellation, usage-limit-approaching). Use a provider with good deliverability for the Swedish/EU market and configure SPF/DKIM/DMARC for the sending domain.",
+          "acceptance_check": "Triggering each email type in a staging environment results in a real email landing in an inbox (not spam) with correct localized (sv/en) content."
+        },
+        {
+          "id": "LAUNCH-7",
+          "severity": "high",
+          "area": "backend — admin capabilities (Phase 2 plan items not yet built)",
+          "problem": "PHASE_2_IMPLEMENTATION_PLAN.md scopes a full admin system (admin_logs/audit trail, dashboard stats, user role history, analytics tables and endpoints, project management tools, usage-limit enforcement with usage_logs) — only a subset (basic admin user list/role checks per ROLE_MIGRATION_PLAN.md) appears implemented. Without this, you (and your team) have no operational visibility into a live paying customer base.",
+          "fix": "Implement at minimum, before launch: (a) admin_logs / audit trail for all admin actions (the plan calls for this — currently nothing logs admin actions), (b) `GET /api/admin/dashboard/stats` (total users, active users, revenue) so you can actually see how the business is doing, (c) real usage-limit enforcement connecting the studio pipeline to plan limits (ties into SEC-7), and (d) basic project-management tools (list/search/delete) for support purposes. Analytics charts and CSV export (plan section 7) can reasonably wait until post-launch if time-constrained — flag that explicitly to the user as a deferred item rather than silently dropping it.",
+          "acceptance_check": "An admin can log in and see real aggregate stats (not zeros/placeholders), every admin action (disable user, change role, delete project) is recorded in an audit log with who/when/what, and a free user is actually blocked (with a clear upgrade prompt) once they exceed their plan's generation limit."
+        },
+        {
+          "id": "LAUNCH-8",
+          "severity": "high",
+          "area": "frontend — legal & compliance pages",
+          "problem": "Beyond the broken Terms/Privacy links (FE-3), a Swedish/EU-facing SaaS handling payments and personal data needs: a cookie-consent banner, a real Privacy Policy (GDPR-compliant — data retention, processing basis, user rights/export/delete), Terms of Service, a Refund/Cancellation policy (relevant for subscriptions), and contact/company info (org number, address) typically required for EU consumer-facing businesses.",
+          "fix": "Work with the user to source real legal copy (do not auto-generate legal text) for: Terms of Service, Privacy Policy, Cookie Policy, and Refund Policy pages; implement a cookie-consent banner that actually gates non-essential cookies/analytics until consent is given; add a footer with company/contact details. This is a hard launch blocker for the Swedish/EU market specifically.",
+          "acceptance_check": "All legal links resolve to real, reviewed content; a first-time EU visitor sees a cookie consent prompt before any non-essential tracking script loads; footer shows real company contact/registration details."
+        },
+        {
+          "id": "LAUNCH-9",
+          "severity": "medium",
+          "area": "backend — rate limiting & abuse prevention (product-wide, not just studio)",
+          "problem": "SEC-7 already flags the studio endpoint specifically, but no rate limiting exists anywhere — login, registration, and password-reset endpoints are equally exposed to brute-force/credential-stuffing and signup-spam abuse.",
+          "fix": "Add a general-purpose rate limiter (slowapi/Redis-backed token bucket) across all auth endpoints (login, register, forgot-password, change-password) with sensible per-IP and per-account thresholds, plus optional CAPTCHA (e.g., hCaptcha/Turnstile) on registration if spam becomes an issue.",
+          "acceptance_check": "Repeated rapid login attempts from one IP are throttled with a clear 429 + retry-after response; legitimate users are not falsely blocked under normal use."
+        },
+        {
+          "id": "LAUNCH-10",
+          "severity": "medium",
+          "area": "ops — observability & error tracking",
+          "problem": "No error-tracking/monitoring integration (Sentry, Datadog, etc.) is evident; SEC-9 already shows logging is misconfigured for production. Without this, you'll find out about customer-facing bugs from angry emails, not dashboards.",
+          "fix": "Integrate an error-tracking service (Sentry is the common default for FastAPI + Next.js) on both frontend and backend, wire up uptime monitoring/health checks (the app likely already has a health endpoint — confirm and point an external monitor at it), and set up basic alerting (Slack/email) for 5xx spikes and failed payments/webhooks.",
+          "acceptance_check": "A deliberately triggered backend exception and a deliberately triggered frontend error both appear in the error-tracking dashboard within seconds, with useful stack traces and user context (without leaking secrets)."
+        },
+        {
+          "id": "LAUNCH-11",
+          "severity": "medium",
+          "area": "backend & frontend — automated test coverage",
+          "problem": "Aside from `test_pipeline.py` (a manual pipeline smoke test per the README), there's no evidence of a real automated test suite (unit/integration for API routes, component/e2e tests for the frontend). Shipping 'no bugs' to customers without regression coverage is not realistically sustainable.",
+          "fix": "Add a baseline automated test suite: backend — pytest with API route tests covering auth, billing ownership checks (so SEC-5 can never regress), studio processing, and admin authorization; frontend — component tests (Jest/React Testing Library) for forms/auth flows and at least a thin e2e layer (Playwright) covering signup → generate → billing as the critical revenue path. Wire these into CI so they run on every PR.",
+          "acceptance_check": "CI runs the full suite on every push/PR and fails the build on any test failure; the critical revenue-path e2e test (signup → generate image → subscribe) passes against a staging environment."
+        },
+        {
+          "id": "LAUNCH-12",
+          "severity": "medium",
+          "area": "frontend — onboarding & empty/first-run states",
+          "problem": "A first-time user landing on an empty dashboard with zero projects needs guidance ('upload your first car photo', sample before/afters, a short product tour) — generic empty states ('no projects found') don't sell the product or teach usage.",
+          "fix": "Design and build a first-run onboarding experience: a short guided flow or checklist ('upload a photo → pick a studio → generate → export'), sample/demo images to try before uploading their own, and contextual tooltips for first-time feature discovery (studio picker, logo branding, export quality).",
+          "acceptance_check": "A brand-new account sees a clear, friendly first-run experience guiding them to their first successful generation, not a blank dashboard."
+        },
+        {
+          "id": "LAUNCH-13",
+          "severity": "medium",
+          "area": "frontend — responsive design & cross-browser/device check",
+          "problem": "No evidence of a deliberate mobile/tablet responsive review — the dashboard's image-heavy, multi-panel layouts (capture flow, before/after sliders, billing cards) are exactly the kind of UI that breaks on small screens if not specifically tested.",
+          "fix": "Do a full pass on mobile (iOS Safari + Android Chrome) and tablet breakpoints for: landing page, auth flows, dashboard/capture flow, before/after comparisons, billing cards, and admin pages (admin can be desktop-only if you choose, but say so explicitly). Fix any overflow, tap-target-size, or layout-collapse issues found.",
+          "acceptance_check": "Every primary user flow (signup → generate → export → subscribe) is fully usable on a 375px-wide mobile viewport with no horizontal scrolling, overlapping elements, or unreachable controls."
+        },
+        {
+          "id": "LAUNCH-14",
+          "severity": "medium",
+          "area": "frontend — accessibility (a11y) baseline",
+          "problem": "FE-17 already flags one specific a11y gap (unlabeled icons); a customer-facing SaaS should meet at least WCAG 2.1 AA basics — keyboard navigation, focus states, color contrast, form labels/error announcements, and screen-reader-friendly image upload flows.",
+          "fix": "Run an automated a11y audit (axe-core/Lighthouse) across all primary pages, fix flagged issues (contrast ratios, missing labels/alt text, focus traps in modals, keyboard-operability of the capture/upload flow), and manually test the signup→generate→export path with a screen reader.",
+          "acceptance_check": "Lighthouse accessibility score ≥ 90 on landing, auth, dashboard, and billing pages; the critical revenue-path flow is fully completable using only a keyboard and a screen reader."
+        },
+        {
+          "id": "LAUNCH-15",
+          "severity": "low",
+          "area": "frontend — landing page SEO & metadata",
+          "problem": "No mention of SEO metadata (title/meta description per locale, Open Graph/Twitter cards, sitemap.xml, robots.txt, structured data) was found — for a SaaS acquiring customers organically, this materially affects discoverability, especially for the Swedish-first market.",
+          "fix": "Add per-locale `<title>`/meta description/OG tags via Next.js metadata API, generate `sitemap.xml` and `robots.txt`, add Organization/SoftwareApplication JSON-LD schema, and verify both `sv` and `en` versions are indexable with correct hreflang tags.",
+          "acceptance_check": "Lighthouse SEO score ≥ 90; Google's Rich Results Test validates the structured data; sitemap.xml lists all public routes in both locales with correct hreflang annotations."
+        },
+        {
+          "id": "LAUNCH-16",
+          "severity": "low",
+          "area": "ops — deployment & environment hygiene",
+          "problem": "The repo contains multiple docker-compose variants (`docker-compose.yml`, `docker-compose.mac-backup.yml`, `docker-compose.yml.bad`) and an empty `autostudio_before_migration.sql`, suggesting deployment configuration is still in flux — risky to present/demo on an unstable deploy setup.",
+          "fix": "Consolidate to a single, working docker-compose (or equivalent IaC) configuration per environment (local/staging/production), delete the `.bad` and backup variants (or move them to a `deploy/archive/` folder with clear notes), remove the empty SQL file or populate it with the actual pre-migration snapshot it implies, and produce a `.env.example` documenting every required environment variable (cross-reference SEC-2/SEC-4/SEC-3 requirements).",
+          "acceptance_check": "A fresh clone + documented setup steps results in a working local environment on the first try, with no stray/confusing config files in the repo root."
+        },
+        {
+          "id": "LAUNCH-17",
+          "severity": "n/a — final gate before calling it 'market ready'",
+          "area": "process",
+          "description": "Before presenting to customers, run a full end-to-end dry run of the entire revenue path as a brand-new user would experience it: land on the marketing site → sign up → verify email → complete onboarding → upload a real car photo → generate in each studio template → export HD and 4K → upload a logo (if premium) → subscribe via Stripe test mode → manage subscription via the customer portal → hit a usage limit and see the upgrade prompt → cancel → receive all expected emails along the way. Document any friction or rough edges found, even cosmetic ones, and fix or explicitly defer (with the user's sign-off) each one.",
+          "acceptance_check": "A person who has never seen the product before can complete the entire journey above without confusion, errors, or needing help — and every email/notification expected along the way actually arrives."
+        }
+      ]
+    }
+  ],
+  "notes_for_claude_code": [
+    "FE-4 and FE-5 (cookie-based auth + middleware gating) are coupled to backend changes — coordinate them as a single cross-stack change set, behind a feature branch, with both frontend and backend updated together and tested end-to-end before merging.",
+    "Phase 1 (backend security) should be completed and deployed before any public launch — items SEC-1 through SEC-7 represent real exploitable risk in the current state.",
+    "Do not invent legal copy for FE-3 (terms/privacy) — flag it back to the user for real legal text; a stand-in placeholder page is acceptable only as a stopgap with a clear 'draft, not final' notice, and the user should be informed either way.",
+    "After each phase, present a short diff summary to the user before proceeding to the next phase.",
+    "Phase 5 (LAUNCH-*) is large and touches product scope, not just code quality — several items (LAUNCH-1 background-removal provider, LAUNCH-3 Stripe sync, LAUNCH-6 email provider, LAUNCH-8 legal copy) require the user to make decisions or provide accounts/credentials/content that Claude Code cannot supply on its own. Surface these dependencies to the user up front and get explicit answers before starting work that depends on them, rather than guessing or stubbing further.",
+    "Do not mark phase 5 'done' based on code existing — many of these items (LAUNCH-11 tests, LAUNCH-13 responsive, LAUNCH-14 accessibility, LAUNCH-17 dry run) are only complete when verified against the acceptance_check, ideally with evidence (test output, Lighthouse score, screen recording) shown to the user.",
+    "If time/budget constraints make full Phase 5 unrealistic before the customer presentation, tell the user explicitly which LAUNCH items are being deferred and why — 'market ready' is the user's bar to set, and they should make that call with full information, not have it made for them silently."
+  ]
+}

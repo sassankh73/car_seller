@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import DashboardNav from "@/components/DashboardNav";
 import DragDropUpload from "@/components/DragDropUpload";
 import GuidedCapture from "@/components/GuidedCapture";
-import { useAuth, authFetch, getAuthHeaders } from "@/context/AuthContext";
+import { useAuth, authFetch } from "@/context/AuthContext";
 import Spinner from "@/components/ui/Spinner";
 
 interface Project {
@@ -141,10 +141,9 @@ export default function Dashboard() {
     }, 3000);
 
     try {
-      const authHeaders = getAuthHeaders();
       const response = await fetch("/api/studio/process", {
         method: "POST",
-        headers: authHeaders,
+        credentials: "include",
         body: formData,
       });
 
@@ -199,10 +198,9 @@ export default function Dashboard() {
       formData.append("export_quality", exportQuality);
 
       try {
-        const authHeaders = getAuthHeaders();
         const response = await fetch("/api/studio/process", {
           method: "POST",
-          headers: authHeaders,
+          credentials: "include",
           body: formData,
         });
 

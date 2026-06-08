@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+import os
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -109,8 +110,21 @@ def _build_usage_info(db_user: User) -> UsageInfoResponse:
     )
 
 
+def _set_auth_cookie(response: Response, token: str) -> None:
+    is_prod = os.getenv("ENVIRONMENT", "development") == "production"
+    response.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        secure=is_prod,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,  # 7 days — matches JWT lifespan
+        path="/",
+    )
+
+
 @router.post("/register", response_model=TokenResponse)
-def register(user: UserCreate, db: Session = Depends(get_db)):
+def register(user: UserCreate, response: Response, db: Session = Depends(get_db)):
     existing_user = get_user_by_email(db, email=user.email)
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -128,6 +142,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
 
     access_token = create_access_token(data={"sub": new_user.email})
+    _set_auth_cookie(response, access_token)
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
@@ -137,7 +152,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(user: UserLogin, db: Session = Depends(get_db)):
+def login(user: UserLogin, response: Response, db: Session = Depends(get_db)):
     db_user = authenticate_user(db, email=user.email, password=user.password)
     if not db_user:
         raise HTTPException(
@@ -152,6 +167,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     access_token = create_access_token(data={"sub": db_user.email})
     force_reset = getattr(db_user, "force_password_reset", False)
 
+    _set_auth_cookie(response, access_token)
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
@@ -159,6 +175,12 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         name=db_user.name,
         force_password_reset=force_reset,
     )
+
+
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie(key="auth_token", path="/")
+    return {"detail": "Logged out successfully"}
 
 
 @router.post("/change-password")
