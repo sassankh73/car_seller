@@ -9,6 +9,12 @@ RUN npm install && \
 
 COPY . .
 
+# Build the production bundle at image-build time. Running `next dev` in containers
+# (the previous setup) compiles pages on-demand on first request, which is what made
+# the dashboard hang/error and need a reload — `next build` + `next start` serves a
+# pre-compiled, production-optimized app that responds immediately on first load.
+RUN npm run build
+
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "start"]
