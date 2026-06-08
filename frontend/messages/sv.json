@@ -1,14 +1,16 @@
 {
   "common": {
     "appName": "AutoStudio",
+    "currency": "kr",
+    "currencyFormat": "{amount} kr",
     "getStarted": "Kom igång",
     "backToHome": "Tillbaka till startsidan",
     "loading": "Laddar...",
     "error": "Fel",
-    "success": "Klar",
+    "success": "Lyckades",
     "cancel": "Avbryt",
     "save": "Spara",
-    "delete": "Radera",
+    "delete": "Ta bort",
     "edit": "Redigera",
     "close": "Stäng",
     "confirm": "Bekräfta",
@@ -16,335 +18,551 @@
     "no": "Nej"
   },
   "landing": {
+    "nav": {
+      "dashboard": "Instrumentpanel",
+      "studios": "Studior",
+      "pricing": "Priser",
+      "about": "Om oss"
+    },
     "hero": {
-      "headline": "Omvandla vanliga bilfoton till professionella showroombilder",
-      "subheadline": "Förvandla vardagliga bilfoton till fantastiska showroombilder på sekunder. Sälj fler bilar med professionella annonser som utmärker sig.",
+      "eyebrow": "Professionell fordonsfotografering",
+      "headlineLine1": "Professionell fordonsfotografering",
+      "headlineLine2": "För moderna bilhandlare",
+      "subheadline": "Förvandla vanliga fordonsbilder till professionella bildhandlarbilder på minuter.",
       "startFreeTrial": "Starta gratis provperiod",
-      "uploadPhoto": "Ladda upp ditt första bilfoto",
-      "trustedBy": "Litad på av 500+ bilhandlare världen över"
-    },
-    "howItWorks": {
-      "title": "Så funkar det",
-      "subtitle": "Tre enkla steg till professionell bilfotografering",
-      "steps": {
-        "upload": {
-          "title": "Ladda upp bilfoto",
-          "description": "Ta ett foto med din telefon och ladda upp det till vår plattform"
-        },
-        "choose": {
-          "title": "Välj virtuell studio",
-          "description": "Välj från vår premium-samling av virtuella studiobakgrunder"
-        },
-        "download": {
-          "title": "Ladda ner professionell bild",
-          "description": "Få din AI-förbättrade studiobild i HD eller 4K-kvalitet"
-        }
+      "viewDemo": "Se demo",
+      "trustedBy": "Betrodd av 1 200+ bilhandlare världen över",
+      "categories": {
+        "sedan": "Sedan",
+        "suv": "SUV",
+        "wagon": "Kombi",
+        "coupe": "Coupé",
+        "pickupEv": "Pickup / EL"
+      },
+      "studios": {
+        "whiteEpoxy": "Vitt Epoxystudio",
+        "commercial": "Kommersiell Showroom",
+        "concrete": "Betongstudio",
+        "darkStudio": "Mörk Bilstudio",
+        "premiumGray": "Premium Ljustudio"
       }
-    },
-    "valueProp": {
-      "eyebrow": "Så funkar det",
-      "title": "Professionell bilfotografi, förenklad",
-      "items": {
-        "upload": {
-          "title": "Ladda upp ditt foto",
-          "description": "Ta ett foto med vilken telefon som helst och ladda upp det till vår plattform. Ingen speciell utrustning eller kunskap krävs."
-        },
-        "studios": {
-          "title": "Välj en studio",
-          "description": "Välj från vår samling av premium-showroom-miljöer designade specifikt för bilfotografi."
-        },
-        "download": {
-          "title": "Få ditt resultat",
-          "description": "Ladda ner din professionella studiobild i HD eller 4K-kvalitet, redo för alla annonsplattformar."
-        },
-        "backgroundRemoval": {
-          "title": "Omedelbar bakgrundsborttagning",
-          "description": "Ta bort bakgrunder automatiskt med pixelperfekt precision — inga redigeringskunskaper krävs"
-        },
-        "realisticShadows": {
-          "title": "Realistiska skuggor och reflektioner",
-          "description": "Naturliga skuggor och reflektioner som gör att varje bil ser ut att vara i en professionell studio"
-        },
-        "hdExport": {
-          "title": "HD & 4K-export",
-          "description": "Exportera i fantastisk högupplöst eller ultra HD 4K — redo för alla annonsplattformar"
-        }
-      }
-    },
-    "beforeAfter": {
-      "title": "Se skillnaden",
-      "subtitle": "Se vanliga foton förvandlas till professionella showroombilder",
-      "before": "Originalfoto",
-      "after": "Showroom-resultat",
-      "dragSlider": "Dra reglaget för att jämföra"
     },
     "features": {
-      "title": "Allt du behöver för att sälja fler bilar",
-      "subtitle": "Professionella verktyg designade för bilhandlare och säljare",
+      "label": "Funktioner",
+      "title": "Allt du behöver för att presentera fordon på bästa sätt",
+      "description": "Specialbyggda verktyg för bilproffs som kräver kvalitet och hastighet.",
       "items": {
-        "aiRemoval": {
-          "title": "Omedelbar bakgrundsborttagning",
-          "description": "Ta bort bakgrunder automatiskt med pixelperfekt precision — inga redigeringskunskaper krävs"
+        "backgroundReplacement": {
+          "title": "Bakgrundsbyte",
+          "description": "Förvandla utomhusbilder till professionella showroombilder med ett klick."
         },
-        "virtualStudios": {
-          "title": "Professionella showroom-studior",
-          "description": "Välj från 20+ premium-showroommiljöer designade för bilar"
+        "professionalStudios": {
+          "title": "Premium bilstudior",
+          "description": "Välj bland flera bilhandlar-miljöer designade för fordonsfotografering."
         },
-        "realisticShadows": {
-          "title": "Realistiska skuggor och reflektioner",
-          "description": "Naturliga skuggor och reflektioner som gör att varje bil ser ut att vara i en professionell studio"
+        "instantProcessing": {
+          "title": "Omedelbar bearbetning",
+          "description": "Generera studiokvalitetsbilder inom sekunder, inte timmar."
         },
-        "hdExport": {
-          "title": "HD & 4K-export",
-          "description": "Exportera i fantastisk högupplöst eller ultra HD 4K — redo för alla annonsplattformar"
+        "batchProcessing": {
+          "title": "Batchbearbetning",
+          "description": "Bearbeta flera fordonsbilder samtidigt. Från en till hela ditt lager."
         },
-        "logoBranding": {
-          "title": "Bilhandlar-logotyp",
-          "description": "Lägg till din bilhandlares logotyp automatiskt på varje bild — bygg varumärkesförtroende"
+        "naturalShadows": {
+          "title": "Skugg- och markjustering",
+          "description": "Naturlig hjulkontakt och realistisk positionering för autentiska resultat."
         },
-        "fastGeneration": {
-          "title": "Resultat på sekunder",
-          "description": "Få professionella resultat på sekunder, inte timmar. Bearbeta flera bilder samtidigt"
+        "multiLanguage": {
+          "title": "Flerspråkigt stöd",
+          "description": "Designad för internationella bilhandlare med flerspråkiga gränssnitt."
+        },
+        "cloudBased": {
+          "title": "Molnbaserad",
+          "description": "Ingen mjukvaruinstallation krävs. Åtkomst från valfri enhet, var som helst."
+        },
+        "dealerReady": {
+          "title": "Bilhandlar-export",
+          "description": "Optimerad för webbplatser, marknadsplatser och annonsplattformar."
         }
       }
     },
     "studios": {
-      "title": "Studio-mallar",
-      "subtitle": "Välj från vår samling av premium virtuella studior",
-      "studios": {
-        "luxuryShowroom": {
-          "name": "Lyxig Showroom",
-          "description": "Premium bilhandlarmiljö med elegant belysning"
-        },
-        "whiteMinimal": {
-          "name": "Vit Minimal Studio",
-          "description": "Ren, professionell vit bakgrund för alla fordon"
-        },
-        "cinematicDark": {
-          "name": "Cinematisk Mörk Studio",
-          "description": "Dramatisk mörk miljö med stämningsfull atmosfär"
-        },
-        "blackShowroom": {
-          "name": "Svart Bilshowroom",
-          "description": "Elegant svart showroom med professionell studiobelysning"
-        },
-        "luxuryExhibition": {
-          "name": "Lyxig Utställningshall",
-          "description": "Premium utställningsmiljö med exklusiv design"
-        },
-        "glossyReflective": {
-          "name": "Blank Reflekterande Golvstudio",
-          "description": "Professionell studio med blankt reflekterande golv"
-        }
-      }
-    },
-    "pricing": {
-      "title": "Enkel, transparent prissättning",
-      "subtitle": "Välj planen som passar ditt företags behov",
-      "billingCycle": {
-        "monthly": "Månadsvis",
-        "yearly": "Årsvis",
-        "savePercent": "Spara 17%"
-      },
-      "plans": {
-        "basic": {
-          "name": "Basic",
-          "price": "299 kr",
-          "period": "/månad",
-          "description": "Perfekt för små bilhandlare",
-          "features": {
-            "images": "50 bilder/månad",
-            "studios": "5 studior inkluderade",
-            "branding": "Logotyp-branding",
-            "export": "HD-export",
-            "support": "E-postsupport"
-          },
-          "cta": "Starta gratis provperiod",
-          "trial": "14 dagars gratis provperiod"
-        },
-        "professional": {
-          "name": "Professional",
-          "price": "799 kr",
-          "period": "/månad",
-          "description": "Bäst för växande företag",
-          "mostPopular": "Mest populär",
-          "features": {
-            "images": "200 bilder/månad",
-            "studios": "Alla 20+ studior",
-            "branding": "Logotyp-branding",
-            "export": "HD + 4K-export",
-            "support": "Prioriterad support"
-          },
-          "cta": "Starta gratis provperiod",
-          "trial": "14 dagars gratis provperiod"
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "price": "1999 kr",
-          "period": "/månad",
-          "description": "För stora bilhandlarkoncerner",
-          "features": {
-            "images": "Obegränsade bilder",
-            "studios": "Alla studior + anpassade",
-            "branding": "Anpassad branding",
-            "export": "4K + RAW-export",
-            "support": "Dedikerad support"
-          },
-          "cta": "Kontakta försäljning"
-        }
-      },
-      "extraCharges": {
-        "title": "Behöver du mer?",
-        "subtitle": "Flexibel betalning efter användning för extra användning",
-        "extraImage": "5 kr per extra bild",
-        "extraStudio": "20 kr per extra studio-mall",
-        "fourKExport": "10 kr per 4K-export (Basic-plan)"
-      }
-    },
-    "testimonials": {
-      "title": "Litad på av bilhandlare",
-      "subtitle": "Se vad fordonsproffs säger om AutoStudio",
-      "metrics": {
-        "photosProcessed": "Fotografier bearbetade",
-        "dealerships": "Bilhandlare världen över",
-        "satisfaction": "Nöjdhetsgrad",
-        "avgProcessing": "Snitt bearbetningstid"
-      },
+      "label": "Studiosamling",
+      "title": "Premium bilstudior",
+      "description": "Professionellt designade virtuella miljöer för varje märke och stil.",
       "items": {
-        "first": {
-          "quote": "AutoStudio har transformerat våra annonsfoton. Vi har sett en 40% ökning i engagemang sedan vi började använda denna plattform.",
-          "author": "Michael Anderson",
-          "role": "Ägare, Anderson Auto Group",
-          "location": "Stockholm, Sverige"
+        "whiteEpoxy": {
+          "name": "Vit epoxystudio",
+          "description": "Ren och ljus miljö, idealisk för premiumannonser."
         },
-        "second": {
-          "quote": "Kvaliteten är otrolig. Våra kunder tror att vi anlitar professionella fotografer. Bästa investeringen vi gjort.",
-          "author": "Sarah Lindberg",
-          "role": "Marknadschef, Nordic Cars",
-          "location": "Göteborg, Sverige"
+        "commercial": {
+          "name": "Kommersiell showroom",
+          "description": "Modern bilhandlarpresentation med realistiskt djup."
         },
-        "third": {
-          "quote": "Snabbt, pålitligt, och resultaten talar för sig själva. Vårt lager ser premium ut utan premiumkostnaden.",
-          "author": "Erik Johansson",
-          "role": "VD, Premium Motors",
-          "location": "Malmö, Sverige"
+        "darkStudio": {
+          "name": "Mörk bilstudio",
+          "description": "Lyxig presentation för premium- och sportbilar."
+        },
+        "concrete": {
+          "name": "Betongstudio",
+          "description": "Industriell stil för bruks- och kommersiella fordon."
+        },
+        "ceramicTile": {
+          "name": "Keramikplattestudio",
+          "description": "Ljus och reflekterande yta för rena presentationer."
+        },
+        "premiumGray": {
+          "name": "Premium grå studio",
+          "description": "Sofistikerad neutral ton för mångsidig fordonsvisning."
+        }
+      },
+      "viewAll": "Se alla studior"
+    },
+    "howItWorks": {
+      "label": "Så fungerar det",
+      "title": "Tre steg till showroomkvalitet",
+      "description": "Från mobilfoto till professionell bilhandlarbild på sekunder.",
+      "steps": {
+        "upload": {
+          "title": "Ladda upp ditt fordonsfoto",
+          "description": "Ladda upp en bil- eller smartphonebild av ditt fordon."
+        },
+        "chooseStudio": {
+          "title": "Välj din studio",
+          "description": "Välj bland professionella bilshowroom-miljöer."
+        },
+        "download": {
+          "title": "Ladda ner resultatet",
+          "description": "Få en bilhandlar-redo bild med realistiska skuggor och placering."
         }
       }
     },
-    "faq": {
-      "title": "Vanliga frågor",
-      "items": {
-        "generationTime": {
-          "question": "Hur lång tid tar genereringen?",
-          "answer": "De flesta bilder bearbetas på 5-15 sekunder. Komplexa bilder med detaljerade reflektioner kan ta upp till 30 sekunder. Du kan bearbeta flera bilder samtidigt."
+    "trust": {
+      "label": "Betrodd världen över",
+      "title": "Bevisad i stor skala",
+      "description": "Betrodd av bilproffs över hela världen.",
+      "stats": {
+        "imagesGenerated": "Genererade bilder",
+        "dealersServed": "Betjänade handlare",
+        "processingSpeed": "Snitt. bearbetningstid",
+        "studioTemplates": "Studiomallar"
+      },
+      "benefits": {
+        "saveHours": {
+          "title": "Spara timmar per fordon",
+          "description": "Ingen behov av att boka fotografer eller vänta på redigerade bilder."
         },
-        "phonePhotos": {
-          "question": "Kan jag ladda upp telefonfoton?",
-          "answer": "Absolut! AutoStudio är specifikt designat för mobilfoton. iPhone, Android, alla smartphone-kameror fungerar perfekt."
+        "noPhotographer": {
+          "title": "Ingen fotograf krävs",
+          "description": "Vem som helst i ditt team kan skapa professionella bilder direkt."
         },
-        "colorAccuracy": {
-          "question": "Bevaras originalbilens färg?",
-          "answer": "Ja, vår teknik bevarar exakt färgnoggrannhet. Originalfärgen, reflektioner och detaljer bevaras med 99,9% noggrannhet."
+        "consistent": {
+          "title": "Konsekvent lagerpresentation",
+          "description": "Varje fordon ser sitt bästa ut med enhetliga, professionella bilder."
         },
-        "logoBranding": {
-          "question": "Kan jag lägga till min bilhandlares logotyp?",
-          "answer": "Ja! Alla planer inkluderar logotyp-branding. Ladda upp din logotyp en gång så läggs den automatiskt till på alla dina genererade bilder."
-        },
-        "cancelSubscription": {
-          "question": "Kan jag avsluta när som helst?",
-          "answer": "Ja, du kan avsluta din prenumeration när som helst. Inga långsiktiga kontrakt eller dolda avgifter."
-        },
-        "commercialUse": {
-          "question": "Kan jag använda bilder kommersiellt?",
-          "answer": "Ja, alla genererade bilder är dina att använda kommersiellt. Använd dem på din webbplats, annonser, sociala medier och reklam."
+        "marketplaceReady": {
+          "title": "Redo för marknadsplatslistor",
+          "description": "Exportera bilder optimerade för valfri plattform eller marknadsplats."
         }
       }
     },
     "cta": {
-      "title": "Redo att transformera dina bilfoton?",
-      "subtitle": "Gå med 500+ bilhandlare som använder AutoStudio idag",
-      "button": "Starta din gratis provperiod",
-      "noCreditCard": "Inget kreditkort krävs"
+      "label": "Kom igång",
+      "title": "Redo att förvandla din fordonsfotografering?",
+      "description": "Gå med tusentals bilhandlare som redan använder AutoStudio för att skapa fantastiska showroombilder.",
+      "startFreeTrial": "Starta gratis provperiod",
+      "bookDemo": "Boka en demo",
+      "noCC": "Inget kreditkort krävs. 14 dagars gratis provperiod."
+    },
+    "footer": {
+      "tagline": "Professionell fordonsfotografering för moderna bilhandlare. Förvandla vald bilbild till en studiokvalitetsbild på sekunder.",
+      "rights": "Alla rättigheter förbehållna.",
+      "product": "Produkt",
+      "company": "Företag",
+      "getStarted": "Kom igång",
+      "startFreeTrial": "Starta gratis",
+      "dashboard": "Instrumentpanel",
+      "about": "Om oss",
+      "contact": "Kontakt",
+      "privacy": "Integritetspolicy",
+      "terms": "Villkor för tjänsten"
+    },
+    "pricing": {
+      "label": "Priser",
+      "title": "Enkla, transparenta priser",
+      "description": "Välj den plan som passar din bilhandel. Uppgradera eller avsluta när som helst.",
+      "monthly": "Månadsvis",
+      "yearly": "Årsvis",
+      "savePercent": "Spara 17%",
+      "mostPopular": "Populärast",
+      "getStarted": "Kom igång",
+      "getStartedFree": "Starta gratis",
+      "logoBranding": "Logotypbranding",
+      "premiumAI": "Premium AI-bearbetning",
+      "priorityProcessing": "Prioriterad bearbetning",
+      "loadingPlans": "Laddar planer…",
+      "viewPlans": "Visa alla planer",
+      "studioCount": {
+        "one": "1 studio ingår",
+        "other": "{count} studior ingår"
+      }
     }
   },
+  "about": {
+    "backHome": "Tillbaka till AutoStudio",
+    "eyebrow": "Om AutoStudio AI",
+    "headline": "Professionell fordonsfotografering – utan studio",
+    "subheadline": "Vi byggde AutoStudio AI för att högkvalitativ bilfotografering inte ska kräva en dedikerad studio, dyr utrustning eller dagar av planering. Det ska ta sekunder.",
+    "whatWeDoTitle": "Vad vi gör",
+    "whatWeDoBody": "AutoStudio AI använder artificiell intelligens för att ta bort bakgrunder från fordonsfoton och ersätta dem med professionella studiomiljöer. Ladda upp ett foto av vilken bil som helst – taget med en telefon eller kamera – och få en polerad, dealerklar bild på under 30 sekunder.",
+    "whatWeDoBody2": "Vi erbjuder flera studiostilsalternativ lämpade för varje fordon och märke: ljusa vita utställningslokaler, mörka dramatiska miljöer, urbana omgivningar och mer. Varje resultat är optimerat för webben, marknadsplatslistor och print.",
+    "features": {
+      "feature1": "Bakgrundsborttagning på under 30 sekunder",
+      "feature2": "Flera professionella studiomiljöer",
+      "feature3": "HD och 4K-export för webb och print",
+      "feature4": "Anpassad logotypbranding på varje bild"
+    },
+    "problemTitle": "Problemet vi löser",
+    "problemBody": "En professionell fordonsfototagning kräver vanligtvis en dedikerad studio, belysningsutrustning, en fotograf och efterproduktionsredigering. För ett enskilt fordon kan detta kosta tusentals kronor och ta dagar att schemalägga – innan en enda annons publiceras.",
+    "problemBody2": "AutoStudio AI komprimerar det arbetsflödet till några sekunder och en bråkdel av kostnaden. Bilhandlare kan bearbeta hela sitt lager på en eftermiddag, upprätthålla konsekvent visuell identitet i varje annons och uppdatera bilder när ett fordon tvättas eller omfotograferas.",
+    "whoTitle": "Vem det är för",
+    "audience": {
+      "dealers": {
+        "title": "Bilhandlare",
+        "description": "Bearbeta hela ditt lager i stor skala. Konsekventa studiokvalitetsbilder i varje annons, varje gång."
+      },
+      "sellers": {
+        "title": "Privatsäljare",
+        "description": "Låt din annons sticka ut med professionella bilder – ingen fotograferingskunskap krävs."
+      },
+      "marketplaces": {
+        "title": "Fordonsmarknadsplatser",
+        "description": "Erbjud bildförbättring som en mervärdestjänst till säljare och bilhandlare på din plattform."
+      }
+    },
+    "ctaTitle": "Redo att prova?",
+    "ctaBody": "Skapa ett gratis konto och bearbeta dina första fem fordon utan kostnad.",
+    "ctaButton": "Starta gratis",
+    "ctaPlans": "Visa priser"
+  },
+  "contact": {
+    "backHome": "Tillbaka till AutoStudio",
+    "eyebrow": "Kontakta oss",
+    "headline": "Vi vill gärna höra från dig",
+    "subheadline": "Oavsett om du har en fråga om planer, behöver teknisk hjälp eller vill diskutera en anpassad integration – vi finns här.",
+    "emailLabel": "E-post",
+    "responseTimeLabel": "Svarstid",
+    "responseTimeValue": "Vi strävar efter att svara inom en arbetsdag.",
+    "formTitle": "Skicka ett meddelande",
+    "formSubtitle": "Fyll i formuläret nedan så öppnas din e-postklient med allt förifyllt.",
+    "nameLabel": "Ditt namn",
+    "namePlaceholder": "Anna Svensson",
+    "emailPlaceholder": "anna@exempel.se",
+    "subjectLabel": "Ämne (valfritt)",
+    "subjectPlaceholder": "Hur kan vi hjälpa?",
+    "messageLabel": "Meddelande",
+    "messagePlaceholder": "Berätta vad du funderar på…",
+    "submitButton": "Skicka meddelande",
+    "defaultSubject": "Förfrågan från webbplats",
+    "successTitle": "Öppnar din e-postklient…",
+    "successBody": "Ditt meddelande är förifyllt. Skicka det från din e-postapp för att nå oss."
+  },
   "home": {
-    "tagline": "Omvandla dina mobilbilder av bilar till premium studiofoton direkt.",
-    "beforeAfter": "Före & Efter",
+    "tagline": "Förvandla dina mobilbilder av bilar till premiumstudioskott direkt.",
+    "beforeAfter": "Före och efter",
     "before": "Före",
     "after": "Efter"
   },
   "dashboard": {
-    "title": "AutoStudio Dashboard",
-    "subtitle": "Omvandla dina bilfoton till professionella studiofoton",
+    "title": "AutoStudio Instrumentpanel",
+    "subtitle": "Förvandla dina bildbilder till professionella studioskott",
+    "billing": "Fakturering",
+    "settings": "Inställningar",
+    "smartPhotoGuide": {
+      "title": "Smart Foto Guide",
+      "description": "Ta fordonsfoton med guided kamerahjälp för bästa AI-resultat",
+      "startGuidedCapture": "Starta Guided Capture",
+      "useExistingUpload": "eller använd befintlig uppladdning",
+      "bestResultsBanner": {
+        "title": "Bästa resultat här",
+        "subtitle": "De flesta användare får betydligt bättre AI-resultat genom att ta nya foton med sin mobilkamera. Vårt guidade capture-system hjälper dig få perfekt vinkel och positionering varje gång.",
+        "cta": "Starta Guided Capture",
+        "fallback": "Du kan fortfarande ladda upp befintliga foton om du vill."
+      },
+      "step": {
+        "stepOf": "Steg {current} av {total}",
+        "title_frontLeft45": "Fram vänster 45°",
+        "title_leftSide": "Vänster sida",
+        "title_rearLeft45": "Bak vänster 45°",
+        "title_rearView": "Bakifrån",
+        "title_rightSide": "Höger sida",
+        "title_frontView": "Framifrån",
+        "title_side": "Sidovy",
+        "title_rearOrFront": "Bak eller Fram",
+        "description_frontLeft45": "Positionera ditt fordon så att du ser fronten och vänster sida tydligt",
+        "description_leftSide": "Ta hela vänster längd på ditt fordon",
+        "description_rearLeft45": "Positionera ditt fordon så att du ser baken och vänster sida",
+        "description_rearView": "Fotografera bakdelen av ditt fordon rakt framifrån",
+        "description_rightSide": "Ta hela höger längd på ditt fordon",
+        "description_frontView": "Fotografera fronten av ditt fordon rakt framifrån",
+        "description_side": "Ta hela längden på ditt fordon",
+        "description_rearOrFront": "Välj antingen bak eller fram för symmetri",
+        "requirement_fullVehicle": "Hela fordonet syns",
+        "requirement_allWheels": "Alla hjul syns",
+        "requirement_eyeLevel": "Kameran på ögonhöjd",
+        "requirement_centered": "Fordonet centrerat i bilden",
+        "requirement_aligned": "Fordonet justerat med ramen",
+        "requirement_symmetrical": "Symmetrisk inramning",
+        "requirement_fullLength": "Hela fordonets längd synlig",
+        "requirement_rearAndSide": "Bak och sida synlig",
+        "requirement_insideFrame": "Hela fordonet innanför ramen",
+        "requirement_cleanBackground": "Ren bakgrund föredras",
+        "requirement_fillGuide": "Fordonet fyller 75–90% av guideområdet",
+        "requirement_bothAxles": "Båda axlarna (fram- och bakhjul) synliga"
+      },
+      "feedback": {
+        "validating": "Tar foto...",
+        "positioning": "Positionera fordonet i guiden",
+        "modelLoading": "Laddar detekteringsmodell...",
+        "vehicleNotDetected": "Fordonet inte upptäckt. Se till att fordonet är i bilden.",
+        "vehicleDetected": "Fordon upptäckt",
+        "vehicleCentered": "Fordon centrerat",
+        "readyToCapture": "Redo! Tryck för att ta foto",
+        "tooFar": "Närmare för att fylla bilden",
+        "tooClose": "Tillbaka, fordonet är för nära",
+        "notCentered": "Centrera fordonet i bilden",
+        "raiseCamera": "Sänk kameran lite",
+        "lowerCamera": "Höj kameran lite",
+        "wheelsNotVisible": "Se till att alla hjul är synliga",
+        "horizonNotLevel": "Håll kameran nivå med marken",
+        "correctPosition": "Perfekt position! Tryck för att ta foto.",
+        "error": "Misslyckades att ta foto. Försök igen.",
+        "notProperlyPositioned": "Fordonet inte korrekt positionerat. Försök igen."
+      },
+      "captureButtons": {
+        "retake": "Gör om",
+        "capture": "Ta Foto",
+        "switchCamera": "Byt kamera"
+      },
+      "session": {
+        "resumeTitle": "Föregående session hittad",
+        "resumeMessage": "Du har {count} foto(n) från en tidigare session. Fortsätta?",
+        "resume": "Fortsätt",
+        "startFresh": "Börja om"
+      },
+      "cameraSelect": {
+        "label": "Kamera",
+        "rearWide": "Bak bred",
+        "rearUltraWide": "Bak ultrabred",
+        "rearTelephoto": "Bak tele",
+        "front": "Fram",
+        "unknown": "Kamera {n}"
+      },
+      "requirementsTitle": "Krav:"
+    },
+    "interiorPhotos": {
+      "title": "Innrfoton",
+      "description": "Innrfoton bearbetas inte av AutoStudio. Fotografera dem separat för din fordonlistning.",
+      "examples": "Exempel: Instrumentpanel, Styrehjul, Säten, Lastutrymme"
+    },
     "navigation": {
       "projects": "Projekt",
       "billing": "Fakturering",
       "settings": "Inställningar",
+      "account": "Konto",
       "logout": "Logga ut"
     },
+    "cards": {
+      "uploadPhoto": {
+        "title": "Ladda upp fordonsfoto",
+        "description": "Börja med att ladda upp en fordonsbild från din telefon eller dator."
+      },
+      "selectStudio": {
+        "title": "Välj studio",
+        "description": "Välj en professionell bilmiljö för ditt fordon."
+      },
+      "recentProjects": {
+        "title": "Senaste projekt",
+        "description": "Se dina senaste genererade bilder och projekt.",
+        "noProjects": "Inga projekt ännu. Ladda upp ett foto för att komma igång."
+      },
+      "downloads": {
+        "title": "Nedladdningar",
+        "description": "Få tillgång till dina exporterade bilder i HD- och 4K-kvalitet."
+      },
+      "accountUsage": {
+        "title": "Kontoanvändning",
+        "description": "Spåra din månatliga genereringsräknare och gränser.",
+        "generationsUsed": "Genereringar använda",
+        "of": "av",
+        "unlimited": "Obegränsad"
+      },
+      "subscription": {
+        "title": "Prenumerationsstatus",
+        "description": "Hantera din plan och faktureringsinställningar.",
+        "freePlan": "Gratis plan",
+        "proPlan": "Professionell plan",
+        "enterprisePlan": "Företagsplan",
+        "upgrade": "Uppgradera plan"
+      }
+    },
     "upload": {
-      "title": "1. Ladda upp bilfoto",
-      "clickToUpload": "Klicka för att ladda upp",
-      "dropImage": "Släpp din bild här"
+      "title": "Ladda upp fordonsfoto",
+      "clickToUpload": "Klicka för att ladda upp eller dra och släpp",
+      "dropImage": "Släpp din bild här",
+      "dragDropTitle": "Dra och släpp ditt fordonsfoto här",
+      "orClickToBrowse": "eller klicka för att bläddra",
+      "supportedFormats": "Format som stöds:",
+      "maxSize": "Maximal filstorlek: 50MB",
+      "clickToReplace": "Klicka för att byta bild",
+      "errors": {
+        "unsupportedFormat": "Filformatet stöds inte. Ladda upp en giltig bildfil.",
+        "corrupted": "Bildfilen är skadad eller kan inte läsas.",
+        "resolutionTooSmall": "Bildupplösningen är för liten. Minimum är 640x480px.",
+        "fileSizeExceeded": "Filstorleken överskrider maxgränsen på {max}MB.",
+        "emptyFile": "Den uppladdade filen är tom."
+      }
     },
     "studio": {
-      "title": "2. Välj Studio",
+      "title": "Välj studio",
       "studios": {
-        "luxury_showroom": "Lyxig Showroom",
-        "white_minimal": "Vit Minimal Studio",
-        "cinematic_dark": "Cinematisk Mörk Studio",
-        "black_showroom": "Svart Bilshowroom",
-        "luxury_exhibition": "Lyxig Utställningshall",
-        "glossy_reflective": "Blank Reflekterande Golvstudio"
+        "white_corner_light_epoxy": "Vitt hörn — Ljusgrå epoxi",
+        "white_corner_ceramic_tile": "Vitt hörn — Keramikplattor",
+        "light_gray_corner_medium_epoxy": "Ljusgrått hörn — Medium epoxi",
+        "dark_gray_corner_concrete": "Mörkgrått hörn — Betong",
+        "black_corner_dark_epoxy": "Svart hörn — Mörk epoxi",
+        "commercial_showroom_tile": "Kommersiell showroom — Plattor",
+        "industrial_concrete": "Industriell — Betonggolv",
+        "matte_black_automotive": "Mattsvart bilstudio"
       }
     },
     "options": {
-      "title": "3. Förbättringsalternativ",
+      "title": "Förbättringsalternativ",
       "enhanceWheels": "Förbättra hjuldetaljer",
-      "enhancePaint": "Förbättra lackreflektioner",
+      "enhancePaint": "Förbättra färgreflektioner",
       "exportQuality": "Exportkvalitet",
       "hd": "HD (1920x1080)",
       "fourK": "4K (3840x2160)"
     },
     "generate": {
-      "button": "Generera studiotillverkning",
+      "button": "Generera studiobild",
       "processing": "Bearbetar...",
       "status": {
         "idle": "",
         "uploading": "Laddar upp bild...",
         "preparing": "Förbereder fordon...",
         "applying": "Applicerar studio...",
-        "finalizing": "Färdigställer bild...",
+        "finalizing": "Slutför bild...",
         "completed": "Klar"
       }
     },
     "preview": {
-      "title": "Förhandsvisning & Resultat",
+      "title": "Förhandsgranskning och resultat",
       "selectStudio": "Välj en studio och klicka på Generera",
-      "uploadToStart": "Ladda upp ett bilfoto för att komma igång",
+      "uploadToStart": "Ladda upp ett bildfoto för att komma igång",
       "downloadImage": "Ladda ner bild",
       "newGeneration": "Ny generering"
     },
     "projects": {
-      "title": "Senaste Projekt",
-      "noPreview": "Ingen förhandsvisning",
+      "title": "Senaste projekt",
+      "noPreview": "Ingen förhandsgranskning",
       "studio": "Studio"
+    },
+    "redesign": {
+      "sidebar": {
+        "title": "ARBETSFLÖDE",
+        "steps": {
+          "chooseStudio": "Välj Studio",
+          "uploadPhoto": "Ladda upp foto",
+          "photoGuide": "Fotoguide",
+          "processing": "Bearbetning",
+          "resultDownload": "Resultat & Nedladdning"
+        },
+        "stats": {
+          "creditsRemaining": "Credits kvar",
+          "photosThisMonth": "Foton denna månad",
+          "unlimited": "Obegränsat"
+        }
+      },
+      "step1": {
+        "heading": "Välj Din Studio",
+        "subtitle": "Välj miljö för ditt fordonsfoto"
+      },
+      "step2": {
+        "heading": "Fotoguide",
+        "subtitle": "Tips för bästa AI-resultat",
+        "tips": {
+          "lighting": "Bra belysning — dagsljus eller öppen skugga",
+          "angle": "3/4-vinkel — framt hörn inte rakt framifrån",
+          "fullCar": "Hela bilen i bild — beskär ingen del",
+          "background": "Enkel bakgrund — parkeringsplats eller väg",
+          "resolution": "Hög upplösning — telefonens huvudkamera",
+          "exterior": "Inga interiörer — bara exteriörbilder"
+        }
+      },
+      "step3": {
+        "heading": "Bra vs Dåliga Exempel",
+        "good": "Bra exempel",
+        "bad": "Undvik dessa",
+        "badLabels": "För mörkt · Beskuret · Rörig bakgrund"
+      },
+      "step4": {
+        "heading": "Ladda Upp Ditt Foto",
+        "deviceZone": {
+          "title": "Ladda upp från enhet",
+          "hint": "Dra och släpp eller klicka — JPG / PNG"
+        },
+        "cameraZone": {
+          "title": "Använd kamera",
+          "hint": "Direkt mobilkameraupptagning"
+        }
+      },
+      "step5": {
+        "cta": "Bearbeta med AI",
+        "ctaInfo": "Använder 1 credit · ~15 sekunder · Studio: {studio}",
+        "ctaSelectBoth": "Välj en studio och ladda upp ett foto för att fortsätta",
+        "result": "Ditt resultat är klart",
+        "download": "Ladda ner bild",
+        "newGeneration": "Ny generering"
+      },
+      "options": {
+        "title": "Förbättringsalternativ",
+        "enhanceWheels": "Förbättra hjuldetaljer",
+        "enhancePaint": "Förbättra färgreflektioner",
+        "quality": "Exportkvalitet"
+      },
+      "right": {
+        "recentProjects": "Senaste projekt",
+        "noProjects": "Inga projekt ännu",
+        "done": "Klar",
+        "usage": {
+          "creditsLeft": "Credits kvar",
+          "thisMonth": "Denna månad",
+          "plan": "Plan",
+          "unlimited": "Obegränsat"
+        },
+        "upgrade": {
+          "title": "Bli Pro",
+          "subtitle": "Obegränsade foton, prioritet & HD",
+          "button": "Uppgradera nu"
+        }
+      }
     }
   },
   "billing": {
-    "title": "Priser & Fakturering",
-    "subtitle": "Välj den perfekta planen för dina behov av bilfotografi",
-    "currentUsage": "Nuvarande användning",
+    "title": "Priser och fakturering",
+    "subtitle": "Välj den perfekta planen för dina bilfotografibehov",
+    "currentUsage": "Aktuell användning",
     "generations": "Genereringar",
-    "extraStudios": "Extra Studios",
-    "logoBranding": "Logotyp",
+    "extraStudios": "Extra studior",
+    "logoBranding": "Logotypbranding",
     "premiumAI": "Premium AI",
-    "fourKExports": "4K Exporter",
-    "unlimited": "Obegränsat",
+    "fourKExports": "4K-exporter",
+    "unlimited": "Obegränsad",
     "monthlyGenerations": "Månatliga genereringar",
     "billingCycle": {
-      "monthly": "Månadsvis",
-      "yearly": "Årsvis",
+      "monthly": "Månatligt",
+      "yearly": "Årligt",
       "savePercent": "Spara 17%"
     },
     "plans": {
@@ -352,49 +570,58 @@
         "name": "Start",
         "generationsPerMonth": "{count} genereringar/mån",
         "maxResolution": "Max {resolution} upplösning",
-        "studiosIncluded": "{count} studios inkluderade",
-        "logoBranding": "Logotyp",
+        "studiosIncluded": "{count, plural, one {# studio ingår} other {# studior ingår}}",
+        "logoBranding": "Logotypbranding",
         "premiumAI": "Premium AI-bearbetning",
         "priorityProcessing": "Prioriterad bearbetning",
-        "support": "{level} support",
         "currentPlan": "Nuvarande plan",
         "getStarted": "Kom igång",
         "processing": "Bearbetar..."
       },
       "professional": {
-        "name": "Professional",
+        "name": "Professionell",
         "mostPopular": "Mest populär"
       },
       "enterprise": {
-        "name": "Enterprise"
+        "name": "Företag"
       }
     },
     "manageSubscription": {
       "title": "Hantera prenumeration",
-      "subtitle": "Uppdatera betalningsmetod, ladda ner fakturor eller säg upp prenumerationen",
+      "subtitle": "Uppdatera betalningsmetod, ladda ner fakturor eller avbryt prenumeration",
       "openPortal": "Öppna kundportal"
     },
     "usageBasedBilling": {
       "title": "Användningsbaserad fakturering",
-      "subtitle": "Behöver du mer än vad din plan inkluderar? Vi erbjuder flexibel betalning efter användning för extra användning.",
+      "subtitle": "Behöver du mer än din plan inkluderar? Vi erbjuder flexibel betala-som-du-går-prissättning för extra användning.",
       "perExtraGeneration": "per extra generering",
       "perExtraStudio": "per extra studio",
-      "perLogoBranding": "per logotyp",
+      "perLogoBranding": "per logotypbranding",
       "perFourKExport": "per 4K-export"
+    },
+    "features": {
+      "generationsPerMonth": "Genereringar per månad",
+      "maxResolution": "Maximal upplösning",
+      "studiosIncluded": "Inkluderade studior",
+      "support": "Support",
+      "supportNone": "Ingen support",
+      "supportEmail": "E-postsupport",
+      "supportPriority": "Prioriterad support",
+      "supportDedicated": "Dedikerad support"
     },
     "faq": {
       "title": "Vanliga frågor",
       "changePlans": {
-        "question": "Kan jag ändra plan när som helst?",
-        "answer": "Ja! Du kan uppgradera eller nedgradera din plan när som helst. Ändringar träder i kraft omedelbart och vi fördelar eventuella skillnader."
+        "question": "Kan jag byta plan när som helst?",
+        "answer": "Ja! Du kan uppgradera eller nedgradera din plan när som helst. Ändringar träder i kraft omedelbart och vi beräknar eventuella skillnader."
       },
       "exceedLimit": {
         "question": "Vad händer om jag överskrider min månatliga gräns?",
-        "answer": "Du debiteras för extra användning enligt våra priser för betalning efter användning. Vi meddelar dig när du närmar dig din gräns så att det inte blir några överraskningar."
+        "answer": "Du debiteras för extra användning till våra betala-som-du-går-priser. Vi meddelar dig när du närmar dig din gräns så att det inte blir några överraskningar."
       },
       "rollover": {
-        "question": "Rullas oanvända genereringar över?",
-        "answer": "Nej, oanvända genereringar återställs i slutet av varje faktureringscykel. Vi rekommenderar att du väljer en plan som matchar din typiska månatliga användning."
+        "question": "Överförs oanvända genereringar?",
+        "answer": "Nej, oanvända genereringar återställs i slutet av varje faktureringsperiod. Vi rekommenderar att du väljer en plan som matchar din typiska månatliga användning."
       }
     }
   },
@@ -405,26 +632,29 @@
     "continue": "Fortsätt"
   },
   "notifications": {
-    "uploadSuccess": "Bilden uppladdades framgångsrikt",
-    "uploadError": "Misslyckades ladda upp bilden",
-    "generationSuccess": "Studiofoto genererades framgångsrikt",
-    "generationError": "Misslyckades bearbeta bilden. Försök igen.",
-    "downloadSuccess": "Bilden nedladdades framgångsrikt",
-    "downloadError": "Misslyckades ladda ner bilden",
-    "subscriptionSuccess": "Prenumerationen uppdaterades framgångsrikt",
-    "subscriptionError": "Misslyckades uppdatera prenumerationen. Försök igen.",
-    "portalError": "Misslyckades öppna kundportalen. Försök igen.",
-    "loginSuccess": "Inloggningen lyckades",
-    "loginError": "Misslyckades logga in. Kontrollera dina uppgifter.",
-    "logoutSuccess": "Utloggningen lyckades",
-    "registerSuccess": "Registreringen lyckades. Vänligen verifiera din e-post.",
-    "registerError": "Misslyckades registrera. Försök igen.",
-    "passwordResetSuccess": "Länk för återställning av lösenord skickad",
-    "passwordResetError": "Misslyckades skicka återställningslänk",
-    "logoUploadSuccess": "Logotyp uppladdades framgångsrikt",
-    "logoUploadError": "Misslyckades ladda upp logotyp",
-    "profileUpdateSuccess": "Profilen uppdaterades framgångsrikt",
-    "profileUpdateError": "Misslyckades uppdatera profil"
+    "uploadSuccess": "Bild uppladdad",
+    "uploadError": "Misslyckades att ladda upp bild",
+    "generationSuccess": "Studioskott genererat",
+    "generationError": "Misslyckades att bearbeta bild. Försök igen.",
+    "downloadSuccess": "Bild nedladdad",
+    "downloadError": "Misslyckades att ladda ner bild",
+    "subscriptionSuccess": "Prenumeration uppdaterad",
+    "subscriptionError": "Misslyckades att uppdatera prenumeration. Försök igen.",
+    "subscriptionLoginRequired": "Vänligen logga in för att prenumerera på ett abonnemang.",
+    "portalError": "Misslyckades att öppna kundportalen. Försök igen.",
+    "loginSuccess": "Inloggning lyckades",
+    "loginError": "Inloggning misslyckades. Kontrollera dina inloggningsuppgifter.",
+    "logoutSuccess": "Utloggning lyckades",
+    "registerSuccess": "Registrering lyckades. Verifiera din e-post.",
+    "registerError": "Misslyckades att registrera. Försök igen.",
+    "passwordResetSuccess": "Länk för lösenordsåterställning skickad",
+    "passwordResetError": "Misslyckades att skicka återställningslänk",
+    "logoUploadSuccess": "Logotyp uppladdad",
+    "logoUploadError": "Misslyckades att ladda upp logotyp",
+    "logoFileTooLarge": "Filstorleken måste vara mindre än 2 MB",
+    "logoFileTypeInvalid": "Endast PNG, JPG och SVG-filer stöds",
+    "profileUpdateSuccess": "Profil uppdaterad",
+    "profileUpdateError": "Misslyckades att uppdatera profil"
   },
   "auth": {
     "login": {
@@ -434,7 +664,10 @@
       "forgotPassword": "Glömt lösenord?",
       "submit": "Logga in",
       "noAccount": "Inget konto?",
-      "register": "Registrera dig"
+      "register": "Registrera dig",
+      "loginFailed": "Inloggning misslyckades. Kontrollera dina uppgifter.",
+      "networkError": "Nätverksfel. Kontrollera din anslutning.",
+      "genericError": "Ett fel uppstod. Försök igen."
     },
     "register": {
       "title": "Skapa konto",
@@ -443,55 +676,72 @@
       "password": "Lösenord",
       "confirmPassword": "Bekräfta lösenord",
       "submit": "Registrera",
-      "hasAccount": "Redan ett konto?",
+      "hasAccount": "Har du redan ett konto?",
       "login": "Logga in",
       "terms": "Genom att registrera dig godkänner du våra",
-      "termsOfService": "användarvillkor",
+      "termsOfService": "Villkor för tjänsten",
       "and": "och",
-      "privacyPolicy": "integritetspolicy"
+      "privacyPolicy": "Integritetspolicy",
+      "passwordsDoNotMatch": "Lösenorden stämmer inte överens",
+      "passwordTooShort": "Lösenordet måste vara minst 8 tecken",
+      "genericError": "Ett fel uppstod. Försök igen."
     },
     "forgotPassword": {
       "title": "Återställ lösenord",
       "email": "E-post",
       "submit": "Skicka återställningslänk",
+      "submitting": "Skickar...",
       "backToLogin": "Tillbaka till inloggning",
-      "description": "Vi skickar en länk för att återställa ditt lösenord"
+      "description": "Vi skickar dig en länk för att återställa ditt lösenord",
+      "genericError": "Ett fel uppstod. Försök igen.",
+      "successMessage": "Återställningslänk skickad! Kontrollera din e-post."
     },
     "resetPassword": {
-      "title": "Nytt lösenord",
+      "title": "Välj nytt lösenord",
       "newPassword": "Nytt lösenord",
       "confirmPassword": "Bekräfta lösenord",
-      "submit": "Ändra lösenord"
+      "submit": "Spara nytt lösenord",
+      "submitting": "Sparar...",
+      "success": "Lösenordet har återställts. Du kan nu logga in.",
+      "invalidToken": "Den här återställningslänken är ogiltig eller har gått ut.",
+      "backToLogin": "Tillbaka till inloggning"
     }
   },
   "branding": {
-    "title": "Varumärkesinställningar",
+    "title": "Brandningsinställningar",
     "description": "Hantera din logotyp och branding för exporterade bilder",
     "freeUserWarning": "Uppgradera till en betald plan för att använda din egen logotyp",
     "currentPlan": "Din nuvarande plan",
-    "upgradeToPro": "Uppgradera till Professional",
+    "upgradeToPro": "Uppgradera till Professionell",
     "logoUpload": {
       "title": "Logotyp",
       "uploadButton": "Ladda upp logotyp",
+      "uploadingButton": "Laddar upp...",
       "removeButton": "Ta bort logotyp",
-      "preview": "Förhandsvisning",
-      "supportedFormats": "Stödda format: PNG, JPG, SVG (max 5MB)",
+      "preview": "Förhandsgranskning",
+      "supportedFormats": "Format som stöds: PNG, JPG, SVG (max 5MB)",
       "recommendedSize": "Rekommenderad storlek: 500x500px",
       "currentLogo": "Nuvarande logotyp",
       "noLogo": "Ingen logotyp uppladdad"
     },
     "watermark": {
-      "title": "Vattenstämpel",
-      "description": "Free-användare har AutoStudio vattenstämpel på alla bilder",
-      "removeWithPro": "Ta bort vattenstämpel med Professional-planen"
+      "title": "Vattenmärke",
+      "description": "Gratisanvändare har AutoStudio-vattenmärke på alla bilder",
+      "removeWithPro": "Ta bort vattenmärke med Professionell plan"
     },
     "logoPlacement": {
       "title": "Logotypplacering",
-      "bottomRight": "Nedre högra hörnet",
-      "bottomLeft": "Nedre vänstra hörnet",
-      "topRight": "Övre högra hörnet",
-      "topLeft": "Övre vänstra hörnet",
+      "bottomRight": "Nere höger",
+      "bottomLeft": "Nere vänster",
+      "topRight": "Upp höger",
+      "topLeft": "Upp vänster",
       "center": "Centrerad"
+    },
+    "logoScale": {
+      "title": "Logotypstorlek",
+      "description": "Justera logotypens storlek i förhållande till bildens bredd",
+      "small": "Liten",
+      "large": "Stor"
     }
   },
   "profile": {
@@ -506,45 +756,198 @@
     "changePassword": "Ändra lösenord",
     "currentPassword": "Nuvarande lösenord",
     "newPassword": "Nytt lösenord",
-    "confirmNewPassword": "Bekräfta nytt lösenord"
+    "confirmNewPassword": "Bekräfta nytt lösenord",
+    "saving": "Sparar..."
   },
   "projects": {
-    "title": "Mina Projekt",
-    "noProjects": "Inga projekt än",
-    "noProjectsDescription": "Ladda upp ditt första bilfoto för att komma igång",
+    "title": "Mina projekt",
+    "noProjects": "Inga projekt ännu",
+    "noProjectsDescription": "Ladda upp ditt första bildfoto för att komma igång",
     "searchPlaceholder": "Sök projekt...",
     "filterByStudio": "Filtrera efter studio",
     "sortBy": "Sortera efter",
-    "newest": "Nyaste först",
-    "oldest": "Äldsta först",
-    "deleteProject": "Radera projekt",
-    "confirmDelete": "Är du säker på att du vill radera detta projekt?",
+    "newest": "Nyast först",
+    "oldest": "Äldst först",
+    "deleteProject": "Ta bort projekt",
+    "confirmDelete": "Är du säker på att du vill ta bort detta projekt?",
     "projectName": "Projektnamn",
     "studio": "Studio",
-    "createdAt": "Skapad",
+    "createdAt": "Skapat",
     "actions": "Åtgärder"
   },
   "subscription": {
     "title": "Prenumeration",
     "currentPlan": "Nuvarande plan",
     "planDetails": "Plandetaljer",
-    "billingCycle": "Faktureringscykel",
+    "billingCycle": "Faktureringsperiod",
     "nextBillingDate": "Nästa faktureringsdatum",
     "imagesUsed": "Bilder använda",
     "imagesRemaining": "Bilder kvar",
     "of": "av",
     "upgrade": "Uppgradera",
     "downgrade": "Nedgradera",
-    "cancel": "Avsluta prenumeration",
-    "cancelConfirmation": "Är du säker på att du vill avsluta din prenumeration?",
+    "cancel": "Avbryt prenumeration",
+    "cancelConfirmation": "Är du säker på att du vill avbryta din prenumeration?",
     "active": "Aktiv",
-    "cancelled": "Avslutad",
+    "cancelled": "Avbruten",
     "expired": "Utgången"
   },
   "footer": {
-    "termsOfService": "Användarvillkor",
+    "termsOfService": "Villkor för tjänsten",
     "privacyPolicy": "Integritetspolicy",
     "contactUs": "Kontakta oss",
     "allRightsReserved": "Alla rättigheter förbehållna."
+  },
+  "admin": {
+    "title": "Admin Instrumentpanel",
+    "subtitle": "Hantera användare och övervaka plattformsstatistik",
+    "backToDashboard": "Tillbaka till instrumentpanelen",
+    "users": "Användare",
+    "usersSubtitle": "Hantera användarkonton och prenumerationer",
+    "email": "E-post",
+    "name": "Namn",
+    "role": "Roll",
+    "status": "Status",
+    "projects": "Projekt",
+    "actions": "Åtgärder",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "disabled": "Inaktiverad",
+    "view": "Visa",
+    "disable": "Inaktivera",
+    "enable": "Aktivera",
+    "search": "Sök",
+    "clear": "Rensa",
+    "searchEmail": "Sök efter e-post",
+    "searchEmailPlaceholder": "Ange e-post...",
+    "searchName": "Sök efter namn",
+    "searchNamePlaceholder": "Ange namn...",
+    "noUsersFound": "Inga användare hittades",
+    "userDetails": "Användardetaljer",
+    "subscription": "Prenumeration",
+    "createdAt": "Skapad",
+    "updatedAt": "Uppdaterad",
+    "disableUser": "Inaktivera användare",
+    "enableUser": "Aktivera användare",
+    "disableUserConfirm": "Inaktivera användarkonto",
+    "enableUserConfirm": "Aktivera användarkonto",
+    "disableUserConfirmMessage": "Är du säker på att du vill inaktivera detta användarkonto? Användaren kommer inte att kunna komma åt plattformen.",
+    "enableUserConfirmMessage": "Är du säker på att du vill aktivera detta användarkonto?",
+    "cancel": "Avbryt",
+    "close": "Stäng",
+    "save": "Spara",
+    "saving": "Sparar...",
+    "success": "Lyckades",
+    "dashboard": "Instrumentpanel",
+    "edit": "Redigera",
+    "editUser": "Redigera användare",
+    "resetPassword": "Återställ lösenord",
+    "generatePassword": "Generera tillfälligt lösenord",
+    "generatePasswordDesc": "Skapa ett slumpmässigt tillfälligt lösenord för denna användare.",
+    "enterPassword": "Ange nytt lösenord",
+    "enterPasswordDesc": "Ange manuellt ett nytt lösenord för denna användare.",
+    "forcePasswordReset": "Tvinga lösenordsåterställning",
+    "forcePasswordResetDesc": "Kräv att användaren ändrar sitt lösenord vid nästa inloggning.",
+    "forceReset": "Tvinga återställning",
+    "setPassword": "Ange lösenord",
+    "newPassword": "Nytt lösenord",
+    "newPasswordPlaceholder": "Ange nytt lösenord (min 6 tecken)",
+    "passwordTooShort": "Lösenordet måste vara minst 6 tecken",
+    "generatedPassword": "Genererat lösenord",
+    "copyPasswordWarning": "⚠️ Se till att kopiera detta lösenord. Det kommer inte att visas igen.",
+    "copy": "Kopiera",
+    "passwordResetSuccess": "Lösenordet har återställts för {email}",
+    "passwordGeneratedSuccess": "Lösenord genererat för {email}",
+    "forcePasswordResetSuccess": "Tvingad lösenordsåterställning aktiverad för {email}",
+    "userUpdated": "Användare {email} uppdaterad",
+    "userDisabledSuccess": "Användare inaktiverad",
+    "userEnabledSuccess": "Användare aktiverad",
+    "passwordResetRequired": "Lösenordsåterställning krävs",
+    "subscriptionPlan": "Prenumerationsplan",
+    "recentRegistrations": "Senaste registreringar",
+    "registeredAt": "Registrerad",
+    "noProjects": "Inga projekt",
+    "stats": {
+      "totalUsers": "Totalt antal användare",
+      "activeUsers": "Aktiva användare",
+      "totalProjects": "Totalt antal projekt",
+      "totalRevenue": "Total intäkt",
+      "revenueLast30Days": "Intäkt (30 dagar)",
+      "revenueLast7Days": "Intäkt (7 dagar)"
+    },
+    "errors": {
+      "error": "Fel",
+      "loadStats": "Misslyckades att ladda instrumentpanelsstatistik",
+      "loadUsers": "Misslyckades att ladda användare",
+      "loadUserDetails": "Misslyckades att ladda användardetaljer",
+      "disableUser": "Misslyckades att inaktivera användare",
+      "enableUser": "Misslyckades att aktivera användare",
+      "loadProjects": "Misslyckades att ladda användarprojekt"
+    }
+  },
+  "account": {
+    "title": "Kontoinställningar",
+    "subtitle": "Hantera din profil, lösenord och prenumeration",
+    "status": {
+      "active": "Aktiv",
+      "disabled": "Inaktiverad"
+    },
+    "never": "Aldrig",
+    "profile": {
+      "title": "Profil",
+      "subtitle": "Din personliga information",
+      "name": "Namn",
+      "email": "E-post",
+      "currentPlan": "Nuvarande plan",
+      "accountStatus": "Kontostatus",
+      "createdDate": "Skapad",
+      "edit": "Redigera",
+      "save": "Spara ändringar",
+      "saving": "Sparar...",
+      "updateSuccess": "Profil uppdaterad",
+      "updateError": "Misslyckades att uppdatera profil"
+    },
+    "password": {
+      "title": "Ändra lösenord",
+      "subtitle": "Uppdatera ditt lösenord för att hålla ditt konto säkert",
+      "current": "Nuvarande lösenord",
+      "new": "Nytt lösenord",
+      "confirm": "Bekräfta nytt lösenord",
+      "change": "Ändra lösenord",
+      "changing": "Ändrar...",
+      "mismatch": "De nya lösenorden matchar inte",
+      "tooShort": "Lösenordet måste vara minst 8 tecken",
+      "changeSuccess": "Lösenordet har ändrats. Logga in igen.",
+      "changeError": "Misslyckades att ändra lösenord"
+    },
+    "passwordStrength": {
+      "weak": "Svagt",
+      "medium": "Medel",
+      "strong": "Starkt"
+    },
+    "subscription": {
+      "title": "Prenumeration och plan",
+      "subtitle": "Din nuvarande plan och användningsdetaljer",
+      "plan": "Nuvarande plan",
+      "status": "Status",
+      "usage": "Månatlig användning",
+      "generations": "Genereringar",
+      "remaining": "Återstående",
+      "unlimited": "Obegränsad",
+      "used": "använt denna månad",
+      "upgradePrompt": "Uppgradera din plan för att låsa upp fler funktioner och högre gränser.",
+      "upgrade": "Uppgradera plan"
+    },
+    "security": {
+      "title": "Kontosäkerhet",
+      "subtitle": "Säkerhetsinformation om ditt konto",
+      "lastLogin": "Senaste inloggning",
+      "passwordChanged": "Lösenord senast ändrat",
+      "accountStatus": "Kontostatus"
+    },
+    "errors": {
+      "loadAccount": "Misslyckades att ladda kontoinformation",
+      "network": "Nätverksfel. Kontrollera din anslutning."
+    }
   }
 }

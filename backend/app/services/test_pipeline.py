@@ -12,7 +12,13 @@ import logging
 import numpy as np
 from PIL import Image
 
-from .image_processing import AICompositingService, MockRemover
+from .image_processing import (
+    AICompositingService,
+    ContactShadowGenerator,
+    MockRemover,
+    ENABLE_ENHANCEMENT,
+    ENABLE_LIGHTING_CORRECTION,
+)
 
 # Enable debug logging to see mode/size at each stage
 logging.basicConfig(level=logging.DEBUG, format="%(name)s - %(message)s")
@@ -66,8 +72,10 @@ def create_test_car_image() -> Image.Image:
 
 def test_pipeline():
     """Run the complete AI pipeline on a test image."""
-    print("🚗 AutoStudio AI Pipeline Test")
-    print("=" * 40)
+    print("🚗 AutoStudio AI Pipeline Test (Production Pipeline)")
+    print("=" * 50)
+    print(f"   Feature flags: ENABLE_ENHANCEMENT={ENABLE_ENHANCEMENT}, ENABLE_LIGHTING_CORRECTION={ENABLE_LIGHTING_CORRECTION}")
+    print()
 
     # Create test image
     print("\n1. Creating test car image...")
@@ -77,19 +85,21 @@ def test_pipeline():
     # Initialize compositing service
     print("\n2. Initializing compositing service...")
     service = AICompositingService(
-        background_remover=MockRemover(), studio_width=1200, studio_height=800
+        background_remover=MockRemover(), studio_width=1920, studio_height=1080
     )
-    print("   ✓ Service initialized")
+    print(f"   ✓ Service initialized (canvas: {service.studio_width}x{service.studio_height})")
+    print(f"   ✓ Vehicle width ratio: {service.VEHICLE_WIDTH_RATIO}")
+    print(f"   ✓ Floor position ratio: {service.FLOOR_POSITION_RATIO}")
 
-    # Test different studios
+    # Test different studios (with solid color fallback since no studio images exist in test)
     studios = [
         ("luxury_showroom", "#2a2a2a"),
-        ("white_studio", "#f5f5f5"),
-        ("dark_cinematic", "#0a0a0a"),
+        ("white_minimal", "#f5f5f5"),
+        ("cinematic_dark", "#0a0a0a"),
     ]
 
     for studio_name, floor_color in studios:
-        print(f"\n3. Processing with '{studio_name}' studio...")
+        print(f"\n3. Processing with '{studio_name}' studio (solid color fallback)...")
 
         try:
             result = service.process(
@@ -121,36 +131,58 @@ def test_pipeline():
         )
         print(f"   ✓ {quality}: {result.size[0]}x{result.size[1]} (mode={result.mode})")
 
+    # Test contact shadow generator directly
+    print("\n5. Testing ContactShadowGenerator...")
+    service.studio_width = 1920
+    service.studio_height = 1080
+
+    shadow_gen = ContactShadowGenerator(blur_radius=40, opacity=0.35)
+    shadow = shadow_gen.generate(
+        vehicle_width=1248,  # ~65% of 1920
+        vehicle_height=700,
+        canvas_size=(1920, 1080),
+    )
+    print(f"   ✓ Contact shadow: {shadow.size[0]}x{shadow.size[1]} (mode={shadow.mode})")
+
     # Verify alpha channel preservation through each stage
-    print("\n5. Verifying alpha channel preservation...")
-    service.studio_width = 1200
-    service.studio_height = 800
+    print("\n6. Verifying alpha channel preservation...")
+    service.studio_width = 1920
+    service.studio_height = 1080
 
     # Run through each stage manually and check mode
     car_no_bg = service.background_remover.remove_background(test_image)
     print(f"   BackgroundRemover: {car_no_bg.mode}")
 
-    car_corrected = service.perspective_corrector.correct(
-        car_no_bg, (service.studio_width, service.studio_height)
+    vehicle_scaled = service._scale_vehicle(car_no_bg)
+    print(f"   ScaleVehicle: {vehicle_scaled.mode} ({vehicle_scaled.size[0]}x{vehicle_scaled.size[1]})")
+
+    if ENABLE_LIGHTING_CORRECTION:
+        car_lit = service.lighting_corrector.correct(vehicle_scaled)
+        print(f"   LightingCorrector: {car_lit.mode}")
+    else:
+        car_lit = vehicle_scaled
+        print(f"   LightingCorrector: SKIPPED (disabled)")
+
+    if ENABLE_ENHANCEMENT:
+        car_wheel = service.wheel_preserver.preserve(car_lit, test_image)
+        print(f"   WheelPreserver: {car_wheel.mode}")
+        car_final = service.paint_enhancer.enhance(car_wheel)
+        print(f"   PaintEnhancer: {car_final.mode}")
+    else:
+        car_final = car_lit
+        print(f"   Enhancement: SKIPPED (disabled)")
+
+    contact_shadow = service.contact_shadow_gen.generate(
+        vehicle_width=car_final.size[0],
+        vehicle_height=car_final.size[1],
+        canvas_size=(service.studio_width, service.studio_height),
     )
-    print(f"   PerspectiveCorrector: {car_corrected.mode}")
-
-    car_lit = service.lighting_corrector.correct(car_corrected)
-    print(f"   LightingCorrector: {car_lit.mode}")
-
-    car_wheel = service.wheel_preserver.preserve(car_lit, test_image)
-    print(f"   WheelPreserver: {car_wheel.mode}")
-
-    car_final = service.paint_enhancer.enhance(car_wheel)
-    print(f"   PaintEnhancer: {car_final.mode}")
-
-    reflection = service.reflection_gen.generate(car_final, "#2a2a2a")
-    print(f"   ReflectionGenerator: {reflection.mode}")
+    print(f"   ContactShadowGenerator: {contact_shadow.mode}")
 
     # Final check
     all_rgba = all(
         img.mode == "RGBA"
-        for img in [car_no_bg, car_corrected, car_lit, car_wheel, car_final, reflection]
+        for img in [car_no_bg, vehicle_scaled, car_lit, car_final, contact_shadow]
     )
     if all_rgba:
         print("\n   ✅ All stages preserved RGBA — alpha channel intact!")
@@ -158,22 +190,32 @@ def test_pipeline():
         print("\n   ❌ Alpha channel was lost at some stage!")
         stages = {
             "BackgroundRemover": car_no_bg,
-            "PerspectiveCorrector": car_corrected,
+            "ScaleVehicle": vehicle_scaled,
             "LightingCorrector": car_lit,
-            "WheelPreserver": car_wheel,
-            "PaintEnhancer": car_final,
-            "ReflectionGenerator": reflection,
+            "FinalVehicle": car_final,
+            "ContactShadow": contact_shadow,
         }
         for name, img in stages.items():
             if img.mode != "RGBA":
                 print(f"      FAIL: {name} returned {img.mode} instead of RGBA")
 
-    print("\n" + "=" * 40)
+    # Verify vehicle scaling
+    print("\n7. Verifying vehicle scaling...")
+    v_w = vehicle_scaled.size[0]
+    canvas_w = service.studio_width
+    width_pct = (v_w / canvas_w) * 100
+    print(f"   Vehicle width: {v_w}px / Canvas: {canvas_w}px = {width_pct:.1f}%")
+    if 60 <= width_pct <= 75:
+        print(f"   ✅ Vehicle width {width_pct:.1f}% is within 60-75% target range")
+    else:
+        print(f"   ⚠️  Vehicle width {width_pct:.1f}% is outside 60-75% target range")
+
+    print("\n" + "=" * 50)
     print("✅ Pipeline test completed successfully!")
     print("\nGenerated files:")
     print("  - test_output_luxury_showroom.png")
-    print("  - test_output_white_studio.png")
-    print("  - test_output_dark_cinematic.png")
+    print("  - test_output_white_minimal.png")
+    print("  - test_output_cinematic_dark.png")
 
 
 if __name__ == "__main__":

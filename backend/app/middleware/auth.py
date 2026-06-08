@@ -21,43 +21,58 @@ async def authenticate_middleware(request: Request, call_next):
     2. Validates the JWT token
     3. Adds the current user to the request state
     """
-    # Skip authentication for public routes
-    public_paths = [
+    # Skip authentication for public routes — exact-path or explicit prefix matches only
+    public_exact = {
         "/api/auth/login",
         "/api/auth/register",
         "/api/auth/forgot-password",
+        "/api/auth/reset-password",
+        "/api/auth/logout",
         "/api/auth/token",
         "/api/auth/signup",
         "/docs",
         "/openapi.json",
         "/health",
-        "/static",
-        "/api/studio",
+    }
+    # Prefix matches for static assets and public plan listing
+    public_prefixes = [
+        "/static/",
+        "/api/billing/plans",
+        "/api/studio/",   # GET /api/studio/* (listing/details) — public; POST /process requires auth
+        "/api/studio",    # exact GET /api/studio listing
     ]
 
     path = request.url.path
-    is_public = any(path.startswith(p) for p in public_paths)
+    # POST /api/studio/process is NOT public — require auth
+    is_public = (
+        path in public_exact
+        or (
+            request.method != "POST"
+            and any(path == p or (p.endswith("/") and path.startswith(p)) for p in public_prefixes)
+        )
+        or (request.method in ("GET",) and path in {"/api/studio"})
+    )
 
     if is_public:
         return await call_next(request)
 
-    # Get authorization header
+    # Accept token from Authorization header or httpOnly cookie
     auth_header = request.headers.get("Authorization")
-    if not auth_header:
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"detail": "Not authenticated"},
-        )
-
-    # Validate token format
-    parts = auth_header.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"detail": "Invalid token format"},
-        )
-
-    token = parts[1]
+    if auth_header:
+        parts = auth_header.split()
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": "Invalid token format"},
+            )
+        token = parts[1]
+    else:
+        token = request.cookies.get("auth_token")
+        if not token:
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": "Not authenticated"},
+            )
 
     # Validate token with proper DB session management
     db: Session = SessionLocal()
@@ -166,12 +181,14 @@ def get_current_admin(request: Request):
     """
     Get the current authenticated admin user or raise 403.
     
+    Allows ADMIN role to access admin routes.
+    
     Usage:
         @app.get("/admin")
         def admin_route(user: User = Depends(get_current_admin)):
             return {"user": user}
     """
     user = get_current_user(request)
-    if not user or user.role != Role.ADMIN:
+    if not user or user.role not in (Role.ADMIN,):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return user

@@ -3,10 +3,10 @@
  * These functions work with localStorage and cookies to persist user language choice
  */
 
-export const SUPPORTED_LOCALES = ['en', 'sv'] as const;
+export const SUPPORTED_LOCALES = ['sv', 'en'] as const;
 export type Locale = typeof SUPPORTED_LOCALES[number];
 
-export const DEFAULT_LOCALE: Locale = 'en';
+export const DEFAULT_LOCALE: Locale = 'sv';
 
 /**
  * Get the user's preferred locale from localStorage
@@ -79,8 +79,8 @@ export function isValidLocale(locale: string): locale is Locale {
  */
 export function getLocaleNativeName(locale: Locale): string {
   const names: Record<Locale, string> = {
-    en: 'English',
-    sv: 'Svenska'
+    sv: 'Svenska',
+    en: 'English'
   };
   return names[locale];
 }
@@ -90,8 +90,8 @@ export function getLocaleNativeName(locale: Locale): string {
  */
 export function getLocaleDisplayName(locale: Locale): string {
   const names: Record<Locale, string> = {
-    en: 'English',
-    sv: 'Swedish'
+    sv: 'Swedish',
+    en: 'English'
   };
   return names[locale];
 }
@@ -101,8 +101,8 @@ export function getLocaleDisplayName(locale: Locale): string {
  */
 export function getLocaleFlag(locale: Locale): string {
   const flags: Record<Locale, string> = {
-    en: '🇬🇧',
-    sv: '🇸🇪'
+    sv: '🇸🇪',
+    en: '🇬🇧'
   };
   return flags[locale];
 }

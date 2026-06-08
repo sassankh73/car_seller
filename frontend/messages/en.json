@@ -1,6 +1,8 @@
 {
   "common": {
     "appName": "AutoStudio",
+    "currency": "SEK",
+    "currencyFormat": "{amount} SEK",
     "getStarted": "Get Started",
     "backToHome": "Back to Home",
     "loading": "Loading...",
@@ -16,256 +18,254 @@
     "no": "No"
   },
   "landing": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "studios": "Studios",
+      "pricing": "Pricing",
+      "about": "About"
+    },
     "hero": {
-      "headline": "Transform Ordinary Car Photos into Professional Showroom Images",
-      "subheadline": "Turn everyday car photos into stunning showroom-quality images in seconds. Sell more cars with professional listings that stand out.",
+      "eyebrow": "Professional Vehicle Photography",
+      "headlineLine1": "Professional Vehicle Photography",
+      "headlineLine2": "For Modern Dealerships",
+      "subheadline": "Transform ordinary vehicle photos into professional dealership-ready images in minutes.",
       "startFreeTrial": "Start Free Trial",
-      "uploadPhoto": "Upload Your First Car Photo",
-      "trustedBy": "Trusted by 500+ dealerships worldwide"
-    },
-    "howItWorks": {
-      "title": "How It Works",
-      "subtitle": "Three simple steps to professional car photography",
-      "steps": {
-        "upload": {
-          "title": "Upload Car Photo",
-          "description": "Take a photo with your phone and upload it to our platform"
-        },
-        "choose": {
-          "title": "Choose Virtual Studio",
-          "description": "Select from our premium collection of virtual studio backgrounds"
-        },
-        "download": {
-          "title": "Download Professional Image",
-          "description": "Get your AI-enhanced studio image in HD or 4K quality"
-        }
+      "viewDemo": "View Demo",
+      "trustedBy": "Trusted by 1,200+ dealerships worldwide",
+      "categories": {
+        "sedan": "Sedan",
+        "suv": "SUV",
+        "wagon": "Wagon",
+        "coupe": "Coupe",
+        "pickupEv": "Pickup / EV"
+      },
+      "studios": {
+        "whiteEpoxy": "White Epoxy Studio",
+        "commercial": "Commercial Showroom",
+        "concrete": "Concrete Studio",
+        "darkStudio": "Dark Automotive Studio",
+        "premiumGray": "Premium Light Studio"
       }
-    },
-    "valueProp": {
-      "eyebrow": "How It Works",
-      "title": "Professional car photography, made simple",
-      "items": {
-        "upload": {
-          "title": "Upload Your Photo",
-          "description": "Take a photo with any phone and upload it to our platform. No special equipment or skills needed."
-        },
-        "studios": {
-          "title": "Choose a Studio",
-          "description": "Select from our collection of premium showroom environments designed specifically for automotive photography."
-        },
-        "download": {
-          "title": "Get Your Result",
-          "description": "Download your professional studio image in HD or 4K quality, ready for any listing platform."
-        },
-        "backgroundRemoval": {
-          "title": "Instant Background Removal",
-          "description": "Automatically remove backgrounds with pixel-perfect precision — no editing skills needed"
-        },
-        "realisticShadows": {
-          "title": "Realistic Shadows & Reflections",
-          "description": "Natural shadows and reflections that make every car look like it's in a professional studio"
-        },
-        "hdExport": {
-          "title": "HD & 4K Export",
-          "description": "Export in stunning high definition or ultra HD 4K — ready for any listing platform"
-        }
-      }
-    },
-    "beforeAfter": {
-      "title": "See the Difference",
-      "subtitle": "Watch ordinary photos transform into professional showroom images",
-      "before": "Original Photo",
-      "after": "Showroom Result",
-      "dragSlider": "Drag the slider to compare"
     },
     "features": {
-      "title": "Everything You Need to Sell More Cars",
-      "subtitle": "Professional tools designed for automotive dealers and sellers",
+      "label": "Features",
+      "title": "Everything you need to present vehicles at their best",
+      "description": "Purpose-built tools for automotive professionals who demand quality and speed.",
       "items": {
-        "aiRemoval": {
-          "title": "Instant Background Removal",
-          "description": "Automatically remove backgrounds with pixel-perfect precision — no editing skills needed"
+        "backgroundReplacement": {
+          "title": "Background Replacement",
+          "description": "Transform outdoor photos into professional showroom images with one click."
         },
-        "virtualStudios": {
-          "title": "Professional Showroom Studios",
-          "description": "Choose from 20+ premium showroom environments designed for cars"
+        "professionalStudios": {
+          "title": "Premium Automotive Studios",
+          "description": "Choose from multiple dealership-ready environments designed for vehicle photography."
         },
-        "realisticShadows": {
-          "title": "Realistic Shadows & Reflections",
-          "description": "Natural shadows and reflections that make every car look like it's in a professional studio"
+        "instantProcessing": {
+          "title": "Instant Processing",
+          "description": "Generate studio-quality photos within seconds, not hours."
         },
-        "hdExport": {
-          "title": "HD & 4K Export",
-          "description": "Export in stunning high definition or ultra HD 4K — ready for any listing platform"
+        "batchProcessing": {
+          "title": "Batch Processing",
+          "description": "Process multiple vehicle photos at once. From one to your entire inventory."
         },
-        "logoBranding": {
-          "title": "Dealership Logo Branding",
-          "description": "Add your dealership logo automatically to every image — build brand trust"
+        "naturalShadows": {
+          "title": "Shadow & Ground Alignment",
+          "description": "Natural wheel contact and realistic positioning for authentic results."
         },
-        "fastGeneration": {
-          "title": "Results in Seconds",
-          "description": "Get professional results in seconds, not hours. Process multiple images at once"
+        "multiLanguage": {
+          "title": "Multi-Language Support",
+          "description": "Designed for international dealerships with multi-language interfaces."
+        },
+        "cloudBased": {
+          "title": "Cloud Based",
+          "description": "No software installation required. Access from any device, anywhere."
+        },
+        "dealerReady": {
+          "title": "Dealer Ready Exports",
+          "description": "Optimized for websites, marketplaces and advertising platforms."
         }
       }
     },
     "studios": {
-      "title": "Studio Templates",
-      "subtitle": "Choose from our collection of premium virtual studios",
-      "studios": {
-        "luxuryShowroom": {
-          "name": "Luxury Showroom",
-          "description": "Premium dealership environment with elegant lighting"
-        },
-        "whiteMinimal": {
-          "name": "White Minimal Studio",
-          "description": "Clean, professional white background for any vehicle"
-        },
-        "cinematicDark": {
-          "name": "Cinematic Dark Studio",
-          "description": "Dramatic dark environment with moody atmosphere"
-        },
-        "blackShowroom": {
-          "name": "Black Automotive Showroom",
-          "description": "Elegant black showroom with professional studio lighting"
-        },
-        "luxuryExhibition": {
-          "name": "Luxury Exhibition Hall",
-          "description": "Premium exhibition environment with exclusive design"
-        },
-        "glossyReflective": {
-          "name": "Glossy Reflective Floor Studio",
-          "description": "Professional studio with glossy reflective flooring"
-        }
-      }
-    },
-    "pricing": {
-      "title": "Simple, Transparent Pricing",
-      "subtitle": "Choose the plan that fits your business needs",
-      "billingCycle": {
-        "monthly": "Monthly",
-        "yearly": "Yearly",
-        "savePercent": "Save 17%"
-      },
-      "plans": {
-        "basic": {
-          "name": "Basic",
-          "price": "$29",
-          "period": "/month",
-          "description": "Perfect for small dealerships",
-          "features": {
-            "images": "50 images/month",
-            "studios": "5 studios included",
-            "branding": "Logo branding",
-            "export": "HD export",
-            "support": "Email support"
-          },
-          "cta": "Start Free Trial",
-          "trial": "14-day free trial"
-        },
-        "professional": {
-          "name": "Professional",
-          "price": "$79",
-          "period": "/month",
-          "description": "Best for growing businesses",
-          "mostPopular": "Most Popular",
-          "features": {
-            "images": "200 images/month",
-            "studios": "All 20+ studios",
-            "branding": "Logo branding",
-            "export": "HD + 4K export",
-            "support": "Priority support"
-          },
-          "cta": "Start Free Trial",
-          "trial": "14-day free trial"
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "price": "$199",
-          "period": "/month",
-          "description": "For large dealership groups",
-          "features": {
-            "images": "Unlimited images",
-            "studios": "All studios + custom",
-            "branding": "Custom branding",
-            "export": "4K + RAW export",
-            "support": "Dedicated support"
-          },
-          "cta": "Contact Sales"
-        }
-      },
-      "extraCharges": {
-        "title": "Need More?",
-        "subtitle": "Flexible pay-as-you-go pricing for extra usage",
-        "extraImage": "$0.50 per extra image",
-        "extraStudio": "$2 per extra studio template",
-        "fourKExport": "$1 per 4K export (Basic plan)"
-      }
-    },
-    "testimonials": {
-      "title": "Trusted by Dealerships",
-      "subtitle": "See what automotive professionals say about AutoStudio",
-      "metrics": {
-        "photosProcessed": "Photos Processed",
-        "dealerships": "Dealerships Worldwide",
-        "satisfaction": "Satisfaction Rate",
-        "avgProcessing": "Avg. Processing Time"
-      },
+      "label": "Studio Collection",
+      "title": "Premium Automotive Studios",
+      "description": "Professionally designed virtual environments for every brand and style.",
       "items": {
-        "first": {
-          "quote": "AutoStudio has transformed our listing photos. We've seen a 40% increase in engagement since using this platform.",
-          "author": "Michael Anderson",
-          "role": "Owner, Anderson Auto Group",
-          "location": "Stockholm, Sweden"
+        "whiteEpoxy": {
+          "name": "White Epoxy Studio",
+          "description": "Clean bright environment ideal for premium listings."
         },
-        "second": {
-          "quote": "The quality is incredible. Our customers think we hire professional photographers. Best investment we've made.",
-          "author": "Sarah Lindberg",
-          "role": "Marketing Director, Nordic Cars",
-          "location": "Gothenburg, Sweden"
+        "commercial": {
+          "name": "Commercial Showroom",
+          "description": "Modern dealership presentation with realistic depth."
         },
-        "third": {
-          "quote": "Fast, reliable, and the results speak for themselves. Our inventory looks premium without the premium cost.",
-          "author": "Erik Johansson",
-          "role": "CEO, Premium Motors",
-          "location": "Malmö, Sweden"
+        "darkStudio": {
+          "name": "Dark Automotive Studio",
+          "description": "Luxury presentation for premium and sports vehicles."
+        },
+        "concrete": {
+          "name": "Concrete Studio",
+          "description": "Industrial look for utility and commercial vehicles."
+        },
+        "ceramicTile": {
+          "name": "Ceramic Tile Studio",
+          "description": "Bright and reflective surface for clean presentations."
+        },
+        "premiumGray": {
+          "name": "Premium Gray Studio",
+          "description": "Sophisticated neutral tone for versatile vehicle display."
+        }
+      },
+      "viewAll": "View all studios"
+    },
+    "howItWorks": {
+      "label": "How It Works",
+      "title": "Three steps to showroom quality",
+      "description": "From phone photo to professional dealership image in seconds.",
+      "steps": {
+        "upload": {
+          "title": "Upload Your Vehicle Photo",
+          "description": "Upload any dealership or smartphone vehicle image."
+        },
+        "chooseStudio": {
+          "title": "Choose Your Studio",
+          "description": "Select from professional automotive showroom environments."
+        },
+        "download": {
+          "title": "Download The Result",
+          "description": "Receive a dealership-ready image with realistic shadows and placement."
         }
       }
     },
-    "faq": {
-      "title": "Frequently Asked Questions",
-      "items": {
-        "generationTime": {
-          "question": "How long does generation take?",
-          "answer": "Most images are processed in 5-15 seconds. Complex images with detailed reflections may take up to 30 seconds. You can process multiple images simultaneously."
+    "trust": {
+      "label": "Trusted Worldwide",
+      "title": "Proven at scale",
+      "description": "Trusted by automotive professionals across the globe.",
+      "stats": {
+        "imagesGenerated": "Images Generated",
+        "dealersServed": "Dealers Served",
+        "processingSpeed": "Avg. Processing Time",
+        "studioTemplates": "Studio Templates"
+      },
+      "benefits": {
+        "saveHours": {
+          "title": "Save Hours Per Vehicle",
+          "description": "No more scheduling photographers or waiting for edited photos."
         },
-        "phonePhotos": {
-          "question": "Can I upload phone photos?",
-          "answer": "Absolutely! AutoStudio is specifically designed for mobile photos. iPhone, Android, any smartphone camera works perfectly."
+        "noPhotographer": {
+          "title": "No Photographer Required",
+          "description": "Anyone on your team can create professional images instantly."
         },
-        "colorAccuracy": {
-          "question": "Does it preserve the original car color?",
-          "answer": "Yes, our technology preserves exact color accuracy. The original paint color, reflections, and details are maintained with 99.9% accuracy."
+        "consistent": {
+          "title": "Consistent Inventory Presentation",
+          "description": "Every vehicle looks its best with uniform, professional imagery."
         },
-        "logoBranding": {
-          "question": "Can I add my dealership logo?",
-          "answer": "Yes! All plans include logo branding. Upload your logo once and it will be automatically added to all your generated images."
-        },
-        "cancelSubscription": {
-          "question": "Can I cancel anytime?",
-          "answer": "Yes, you can cancel your subscription at any time. No long-term contracts or hidden fees."
-        },
-        "commercialUse": {
-          "question": "Can I use images commercially?",
-          "answer": "Yes, all generated images are yours to use commercially. Use them on your website, listings, social media, and advertisements."
+        "marketplaceReady": {
+          "title": "Ready For Marketplace Listings",
+          "description": "Export images optimized for any platform or marketplace."
         }
       }
     },
     "cta": {
-      "title": "Ready to Transform Your Car Photos?",
-      "subtitle": "Join 500+ dealerships using AutoStudio today",
-      "button": "Start Your Free Trial",
-      "noCreditCard": "No credit card required"
+      "label": "Get Started",
+      "title": "Ready to transform your vehicle photography?",
+      "description": "Join thousands of dealerships already using AutoStudio to create stunning showroom images.",
+      "startFreeTrial": "Start Free Trial",
+      "bookDemo": "Book a Demo",
+      "noCC": "No credit card required. 14-day free trial."
+    },
+    "footer": {
+      "tagline": "Professional vehicle photography for modern dealerships. Turn any car photo into a studio-quality image in seconds.",
+      "rights": "All rights reserved.",
+      "product": "Product",
+      "company": "Company",
+      "getStarted": "Get Started",
+      "startFreeTrial": "Start Free Trial",
+      "dashboard": "Dashboard",
+      "about": "About",
+      "contact": "Contact",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service"
+    },
+    "pricing": {
+      "label": "Pricing",
+      "title": "Simple, transparent pricing",
+      "description": "Choose the plan that fits your dealership. Upgrade or cancel anytime.",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "savePercent": "Save 17%",
+      "mostPopular": "Most Popular",
+      "getStarted": "Get Started",
+      "getStartedFree": "Start for Free",
+      "logoBranding": "Logo branding",
+      "premiumAI": "Premium AI processing",
+      "priorityProcessing": "Priority processing",
+      "loadingPlans": "Loading plans…",
+      "viewPlans": "View all plans",
+      "studioCount": {
+        "one": "1 studio included",
+        "other": "{count} studios included"
+      }
     }
+  },
+  "about": {
+    "backHome": "Back to AutoStudio",
+    "eyebrow": "About AutoStudio AI",
+    "headline": "Professional vehicle photography — without the studio",
+    "subheadline": "We built AutoStudio AI because high-quality car photography should not require a dedicated studio, expensive equipment, or days of scheduling. It should take seconds.",
+    "whatWeDoTitle": "What we do",
+    "whatWeDoBody": "AutoStudio AI uses artificial intelligence to remove backgrounds from vehicle photos and replace them with professional studio environments. Upload a photo of any car — taken on a phone or with a camera — and receive a polished, dealership-ready image in under 30 seconds.",
+    "whatWeDoBody2": "We offer multiple studio styles suited to every vehicle and brand: bright white showrooms, dark dramatic settings, urban environments, and more. Every output is optimised for the web, marketplace listings, and print.",
+    "features": {
+      "feature1": "Background removal in under 30 seconds",
+      "feature2": "Multiple professional studio environments",
+      "feature3": "HD and 4K export for web and print",
+      "feature4": "Custom logo branding on every image"
+    },
+    "problemTitle": "The problem we solve",
+    "problemBody": "A professional automotive photoshoot typically requires a dedicated studio, lighting rigs, a photographer, and post-production editing. For a single vehicle this can cost thousands of SEK and take days to schedule — before a single listing goes live.",
+    "problemBody2": "AutoStudio AI compresses that workflow to a few seconds and a fraction of the cost. Dealerships can process their entire inventory in an afternoon, maintain consistent visual identity across every listing, and update images whenever a vehicle is detailed or rephotographed.",
+    "whoTitle": "Who it's for",
+    "audience": {
+      "dealers": {
+        "title": "Car dealerships",
+        "description": "Process your full inventory at scale. Consistent studio-quality images across every listing, every time."
+      },
+      "sellers": {
+        "title": "Private sellers",
+        "description": "Make your listing stand out with professional imagery, no photography experience required."
+      },
+      "marketplaces": {
+        "title": "Automotive marketplaces",
+        "description": "Offer image enhancement as a value-added service to sellers and dealerships on your platform."
+      }
+    },
+    "ctaTitle": "Ready to try it?",
+    "ctaBody": "Create a free account and process your first five vehicles at no cost.",
+    "ctaButton": "Start for Free",
+    "ctaPlans": "View Pricing"
+  },
+  "contact": {
+    "backHome": "Back to AutoStudio",
+    "eyebrow": "Get in touch",
+    "headline": "We'd love to hear from you",
+    "subheadline": "Whether you have a question about plans, need technical help, or want to discuss a custom integration — we're here.",
+    "emailLabel": "Email",
+    "responseTimeLabel": "Response time",
+    "responseTimeValue": "We aim to respond within one business day.",
+    "formTitle": "Send us a message",
+    "formSubtitle": "Fill in the form below and your email client will open with everything pre-filled.",
+    "nameLabel": "Your name",
+    "namePlaceholder": "Jane Smith",
+    "emailPlaceholder": "jane@example.com",
+    "subjectLabel": "Subject (optional)",
+    "subjectPlaceholder": "How can we help?",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Tell us what's on your mind…",
+    "submitButton": "Send Message",
+    "defaultSubject": "Enquiry from website",
+    "successTitle": "Opening your email client…",
+    "successBody": "Your message has been pre-filled. Send it from your email app to reach us."
   },
   "home": {
     "tagline": "Transform your mobile car photos into premium studio shots instantly.",
@@ -276,30 +276,185 @@
   "dashboard": {
     "title": "AutoStudio Dashboard",
     "subtitle": "Transform your car photos into professional studio shots",
+    "billing": "Billing",
+    "settings": "Settings",
+    "smartPhotoGuide": {
+      "title": "Smart Photo Guide",
+      "description": "Capture vehicle photos with guided camera assistance for best AI results",
+      "startGuidedCapture": "Start Guided Capture",
+      "useExistingUpload": "or use existing upload",
+      "bestResultsBanner": {
+        "title": "Best Results Achieved Here",
+        "subtitle": "Most users achieve significantly better AI results by taking new photos using your mobile camera. Our guided capture system helps you get the perfect angle and positioning every time.",
+        "cta": "Start Guided Capture",
+        "fallback": "You can still upload existing photos if needed."
+      },
+      "step": {
+        "stepOf": "Step {current} of {total}",
+        "title_frontLeft45": "Front Left 45°",
+        "title_leftSide": "Left Side",
+        "title_rearLeft45": "Rear Left 45°",
+        "title_rearView": "Rear View",
+        "title_rightSide": "Right Side",
+        "title_frontView": "Front View",
+        "title_side": "Side View",
+        "title_rearOrFront": "Rear or Front View",
+        "description_frontLeft45": "Position your vehicle so you can see the front and left side clearly",
+        "description_leftSide": "Capture the full left length of your vehicle",
+        "description_rearLeft45": "Position your vehicle so you can see the rear and left side",
+        "description_rearView": "Photograph the rear of your vehicle straight on",
+        "description_rightSide": "Capture the full right length of your vehicle",
+        "description_frontView": "Photograph the front of your vehicle straight on",
+        "description_side": "Capture the full length of your vehicle",
+        "description_rearOrFront": "Choose either rear or front view for symmetry",
+        "requirement_fullVehicle": "Full vehicle visible",
+        "requirement_allWheels": "All wheels visible",
+        "requirement_eyeLevel": "Camera at eye level",
+        "requirement_centered": "Vehicle centered in frame",
+        "requirement_aligned": "Vehicle aligned with frame",
+        "requirement_symmetrical": "Symmetrical framing",
+        "requirement_fullLength": "Full vehicle length visible",
+        "requirement_rearAndSide": "Rear and side visible",
+        "requirement_insideFrame": "Full vehicle inside frame",
+        "requirement_cleanBackground": "Clean background preferred",
+        "requirement_fillGuide": "Vehicle fills 75–90% of guide area",
+        "requirement_bothAxles": "Both axles (front & rear wheels) visible"
+      },
+      "feedback": {
+        "validating": "Capturing photo...",
+        "positioning": "Position your vehicle inside the guide",
+        "modelLoading": "Loading detection model...",
+        "vehicleNotDetected": "Vehicle not detected. Ensure vehicle is in frame.",
+        "vehicleDetected": "Vehicle detected",
+        "vehicleCentered": "Vehicle centered",
+        "readyToCapture": "Ready! Tap to capture",
+        "tooFar": "Move closer to fill the frame",
+        "tooClose": "Move back, vehicle is too close",
+        "notCentered": "Center the vehicle in the frame",
+        "raiseCamera": "Lower camera slightly",
+        "lowerCamera": "Raise camera slightly",
+        "wheelsNotVisible": "Ensure all wheels are visible",
+        "horizonNotLevel": "Keep camera level with the ground",
+        "correctPosition": "Perfect position! Tap to capture.",
+        "error": "Failed to capture image. Please try again.",
+        "notProperlyPositioned": "Vehicle not properly positioned. Please try again."
+      },
+      "captureButtons": {
+        "retake": "Retake",
+        "capture": "Capture Photo",
+        "switchCamera": "Switch Camera"
+      },
+      "session": {
+        "resumeTitle": "Previous session found",
+        "resumeMessage": "You have {count} photo(s) from a previous session. Resume?",
+        "resume": "Resume",
+        "startFresh": "Start fresh"
+      },
+      "cameraSelect": {
+        "label": "Camera",
+        "rearWide": "Rear Wide",
+        "rearUltraWide": "Rear Ultra Wide",
+        "rearTelephoto": "Rear Telephoto",
+        "front": "Front",
+        "unknown": "Camera {n}"
+      },
+      "requirementsTitle": "Requirements:"
+    },
+    "interiorPhotos": {
+      "title": "Interior Photos",
+      "description": "Interior photos are not processed by AutoStudio. Please photograph them separately for your vehicle listing.",
+      "examples": "Examples: Dashboard, Steering wheel, Seats, Cargo area"
+    },
+    "upload": {
+      "title": "Upload Vehicle Photo",
+      "clickToUpload": "Click to upload or drag and drop",
+      "dropImage": "Drop your image here",
+      "dragDropTitle": "Drag & drop your vehicle photo here",
+      "orClickToBrowse": "or click to browse",
+      "supportedFormats": "Supported formats:",
+      "maxSize": "Maximum file size: 50MB",
+      "clickToReplace": "Click to replace the image",
+      "errors": {
+        "unsupportedFormat": "Unsupported file format. Please upload a valid image.",
+        "corrupted": "The image file is corrupted or cannot be read.",
+        "resolutionTooSmall": "Image resolution is too small. Minimum is 640x480px.",
+        "fileSizeExceeded": "File size exceeds the maximum limit of {max}MB.",
+        "emptyFile": "The uploaded file is empty."
+      }
+    },
     "navigation": {
       "projects": "Projects",
       "billing": "Billing",
       "settings": "Settings",
+      "account": "Account",
       "logout": "Logout"
     },
+    "cards": {
+      "uploadPhoto": {
+        "title": "Upload Vehicle Photo",
+        "description": "Start by uploading a vehicle image from your phone or computer."
+      },
+      "selectStudio": {
+        "title": "Select Studio",
+        "description": "Choose a professional automotive environment for your vehicle."
+      },
+      "recentProjects": {
+        "title": "Recent Projects",
+        "description": "View your latest generated images and projects.",
+        "noProjects": "No projects yet. Upload a photo to get started."
+      },
+      "downloads": {
+        "title": "Downloads",
+        "description": "Access your exported images in HD and 4K quality."
+      },
+      "accountUsage": {
+        "title": "Account Usage",
+        "description": "Track your monthly generation count and limits.",
+        "generationsUsed": "Generations used",
+        "of": "of",
+        "unlimited": "Unlimited"
+      },
+      "subscription": {
+        "title": "Subscription Status",
+        "description": "Manage your plan and billing preferences.",
+        "freePlan": "Free Plan",
+        "proPlan": "Professional Plan",
+        "enterprisePlan": "Enterprise Plan",
+        "upgrade": "Upgrade Plan"
+      }
+    },
     "upload": {
-      "title": "1. Upload Car Photo",
-      "clickToUpload": "Click to upload",
-      "dropImage": "Drop your image here"
+      "title": "Upload Vehicle Photo",
+      "clickToUpload": "Click to upload or drag and drop",
+      "dropImage": "Drop your image here",
+      "dragDropTitle": "Drag & drop your vehicle photo here",
+      "orClickToBrowse": "or click to browse",
+      "supportedFormats": "Supported formats:",
+      "maxSize": "Maximum file size: 50MB",
+      "clickToReplace": "Click to replace the image",
+      "errors": {
+        "unsupportedFormat": "Unsupported file format. Please upload a valid image.",
+        "corrupted": "The image file is corrupted or cannot be read.",
+        "resolutionTooSmall": "Image resolution is too small. Minimum is 640x480px.",
+        "fileSizeExceeded": "File size exceeds the maximum limit of {max}MB.",
+        "emptyFile": "The uploaded file is empty."
+      }
     },
     "studio": {
-      "title": "2. Select Studio",
+      "title": "Select Studio",
       "studios": {
-        "luxury_showroom": "Luxury Showroom",
-        "white_minimal": "White Minimal Studio",
-        "cinematic_dark": "Cinematic Dark Studio",
-        "black_showroom": "Black Automotive Showroom",
-        "luxury_exhibition": "Luxury Exhibition Hall",
-        "glossy_reflective": "Glossy Reflective Floor Studio"
+        "white_corner_light_epoxy": "White Corner — Light Gray Epoxy",
+        "white_corner_ceramic_tile": "White Corner — Ceramic Tile",
+        "light_gray_corner_medium_epoxy": "Light Gray Corner — Medium Epoxy",
+        "dark_gray_corner_concrete": "Dark Gray Corner — Concrete",
+        "black_corner_dark_epoxy": "Black Corner — Dark Epoxy",
+        "commercial_showroom_tile": "Commercial Showroom — Tile",
+        "industrial_concrete": "Industrial — Concrete Floor",
+        "matte_black_automotive": "Matte Black Automotive"
       }
     },
     "options": {
-      "title": "3. Enhancement Options",
+      "title": "Enhancement Options",
       "enhanceWheels": "Enhance Wheel Details",
       "enhancePaint": "Enhance Paint Reflections",
       "exportQuality": "Export Quality",
@@ -329,6 +484,86 @@
       "title": "Recent Projects",
       "noPreview": "No preview",
       "studio": "Studio"
+    },
+    "redesign": {
+      "sidebar": {
+        "title": "WORKFLOW",
+        "steps": {
+          "chooseStudio": "Choose Studio",
+          "uploadPhoto": "Upload Photo",
+          "photoGuide": "Photo Guide",
+          "processing": "Processing",
+          "resultDownload": "Result & Download"
+        },
+        "stats": {
+          "creditsRemaining": "Credits remaining",
+          "photosThisMonth": "Photos this month",
+          "unlimited": "Unlimited"
+        }
+      },
+      "step1": {
+        "heading": "Choose Your Studio",
+        "subtitle": "Select the environment for your vehicle photo"
+      },
+      "step2": {
+        "heading": "Photo Guide",
+        "subtitle": "Tips for the best AI results",
+        "tips": {
+          "lighting": "Good lighting — daylight or open shade",
+          "angle": "3/4 angle — front corner not straight-on",
+          "fullCar": "Full car in frame — don't crop any part",
+          "background": "Simple background — parking lot or road",
+          "resolution": "High resolution — phone main camera",
+          "exterior": "No interiors — exterior shots only"
+        }
+      },
+      "step3": {
+        "heading": "Good vs Bad Examples",
+        "good": "Good examples",
+        "bad": "Avoid these",
+        "badLabels": "Too dark · Cropped · Cluttered background"
+      },
+      "step4": {
+        "heading": "Upload Your Photo",
+        "deviceZone": {
+          "title": "Upload from device",
+          "hint": "Drag & drop or click — JPG / PNG"
+        },
+        "cameraZone": {
+          "title": "Use camera",
+          "hint": "Direct mobile camera capture"
+        }
+      },
+      "step5": {
+        "cta": "Process with AI",
+        "ctaInfo": "Uses 1 credit · ~15 seconds · Studio: {studio}",
+        "ctaSelectBoth": "Select a studio and upload a photo to continue",
+        "result": "Your result is ready",
+        "download": "Download Image",
+        "newGeneration": "New Generation"
+      },
+      "options": {
+        "title": "Enhancement Options",
+        "enhanceWheels": "Enhance Wheel Details",
+        "enhancePaint": "Enhance Paint Reflections",
+        "quality": "Export Quality"
+      },
+      "right": {
+        "recentProjects": "Recent Projects",
+        "noProjects": "No projects yet",
+        "done": "Done",
+        "usage": {
+          "creditsLeft": "Credits left",
+          "thisMonth": "This month",
+          "plan": "Plan",
+          "unlimited": "Unlimited"
+        },
+        "upgrade": {
+          "title": "Go Pro",
+          "subtitle": "Unlimited photos, priority & HD",
+          "button": "Upgrade Now"
+        }
+      }
     }
   },
   "billing": {
@@ -352,11 +587,10 @@
         "name": "Starter",
         "generationsPerMonth": "{count} generations/mo",
         "maxResolution": "Max {resolution} resolution",
-        "studiosIncluded": "{count} studios included",
+        "studiosIncluded": "{count, plural, one {# studio included} other {# studios included}}",
         "logoBranding": "Logo branding",
         "premiumAI": "Premium AI processing",
         "priorityProcessing": "Priority processing",
-        "support": "{level} support",
         "currentPlan": "Current Plan",
         "getStarted": "Get Started",
         "processing": "Processing..."
@@ -381,6 +615,16 @@
       "perExtraStudio": "per extra studio",
       "perLogoBranding": "per logo branding",
       "perFourKExport": "per 4K export"
+    },
+    "features": {
+      "generationsPerMonth": "Generations per month",
+      "maxResolution": "Max resolution",
+      "studiosIncluded": "Studios included",
+      "support": "Support",
+      "supportNone": "No support",
+      "supportEmail": "Email support",
+      "supportPriority": "Priority support",
+      "supportDedicated": "Dedicated support"
     },
     "faq": {
       "title": "Frequently Asked Questions",
@@ -413,6 +657,7 @@
     "downloadError": "Failed to download image",
     "subscriptionSuccess": "Subscription updated successfully",
     "subscriptionError": "Failed to update subscription. Please try again.",
+    "subscriptionLoginRequired": "Please log in to subscribe to a plan.",
     "portalError": "Failed to open customer portal. Please try again.",
     "loginSuccess": "Login successful",
     "loginError": "Failed to login. Please check your credentials.",
@@ -423,6 +668,8 @@
     "passwordResetError": "Failed to send reset link",
     "logoUploadSuccess": "Logo uploaded successfully",
     "logoUploadError": "Failed to upload logo",
+    "logoFileTooLarge": "File size must be less than 2 MB",
+    "logoFileTypeInvalid": "Only PNG, JPG, and SVG files are supported",
     "profileUpdateSuccess": "Profile updated successfully",
     "profileUpdateError": "Failed to update profile"
   },
@@ -436,7 +683,8 @@
       "noAccount": "No account?",
       "register": "Sign up",
       "loginFailed": "Login failed. Please check your credentials.",
-      "networkError": "Network error. Please check your connection."
+      "networkError": "Network error. Please check your connection.",
+      "genericError": "An error occurred. Please try again."
     },
     "register": {
       "title": "Create Account",
@@ -450,20 +698,30 @@
       "terms": "By registering you agree to our",
       "termsOfService": "Terms of Service",
       "and": "and",
-      "privacyPolicy": "Privacy Policy"
+      "privacyPolicy": "Privacy Policy",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "genericError": "An error occurred. Please try again."
     },
     "forgotPassword": {
       "title": "Reset Password",
       "email": "Email",
       "submit": "Send Reset Link",
+      "submitting": "Sending...",
       "backToLogin": "Back to Login",
-      "description": "We'll send you a link to reset your password"
+      "description": "We'll send you a link to reset your password",
+      "genericError": "An error occurred. Please try again.",
+      "successMessage": "Reset link sent! Check your email."
     },
     "resetPassword": {
-      "title": "New Password",
+      "title": "Set New Password",
       "newPassword": "New Password",
       "confirmPassword": "Confirm Password",
-      "submit": "Change Password"
+      "submit": "Set New Password",
+      "submitting": "Saving...",
+      "success": "Password reset successfully. You can now log in.",
+      "invalidToken": "This reset link is invalid or has expired.",
+      "backToLogin": "Back to Login"
     }
   },
   "branding": {
@@ -475,6 +733,7 @@
     "logoUpload": {
       "title": "Logo",
       "uploadButton": "Upload Logo",
+      "uploadingButton": "Uploading...",
       "removeButton": "Remove Logo",
       "preview": "Preview",
       "supportedFormats": "Supported formats: PNG, JPG, SVG (max 5MB)",
@@ -494,6 +753,12 @@
       "topRight": "Top Right",
       "topLeft": "Top Left",
       "center": "Center"
+    },
+    "logoScale": {
+      "title": "Logo Scale",
+      "description": "Adjust the size of your logo relative to the image width",
+      "small": "Small",
+      "large": "Large"
     }
   },
   "profile": {
@@ -508,7 +773,8 @@
     "changePassword": "Change Password",
     "currentPassword": "Current Password",
     "newPassword": "New Password",
-    "confirmNewPassword": "Confirm New Password"
+    "confirmNewPassword": "Confirm New Password",
+    "saving": "Saving..."
   },
   "projects": {
     "title": "My Projects",
@@ -586,6 +852,35 @@
     "enableUserConfirmMessage": "Are you sure you want to enable this user account?",
     "cancel": "Cancel",
     "close": "Close",
+    "save": "Save",
+    "saving": "Saving...",
+    "success": "Success",
+    "dashboard": "Dashboard",
+    "edit": "Edit",
+    "editUser": "Edit User",
+    "resetPassword": "Reset Password",
+    "generatePassword": "Generate Temporary Password",
+    "generatePasswordDesc": "Create a random temporary password for this user.",
+    "enterPassword": "Enter New Password",
+    "enterPasswordDesc": "Manually set a new password for this user.",
+    "forcePasswordReset": "Force Password Reset",
+    "forcePasswordResetDesc": "Require the user to change their password on next login.",
+    "forceReset": "Force Reset",
+    "setPassword": "Set Password",
+    "newPassword": "New Password",
+    "newPasswordPlaceholder": "Enter new password (min 6 characters)",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "generatedPassword": "Generated Password",
+    "copyPasswordWarning": "⚠️ Make sure to copy this password. It won't be shown again.",
+    "copy": "Copy",
+    "passwordResetSuccess": "Password reset successfully for {email}",
+    "passwordGeneratedSuccess": "Password generated successfully for {email}",
+    "forcePasswordResetSuccess": "Force password reset set for {email}",
+    "userUpdated": "User {email} updated successfully",
+    "userDisabledSuccess": "User disabled successfully",
+    "userEnabledSuccess": "User enabled successfully",
+    "passwordResetRequired": "Password reset required",
+    "subscriptionPlan": "Subscription Plan",
     "recentRegistrations": "Recent Registrations",
     "registeredAt": "Registered At",
     "noProjects": "No projects",
@@ -605,6 +900,71 @@
       "disableUser": "Failed to disable user",
       "enableUser": "Failed to enable user",
       "loadProjects": "Failed to load user projects"
+    }
+  },
+  "account": {
+    "title": "Account Settings",
+    "subtitle": "Manage your profile, password, and subscription",
+    "status": {
+      "active": "Active",
+      "disabled": "Disabled"
+    },
+    "never": "Never",
+    "profile": {
+      "title": "Profile",
+      "subtitle": "Your personal information",
+      "name": "Name",
+      "email": "Email",
+      "currentPlan": "Current Plan",
+      "accountStatus": "Account Status",
+      "createdDate": "Created",
+      "edit": "Edit",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "updateSuccess": "Profile updated successfully",
+      "updateError": "Failed to update profile"
+    },
+    "password": {
+      "title": "Change Password",
+      "subtitle": "Update your password to keep your account secure",
+      "current": "Current Password",
+      "new": "New Password",
+      "confirm": "Confirm New Password",
+      "change": "Change Password",
+      "changing": "Changing...",
+      "mismatch": "New passwords do not match",
+      "tooShort": "Password must be at least 8 characters",
+      "changeSuccess": "Password changed successfully. Please log in again.",
+      "changeError": "Failed to change password"
+    },
+    "passwordStrength": {
+      "weak": "Weak",
+      "medium": "Medium",
+      "strong": "Strong"
+    },
+    "subscription": {
+      "title": "Subscription & Plan",
+      "subtitle": "Your current plan and usage details",
+      "plan": "Current Plan",
+      "status": "Status",
+      "usage": "Monthly Usage",
+      "generations": "Generations",
+      "remaining": "Remaining",
+      "unlimited": "Unlimited",
+      "used": "used this month",
+      "upgradePrompt": "Upgrade your plan to unlock more features and higher limits.",
+      "upgrade": "Upgrade Plan"
+    },
+    "security": {
+      "title": "Account Security",
+      "subtitle": "Security information about your account",
+      "lastLogin": "Last Login",
+      "passwordChanged": "Password Last Changed",
+      "accountStatus": "Account Status"
+    },
+    "errors": {
+      "loadAccount": "Failed to load account information",
+      "network": "Network error. Please check your connection."
     }
   }
 }

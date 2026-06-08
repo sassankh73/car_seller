@@ -38,8 +38,8 @@ export default function LanguageSwitcher() {
       onChange={(e) => handleLanguageChange(e.target.value)}
       className="bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 hover:border-gray-500 transition"
     >
-      <option value="en">🇬🇧 English</option>
       <option value="sv">🇸🇪 Svenska</option>
+      <option value="en">🇬🇧 English</option>
     </select>
   );
 }

@@ -1,10 +1,35 @@
 services:
+  postgres:
+    image: postgres:16
+    container_name: car_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=autostudio
+      - POSTGRES_USER=autostudio_user
+      - POSTGRES_PASSWORD=autostudio
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autostudio_user -d autostudio"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   rembg:
     image: danielgatis/rembg:latest
     container_name: car_rembg
     ports:
       - "7000:7000"
     command: ["s"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
 
   backend:
@@ -20,7 +45,17 @@ services:
       - BG_REMOVAL_ENGINE=rembg
       - REMBG_SERVICE_URL=http://rembg:7000
     depends_on:
-      - rembg
+      postgres:
+        condition: service_healthy
+      rembg:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
@@ -30,5 +65,11 @@ services:
     environment:
       - BACKEND_HOST=backend
       - BACKEND_PORT=8001
+      - NEXT_PUBLIC_CAMERA_DEBUG=false
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

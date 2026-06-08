@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -20,6 +21,8 @@ class ProjectOut(BaseModel):
     name: str
     background: str
     image_url: Optional[str] = None
+    watermark_applied: Optional[bool] = False
+    created_at: Optional[datetime] = None
     user_id: int
 
     class Config:

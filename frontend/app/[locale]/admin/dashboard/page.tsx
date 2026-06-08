@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useAuth, authFetch } from "@/context/AuthContext";
+import Spinner from "@/components/ui/Spinner";
+import { formatLocaleNumber, formatLocaleDate } from "@/utils/formatLocale";
 
 interface DashboardStats {
   total_users: number;
@@ -34,7 +36,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isAuthenticated || user?.role !== "admin") return;
+    if (!isAuthenticated || user?.role !== "ADMIN") return;
 
     const loadStats = async () => {
       try {
@@ -58,17 +60,14 @@ export default function AdminDashboard() {
     return (
       <main className="p-8 min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-gray-400">
-          <svg className="animate-spin h-8 w-8 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
+          <Spinner size="lg" className="mx-auto mb-3" />
           <p>{commonT("loading")}</p>
         </div>
       </main>
     );
   }
 
-  if (!isAuthenticated || user?.role !== "admin") {
+  if (!isAuthenticated || user?.role !== "ADMIN") {
     return (
       <main className="p-8 min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -88,10 +87,7 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center py-12">
             <div className="text-gray-400">
-              <svg className="animate-spin h-8 w-8 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
+              <Spinner size="lg" className="mx-auto mb-3" />
               <p>{commonT("loading")}</p>
             </div>
           </div>
@@ -168,7 +164,7 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
             <h3 className="text-gray-400 text-sm mb-2">{t("stats.totalRevenue")}</h3>
-            <p className="text-4xl font-bold text-white">${stats.total_revenue.toLocaleString()}</p>
+            <p className="text-4xl font-bold text-white">{formatLocaleNumber(locale, stats.total_revenue)} SEK</p>
           </div>
         </div>
 
@@ -203,7 +199,7 @@ export default function AdminDashboard() {
                         {reg.name || "-"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                        {new Date(reg.registered_at).toLocaleDateString()}
+                        {formatLocaleDate(locale, reg.registered_at, { year: "numeric", month: "long", day: "numeric" })}
                       </td>
                     </tr>
                   ))}
@@ -218,13 +214,13 @@ export default function AdminDashboard() {
           <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
             <h3 className="text-gray-400 text-sm mb-4">{t("stats.revenueLast30Days")}</h3>
             <p className="text-3xl font-bold text-green-400">
-              ${stats.revenue_last_30_days.toLocaleString()}
+              {formatLocaleNumber(locale, stats.revenue_last_30_days)} SEK
             </p>
           </div>
           <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
             <h3 className="text-gray-400 text-sm mb-4">{t("stats.revenueLast7Days")}</h3>
             <p className="text-3xl font-bold text-green-400">
-              ${stats.revenue_last_7_days.toLocaleString()}
+              {formatLocaleNumber(locale, stats.revenue_last_7_days)} SEK
             </p>
           </div>
         </div>

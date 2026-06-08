@@ -4,63 +4,67 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: "#f5f5f5",
-          100: "#e8e8e8",
-          200: "#d1d1d1",
-          300: "#b0b0b0",
-          400: "#888888",
-          500: "#1F2937",
-          600: "#1a2332",
-          700: "#151c29",
-          800: "#111827",
-          900: "#0A0F1A",
-          950: "#05080D",
+        charcoal: {
+          900: "#1A1A1A",
+          800: "#222222",
+          700: "#333333",
+          600: "#4A4A4A",
+          500: "#666666",
+          400: "#999999",
+          300: "#CCCCCC",
+          200: "#E5E5E5",
+          100: "#F5F5F5",
         },
-        secondary: {
-          50: "#fff7ed",
-          100: "#ffedd5",
-          200: "#fed7aa",
-          300: "#fdba74",
-          400: "#fb923c",
-          500: "#F97316",
-          600: "#EA580C",
-          700: "#C2410C",
-          800: "#9A3412",
-          900: "#7C2D12",
+        red: {
+          700: "#a32733",
+          600: "#c8303b",
+          500: "#e63946",
+          400: "#f05060",
+          300: "#f88a93",
+          200: "#fbb8bc",
+          100: "#fde8ea",
+          50: "#fff5f6",
+        },
+        warm: {
+          cream: "#FAF8F5",
+          sand: "#F7F4EF",
+          beige: "#F4E6D4",
+          stone: "#D6CCC2",
+          clay: "#E8DDD4",
         },
         accent: {
-          gold: "#C8A96E",
-          goldLight: "#F5E6B8",
-          silver: "#94A3B8",
-        },
-        graphite: {
-          50: "#F9FAFB",
-          100: "#F3F4F6",
-          200: "#E5E7EB",
-          300: "#D1D5DB",
-          400: "#9CA3AF",
-          500: "#6B7280",
-          600: "#4B5563",
-          700: "#374151",
-          800: "#1F2937",
-          900: "#111827",
-          950: "#0A0F1A",
-        },
-        surface: {
-          white: "#FFFFFF",
-          warm: "#FAFAFA",
-          muted: "#F5F5F5",
-          subtle: "#EFEFEA",
+          DEFAULT: "#e63946",
+          hover: "#c8303b",
+          soft: "rgba(230, 57, 70, 0.08)",
         },
       },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        display: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+      },
+      borderRadius: {
+        "2xl": "16px",
+        "3xl": "24px",
+        "4xl": "32px",
+      },
+      boxShadow: {
+        "card-sm":
+          "0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06)",
+        card: "0 4px 6px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.04)",
+        "card-lg":
+          "0 10px 25px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.03)",
+        "card-hover":
+          "0 12px 30px rgba(0, 0, 0, 0.07), 0 6px 12px rgba(0, 0, 0, 0.04)",
+        "red-glow": "0 0 20px rgba(214, 40, 40, 0.15), 0 0 40px rgba(214, 40, 40, 0.05)",
+      },
       animation: {
-        "fade-in": "fadeIn 0.6s ease-out",
-        "fade-in-up": "fadeInUp 0.6s ease-out",
-        "fade-in-down": "fadeInDown 0.6s ease-out",
-        "slide-in-left": "slideInLeft 0.6s ease-out",
-        "slide-in-right": "slideInRight 0.6s ease-out",
-        "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "fade-in": "fadeIn 0.8s ease-out forwards",
+        "fade-in-up": "fadeInUp 0.8s ease-out forwards",
+        "fade-in-down": "fadeInDown 0.6s ease-out forwards",
+        float: "float 6s ease-in-out infinite",
+        "float-slow": "float 8s ease-in-out infinite",
+        "pulse-soft": "pulseSoft 2s cubic-bezier(0.4,0,0.6,1) infinite",
+        "check-in": "checkIn 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards",
       },
       keyframes: {
         fadeIn: {
@@ -68,55 +72,54 @@ module.exports = {
           "100%": { opacity: "1" },
         },
         fadeInUp: {
-          "0%": {
-            opacity: "0",
-            transform: "translateY(20px)",
-          },
-          "100%": {
-            opacity: "1",
-            transform: "translateY(0)",
-          },
+          "0%": { opacity: "0", transform: "translateY(30px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
         fadeInDown: {
-          "0%": {
-            opacity: "0",
-            transform: "translateY(-20px)",
-          },
-          "100%": {
-            opacity: "1",
-            transform: "translateY(0)",
-          },
+          "0%": { opacity: "0", transform: "translateY(-20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
-        slideInLeft: {
-          "0%": {
-            opacity: "0",
-            transform: "translateX(-20px)",
-          },
-          "100%": {
-            opacity: "1",
-            transform: "translateX(0)",
-          },
+        float: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-10px)" },
         },
-        slideInRight: {
-          "0%": {
-            opacity: "0",
-            transform: "translateX(20px)",
-          },
-          "100%": {
-            opacity: "1",
-            transform: "translateX(0)",
-          },
+        pulseSoft: {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.6" },
+        },
+        checkIn: {
+          "0%": { opacity: "0", transform: "scale(0.6)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
         },
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "hero-gradient":
-          "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%)",
+        "hero-warm":
+          "radial-gradient(ellipse at 70% 30%, rgba(214, 40, 40, 0.04) 0%, transparent 50%), radial-gradient(ellipse at 30% 70%, rgba(214, 108, 86, 0.04) 0%, transparent 50%)",
+        "dot-warm":
+          "radial-gradient(rgba(0, 0, 0, 0.04) 0.5px, transparent 0.5px)",
       },
-      boxShadow: {
-        "card": "0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)",
-        "card-hover": "0 10px 25px rgba(0,0,0,0.06), 0 4px 10px rgba(0,0,0,0.02)",
-        "premium": "0 4px 14px rgba(0,0,0,0.06)",
+      backgroundSize: {
+        dot: "24px 24px",
+      },
+      spacing: {
+        18: "4.5rem",
+        22: "5.5rem",
+        30: "7.5rem",
+      },
+      fontSize: {
+        hero: [
+          "clamp(2.5rem, 5vw, 4.25rem)",
+          { lineHeight: "1.08", letterSpacing: "-0.03em", fontWeight: "600" },
+        ],
+        "hero-sub": [
+          "clamp(1rem, 2vw, 1.25rem)",
+          { lineHeight: "1.6", letterSpacing: "-0.01em" },
+        ],
+        section: [
+          "clamp(2rem, 4vw, 3.25rem)",
+          { lineHeight: "1.12", letterSpacing: "-0.02em", fontWeight: "600" },
+        ],
       },
     },
   },

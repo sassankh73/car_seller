@@ -1,49 +1,89 @@
-# Studio Preview Images
+# Studio Background Images
 
 ## Location
-Preview images should be stored in: `backend/app/static/studios/`
+Studio images are stored in: `backend/app/static/studios/`
 
-## Required Preview Images
+## Studio Catalog
 
-The following preview images must exist for each studio:
+The following 8 automotive corner studios are available — all with 3D perspective depth:
 
-| Studio Key | Preview Image Filename | Description |
-|------------|----------------------|-------------|
-| `luxury_showroom` | `luxury_showroom_preview.jpg` | Luxury automotive showroom environment |
-| `white_minimal` | `white_minimal_preview.jpg` | White minimal studio environment |
-| `cinematic_dark` | `cinematic_dark_preview.jpg` | Cinematic dark studio environment |
-| `black_automotive_showroom` | `black_showroom_preview.jpg` | Black automotive showroom environment |
-| `luxury_exhibition_hall` | `luxury_exhibition_preview.jpg` | Luxury exhibition hall environment |
-| `glossy_reflective_floor` | `glossy_reflective_preview.jpg` | Glossy reflective floor studio |
+| Studio Key | Full Image | Preview Image | Description |
+|------------|-----------|---------------|-------------|
+| `white_corner_light_epoxy` | `white_corner_light_epoxy.png` | `white_corner_light_epoxy_preview.png` | White corner + light gray epoxy floor |
+| `white_corner_ceramic_tile` | `white_corner_ceramic_tile.png` | `white_corner_ceramic_tile_preview.png` | White corner + ceramic tile floor |
+| `light_gray_corner_medium_epoxy` | `light_gray_corner_medium_epoxy.png` | `light_gray_corner_medium_epoxy_preview.png` | Light gray corner + medium gray epoxy |
+| `dark_gray_corner_concrete` | `dark_gray_corner_concrete.png` | `dark_gray_corner_concrete_preview.png` | Dark gray corner + concrete floor |
+| `black_corner_dark_epoxy` | `black_corner_dark_epoxy.png` | `black_corner_dark_epoxy_preview.png` | Black corner + dark epoxy floor |
+| `commercial_showroom_tile` | `commercial_showroom_tile.png` | `commercial_showroom_tile_preview.png` | Commercial showroom + tile floor |
+| `industrial_concrete` | `industrial_concrete.png` | `industrial_concrete_preview.png` | Industrial dark + concrete floor |
+| `matte_black_automotive` | `matte_black_automotive.png` | `matte_black_automotive_preview.png` | Matte black + matte black epoxy |
 
-## Image Requirements
+## Design Principles
 
-1. **Format**: JPEG or PNG (JPEG recommended for photos)
-2. **Resolution**: Minimum 1920x1080 pixels (HD), prefer 3840x2160 (4K)
-3. **Aspect Ratio**: 16:9 or similar landscape orientation
-4. **Content Rules**:
-   - Must be an **empty** automotive exhibition/showroom environment
-   - **NO VEHICLES** should be present - only the empty space where vehicles will be inserted
-   - Show professional studio lighting, walls, and floor
-   - Clean, professional environment without distractions
+These studios are realistic 3D corner rooms for automotive photography:
 
-5. **File Size**: Optimize for web (under 2MB per image recommended)
+- **Visible room structure** — rear wall, left wall, right wall, ceiling, floor
+- **Sharp 90° corners** — no cyclorama, no curved transitions, no infinity walls
+- **Deep room perspective** — natural vanishing point, realistic corner geometry
+- **~60% floor, ~30% walls, ~10% ceiling** — professional dealership composition
+- **No platforms or stages** — vehicles sit directly on the floor
+- **Matte finishes** — no glossy reflections, no mirror floors
+- **Commercial showroom lighting** — ceiling light strips, even illumination
+- **Ambient occlusion** — subtle darkening at corners for realism
+- **Distance shading** — subtle darkening with depth for natural feel
+
+## 3D Perspective Parameters
+
+All studios use the same camera and room geometry:
+
+- **Camera height**: 1.05m from floor (slightly below eye level)
+- **Camera pitch**: -6° (slight downward tilt for maximum floor)
+- **Horizontal FOV**: 68° (~30mm equivalent lens)
+- **Room width**: 8.0m
+- **Room height**: 3.2m
+- **Room depth**: 8.0m (camera to back wall)
+- **Vanishing point**: Center of image (where walls converge)
+
+## Floor Types
+
+- **Epoxy**: Subtle depth tint, smooth matte surface
+- **Tile**: Visible grout lines (0.6-0.8m tiles), per-tile color variation
+- **Concrete**: Deterministic noise texture, industrial feel
+
+## Image Specifications
+
+1. **Format**: PNG (RGBA)
+2. **Full Resolution**: 1920×1080 pixels (HD)
+3. **Preview Resolution**: 400×225 pixels
+4. **Aspect Ratio**: 16:9
+5. **Floor Line**: At ~78% of height (floor_y=0.78), matching shadow profiles
+
+## Regenerating Studios
+
+Run the generation script to create all studio images:
+
+```bash
+cd backend
+python3 generate_studios.py
+```
+
+This will regenerate all 8 corner studio backgrounds and their previews.
+
+## Shadow Profiles
+
+Each studio has a `StudioShadowProfile` with `floor_y=0.78` that controls:
+
+- `floor_y` (0.78): Where the vehicle's wheels sit on the floor
+- `shadow_blur` (32-40): Gaussian blur radius for body shadow
+- `shadow_opacity` (0.20-0.28): Opacity of the body shadow
+- `shadow_length` (0.9-1.1): Length multiplier for body shadow
+- `tire_shadow_blur` (13-16): Blur radius for tire contact shadows
+- `tire_shadow_opacity` (0.42-0.52): Opacity for tire contact shadows
+- `ao_shadow_opacity` (0.28-0.35): Ambient occlusion shadow opacity
 
 ## Fallback Behavior
 
-If a preview image is missing or fails to load:
-- A dark gradient fallback will be displayed
-- The studio name will remain visible on the card
-- No breaking errors - the card remains functional
-
-## Image Sourcing Recommendations
-
-1. **Free Stock Sites**: Use Pexels, Unsplash, or Pixabay
-   - Search terms: "empty car showroom", "automotive exhibition hall", "luxury car display", "car studio background"
-   - Filter by "No people" or "Empty" where possible
-
-2. **AI Generation**: Use Stable Diffusion, Leonardo.AI, or similar
-   - Prompt: "Empty luxury car showroom, no vehicle, professional photography, cinematic lighting, clean environment"
-   - Ensure the image does NOT contain any vehicles
-
-3. **Download Location**: Save images to `backend/app/static/studios/`
+If a studio background image is missing:
+- The system falls back to a solid color (defined per studio in `studio.py`)
+- A soft contact shadow is still generated under the vehicle
+- No breaking errors — the composite remains functional
