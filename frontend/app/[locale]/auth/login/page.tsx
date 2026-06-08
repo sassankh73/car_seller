@@ -26,7 +26,7 @@ export default function LoginPage() {
       await login(email, password);
       // AuthContext handles token storage, user state, and redirect
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      setError(t("genericError"));
     } finally {
       setLoading(false);
     }

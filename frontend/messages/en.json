@@ -490,7 +490,8 @@
       "noAccount": "No account?",
       "register": "Sign up",
       "loginFailed": "Login failed. Please check your credentials.",
-      "networkError": "Network error. Please check your connection."
+      "networkError": "Network error. Please check your connection.",
+      "genericError": "An error occurred. Please try again."
     },
     "register": {
       "title": "Create Account",
@@ -504,14 +505,18 @@
       "terms": "By registering you agree to our",
       "termsOfService": "Terms of Service",
       "and": "and",
-      "privacyPolicy": "Privacy Policy"
+      "privacyPolicy": "Privacy Policy",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "genericError": "An error occurred. Please try again."
     },
     "forgotPassword": {
       "title": "Reset Password",
       "email": "Email",
       "submit": "Send Reset Link",
       "backToLogin": "Back to Login",
-      "description": "We'll send you a link to reset your password"
+      "description": "We'll send you a link to reset your password",
+      "genericError": "An error occurred. Please try again."
     },
     "resetPassword": {
       "title": "New Password",
@@ -529,6 +534,7 @@
     "logoUpload": {
       "title": "Logo",
       "uploadButton": "Upload Logo",
+      "uploadingButton": "Uploading...",
       "removeButton": "Remove Logo",
       "preview": "Preview",
       "supportedFormats": "Supported formats: PNG, JPG, SVG (max 5MB)",

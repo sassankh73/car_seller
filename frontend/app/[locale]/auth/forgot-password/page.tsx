@@ -31,10 +31,10 @@ export default function ForgotPasswordPage() {
         setSuccess(true);
       } else {
         const data = await response.json();
-        setError(data.detail || data.message || "Failed to send reset link");
+        setError(data.detail || data.message || t("genericError"));
       }
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      setError(t("genericError"));
     } finally {
       setLoading(false);
     }

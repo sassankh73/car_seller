@@ -26,12 +26,12 @@ export default function RegisterPage() {
     setError("");
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("passwordsDoNotMatch"));
       return;
     }
 
     if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("passwordTooShort"));
       return;
     }
 
@@ -41,7 +41,7 @@ export default function RegisterPage() {
       await register(formData.email, formData.password, formData.name || undefined);
       // AuthContext handles token storage, user state, and redirect to dashboard
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      setError(t("genericError"));
     } finally {
       setLoading(false);
     }

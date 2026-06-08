@@ -473,7 +473,8 @@
       "noAccount": "Inget konto?",
       "register": "Registrera dig",
       "loginFailed": "Inloggning misslyckades. Kontrollera dina uppgifter.",
-      "networkError": "Nätverksfel. Kontrollera din anslutning."
+      "networkError": "Nätverksfel. Kontrollera din anslutning.",
+      "genericError": "Ett fel uppstod. Försök igen."
     },
     "register": {
       "title": "Skapa konto",
@@ -487,14 +488,18 @@
       "terms": "Genom att registrera dig godkänner du våra",
       "termsOfService": "Villkor för tjänsten",
       "and": "och",
-      "privacyPolicy": "Integritetspolicy"
+      "privacyPolicy": "Integritetspolicy",
+      "passwordsDoNotMatch": "Lösenorden stämmer inte överens",
+      "passwordTooShort": "Lösenordet måste vara minst 8 tecken",
+      "genericError": "Ett fel uppstod. Försök igen."
     },
     "forgotPassword": {
       "title": "Återställ lösenord",
       "email": "E-post",
       "submit": "Skicka återställningslänk",
       "backToLogin": "Tillbaka till inloggning",
-      "description": "Vi skickar dig en länk för att återställa ditt lösenord"
+      "description": "Vi skickar dig en länk för att återställa ditt lösenord",
+      "genericError": "Ett fel uppstod. Försök igen."
     },
     "resetPassword": {
       "title": "Nytt lösenord",
@@ -512,6 +517,7 @@
     "logoUpload": {
       "title": "Logotyp",
       "uploadButton": "Ladda upp logotyp",
+      "uploadingButton": "Laddar upp...",
       "removeButton": "Ta bort logotyp",
       "preview": "Förhandsgranskning",
       "supportedFormats": "Format som stöds: PNG, JPG, SVG (max 5MB)",
