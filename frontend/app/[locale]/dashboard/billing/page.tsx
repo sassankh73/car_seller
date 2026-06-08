@@ -150,6 +150,16 @@ export default function BillingPage() {
     return formatLocaleNumber(locale, num);
   };
 
+  const formatSupportLevel = (level: string) => {
+    const map: Record<string, string> = {
+      none: t("features.supportNone"),
+      email: t("features.supportEmail"),
+      priority: t("features.supportPriority"),
+      dedicated: t("features.supportDedicated"),
+    };
+    return map[level] ?? level;
+  };
+
   return (
     <div className="min-h-screen bg-warm-cream">
       <DashboardNav active="billing" />
@@ -175,7 +185,7 @@ export default function BillingPage() {
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-600">
+                <div className="text-3xl font-bold text-stone-900">
                   {usage.remaining < 0 ? "∞" : usage.remaining}
                 </div>
                 <div className="text-sm text-stone-500 mt-1">
@@ -188,19 +198,19 @@ export default function BillingPage() {
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-600">{usage.extra_studios_used}</div>
+                <div className="text-3xl font-bold text-stone-900">{usage.extra_studios_used}</div>
                 <div className="text-xs text-stone-400 mt-2">{t("extraStudios")}</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-600">{usage.logo_branding_used}</div>
+                <div className="text-3xl font-bold text-stone-900">{usage.logo_branding_used}</div>
                 <div className="text-xs text-stone-400 mt-2">{t("logoBranding")}</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-600">{usage.premium_ai_uses}</div>
+                <div className="text-3xl font-bold text-stone-900">{usage.premium_ai_uses}</div>
                 <div className="text-xs text-stone-400 mt-2">{t("premiumAI")}</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-indigo-600">{usage.four_k_exports}</div>
+                <div className="text-3xl font-bold text-stone-900">{usage.four_k_exports}</div>
                 <div className="text-xs text-stone-400 mt-2">{t("fourKExports")}</div>
               </div>
             </div>
@@ -214,7 +224,7 @@ export default function BillingPage() {
                 <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
                   <div
                     className={`h-full transition-all ${
-                      usage.generation_count / usage.generations_limit > 0.8 ? "bg-red-500" : "bg-indigo-500"
+                      usage.generation_count / usage.generations_limit > 0.85 ? "bg-red-500" : "bg-[#e63946]"
                     }`}
                     style={{ width: `${Math.min(100, (usage.generation_count / usage.generations_limit) * 100)}%` }}
                   />
@@ -230,7 +240,7 @@ export default function BillingPage() {
             <button
               onClick={() => setBillingCycle("monthly")}
               className={`px-6 py-2 rounded-md font-medium transition ${
-                billingCycle === "monthly" ? "bg-indigo-600 text-white" : "text-stone-600 hover:text-stone-900"
+                billingCycle === "monthly" ? "bg-[#e63946] text-white" : "text-stone-600 hover:text-stone-900"
               }`}
             >
               {t("billingCycle.monthly")}
@@ -238,7 +248,7 @@ export default function BillingPage() {
             <button
               onClick={() => setBillingCycle("yearly")}
               className={`px-6 py-2 rounded-md font-medium transition flex items-center ${
-                billingCycle === "yearly" ? "bg-indigo-600 text-white" : "text-stone-600 hover:text-stone-900"
+                billingCycle === "yearly" ? "bg-[#e63946] text-white" : "text-stone-600 hover:text-stone-900"
               }`}
             >
               {t("billingCycle.yearly")}
@@ -264,15 +274,15 @@ export default function BillingPage() {
                 key={plan.tier}
                 className={`relative rounded-2xl p-8 border transition-all ${
                   isCurrentPlan
-                    ? "bg-indigo-50 border-indigo-400"
+                    ? "bg-red-50 border-[#e63946]/50"
                     : isPopular
-                      ? "bg-white border-indigo-400 shadow-xl shadow-indigo-100"
+                      ? "bg-white border-[#e63946] shadow-xl shadow-red-100"
                       : "bg-white border-stone-200 shadow-sm"
                 }`}
               >
                 {isPopular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-indigo-500 text-white text-sm font-medium px-4 py-1 rounded-full">
+                    <span className="bg-[#e63946] text-white text-sm font-medium px-4 py-1 rounded-full">
                       {t("plans.professional.mostPopular")}
                     </span>
                   </div>
@@ -299,7 +309,6 @@ export default function BillingPage() {
                   </li>
                   <li className="flex items-center justify-between text-stone-700">
                     <span>
-                      {plan.features.studios_included.length}{" "}
                       {t("plans.starter.studiosIncluded", { count: plan.features.studios_included.length })}
                     </span>
                     {getFeatureIcon(true, t("features.studiosIncluded"))}
@@ -317,7 +326,7 @@ export default function BillingPage() {
                     {getFeatureIcon(plan.features.priority_processing, t("plans.starter.priorityProcessing"))}
                   </li>
                   <li className="flex items-center justify-between text-stone-700">
-                    <span>{t("plans.starter.support", { level: plan.features.support_level })}</span>
+                    <span>{formatSupportLevel(plan.features.support_level)}</span>
                     {getFeatureIcon(true, t("features.support"))}
                   </li>
                 </ul>
@@ -328,7 +337,7 @@ export default function BillingPage() {
                   className={`w-full py-3 rounded-lg font-semibold transition ${
                     isCurrentPlan
                       ? "bg-stone-200 text-stone-400 cursor-not-allowed"
-                      : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                      : "bg-[#e63946] hover:bg-[#c8303b] text-white"
                   }`}
                 >
                   {checkoutLoading === plan.tier ? (
@@ -375,7 +384,7 @@ export default function BillingPage() {
               { amount: 49, label: t("usageBasedBilling.perFourKExport") },
             ].map((item, i) => (
               <div key={i} className="text-center p-4 bg-stone-50 rounded-lg border border-stone-100">
-                <div className="text-2xl font-bold text-indigo-600">
+                <div className="text-2xl font-bold text-stone-900">
                   {item.display ?? formatCurrency(item.amount!)}
                 </div>
                 <div className="text-sm text-stone-500 mt-1">{item.label}</div>

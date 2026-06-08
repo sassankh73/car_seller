@@ -477,11 +477,10 @@
         "name": "Starter",
         "generationsPerMonth": "{count} generations/mo",
         "maxResolution": "Max {resolution} resolution",
-        "studiosIncluded": "{count} studios included",
+        "studiosIncluded": "{count, plural, one {# studio included} other {# studios included}}",
         "logoBranding": "Logo branding",
         "premiumAI": "Premium AI processing",
         "priorityProcessing": "Priority processing",
-        "support": "{level} support",
         "currentPlan": "Current Plan",
         "getStarted": "Get Started",
         "processing": "Processing..."
@@ -511,7 +510,11 @@
       "generationsPerMonth": "Generations per month",
       "maxResolution": "Max resolution",
       "studiosIncluded": "Studios included",
-      "support": "Support"
+      "support": "Support",
+      "supportNone": "No support",
+      "supportEmail": "Email support",
+      "supportPriority": "Priority support",
+      "supportDedicated": "Dedicated support"
     },
     "faq": {
       "title": "Frequently Asked Questions",
@@ -838,6 +841,7 @@
       "generations": "Generations",
       "remaining": "Remaining",
       "unlimited": "Unlimited",
+      "used": "used this month",
       "upgradePrompt": "Upgrade your plan to unlock more features and higher limits.",
       "upgrade": "Upgrade Plan"
     },

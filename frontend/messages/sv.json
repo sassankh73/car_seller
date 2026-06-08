@@ -460,11 +460,10 @@
         "name": "Start",
         "generationsPerMonth": "{count} genereringar/mån",
         "maxResolution": "Max {resolution} upplösning",
-        "studiosIncluded": "{count} studior inkluderade",
+        "studiosIncluded": "{count, plural, one {# studio ingår} other {# studior ingår}}",
         "logoBranding": "Logotypbranding",
         "premiumAI": "Premium AI-bearbetning",
         "priorityProcessing": "Prioriterad bearbetning",
-        "support": "{level} support",
         "currentPlan": "Nuvarande plan",
         "getStarted": "Kom igång",
         "processing": "Bearbetar..."
@@ -494,7 +493,11 @@
       "generationsPerMonth": "Genereringar per månad",
       "maxResolution": "Maximal upplösning",
       "studiosIncluded": "Inkluderade studior",
-      "support": "Support"
+      "support": "Support",
+      "supportNone": "Ingen support",
+      "supportEmail": "E-postsupport",
+      "supportPriority": "Prioriterad support",
+      "supportDedicated": "Dedikerad support"
     },
     "faq": {
       "title": "Vanliga frågor",
@@ -821,6 +824,7 @@
       "generations": "Genereringar",
       "remaining": "Återstående",
       "unlimited": "Obegränsad",
+      "used": "använt denna månad",
       "upgradePrompt": "Uppgradera din plan för att låsa upp fler funktioner och högre gränser.",
       "upgrade": "Uppgradera plan"
     },

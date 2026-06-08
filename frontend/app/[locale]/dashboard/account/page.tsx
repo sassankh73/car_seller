@@ -188,7 +188,7 @@ export default function AccountPage() {
       case "ADMIN":
         return { label: "Admin", classes: "bg-red-500/20 text-red-400 border-red-500/30" };
       case "PREMIUM":
-        return { label: "Premium", classes: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30" };
+        return { label: "Premium", classes: "bg-red-50 text-[#e63946] border-red-200" };
       default:
         return { label: "Free", classes: "bg-gray-500/20 text-gray-400 border-gray-500/30" };
     }
@@ -273,9 +273,9 @@ export default function AccountPage() {
               {/* Role / Current Plan */}
               <div className="grid grid-cols-3 gap-4 items-center">
                 <label className="text-sm font-medium text-stone-500">{t("profile.currentPlan")}</label>
-                <div className="col-span-2">
+                <div className="col-span-2 flex items-center gap-2">
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${roleBadge.classes}`}>
-                    {roleBadge.label}
+                    {accountData?.subscription?.plan_name || roleBadge.label}
                   </span>
                 </div>
               </div>
@@ -441,13 +441,8 @@ export default function AccountPage() {
                 <label className="text-sm font-medium text-stone-500">{t("subscription.plan")}</label>
                 <div className="col-span-2">
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${roleBadge.classes}`}>
-                    {roleBadge.label}
+                    {accountData?.subscription?.plan_name || roleBadge.label}
                   </span>
-                  {accountData?.subscription?.plan_tier && (
-                    <span className="ml-2 text-sm text-stone-500">
-                      ({accountData.subscription.plan_name})
-                    </span>
-                  )}
                 </div>
               </div>
 
@@ -469,24 +464,34 @@ export default function AccountPage() {
                   <div className="grid grid-cols-3 gap-4 items-center">
                     <label className="text-sm text-stone-500">{t("subscription.generations")}</label>
                     <div className="col-span-2">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-1 h-2 bg-stone-200 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-red-500 rounded-full transition-all"
-                            style={{
-                              width: accountData.usage.generations_limit > 0
-                                ? `${Math.min(100, (accountData.usage.generation_count / accountData.usage.generations_limit) * 100)}%`
-                                : "100%",
-                            }}
-                          />
+                      {accountData.usage.generations_limit > 0 ? (
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-1 h-2 bg-stone-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                accountData.usage.generation_count / accountData.usage.generations_limit > 0.85
+                                  ? "bg-red-500"
+                                  : "bg-[#e63946]"
+                              }`}
+                              style={{
+                                width: `${Math.min(100, (accountData.usage.generation_count / accountData.usage.generations_limit) * 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-sm text-stone-700 whitespace-nowrap tabular-nums">
+                            {accountData.usage.generation_count} / {accountData.usage.generations_limit}
+                          </span>
                         </div>
-                        <span className="text-sm text-stone-700 whitespace-nowrap">
-                          {accountData.usage.generation_count}
-                          {accountData.usage.generations_limit > 0
-                            ? ` / ${accountData.usage.generations_limit}`
-                            : ` (${t("subscription.unlimited")})`}
-                        </span>
-                      </div>
+                      ) : (
+                        <div className="flex items-center gap-2.5">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            ∞ {t("subscription.unlimited")}
+                          </span>
+                          <span className="text-sm text-stone-500 tabular-nums">
+                            {accountData.usage.generation_count} {t("subscription.used")}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

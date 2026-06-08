@@ -16,14 +16,14 @@ module.exports = {
           100: "#F5F5F5",
         },
         red: {
-          700: "#8B1A1A",
-          600: "#B71C1C",
-          500: "#D62828",
-          400: "#E74C3C",
-          300: "#F07070",
-          200: "#F5A0A0",
-          100: "#FDE8E8",
-          50: "#FFF5F5",
+          700: "#a32733",
+          600: "#c8303b",
+          500: "#e63946",
+          400: "#f05060",
+          300: "#f88a93",
+          200: "#fbb8bc",
+          100: "#fde8ea",
+          50: "#fff5f6",
         },
         warm: {
           cream: "#FAF8F5",
@@ -33,9 +33,9 @@ module.exports = {
           clay: "#E8DDD4",
         },
         accent: {
-          coral: "#E76F51",
-          terracotta: "#C75B39",
-          gold: "#C4956A",
+          DEFAULT: "#e63946",
+          hover: "#c8303b",
+          soft: "rgba(230, 57, 70, 0.08)",
         },
       },
       fontFamily: {
@@ -63,6 +63,8 @@ module.exports = {
         "fade-in-down": "fadeInDown 0.6s ease-out forwards",
         float: "float 6s ease-in-out infinite",
         "float-slow": "float 8s ease-in-out infinite",
+        "pulse-soft": "pulseSoft 2s cubic-bezier(0.4,0,0.6,1) infinite",
+        "check-in": "checkIn 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards",
       },
       keyframes: {
         fadeIn: {
@@ -80,6 +82,14 @@ module.exports = {
         float: {
           "0%, 100%": { transform: "translateY(0px)" },
           "50%": { transform: "translateY(-10px)" },
+        },
+        pulseSoft: {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.6" },
+        },
+        checkIn: {
+          "0%": { opacity: "0", transform: "scale(0.6)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
         },
       },
       backgroundImage: {
