@@ -574,7 +574,8 @@
     "changePassword": "Change Password",
     "currentPassword": "Current Password",
     "newPassword": "New Password",
-    "confirmNewPassword": "Confirm New Password"
+    "confirmNewPassword": "Confirm New Password",
+    "saving": "Saving..."
   },
   "projects": {
     "title": "My Projects",

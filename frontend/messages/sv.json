@@ -557,7 +557,8 @@
     "changePassword": "Ändra lösenord",
     "currentPassword": "Nuvarande lösenord",
     "newPassword": "Nytt lösenord",
-    "confirmNewPassword": "Bekräfta nytt lösenord"
+    "confirmNewPassword": "Bekräfta nytt lösenord",
+    "saving": "Sparar..."
   },
   "projects": {
     "title": "Mina projekt",

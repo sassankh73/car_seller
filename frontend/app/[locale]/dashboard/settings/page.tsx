@@ -419,7 +419,7 @@ export default function SettingsPage() {
                     : "bg-indigo-600 hover:bg-indigo-700 text-white"
                 }`}
               >
-                {loading ? "Saving..." : profileT("saveChanges")}
+                {loading ? profileT("saving") : profileT("saveChanges")}
               </button>
             </div>
           </div>
