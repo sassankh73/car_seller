@@ -458,7 +458,7 @@ async def process_image(
     )
 
 
-@router.get("/", response_model=List[StudioOut])
+@router.get("", response_model=List[StudioOut])
 def list_studios():
     """List all available studio templates."""
     result = []

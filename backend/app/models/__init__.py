@@ -285,7 +285,7 @@ _ALLOWED_TABLES = {"users", "subscriptions", "usages", "projects"}
 _ALLOWED_COLS = {
     "last_login", "password_changed_at", "is_disabled", "force_password_reset",
     "logo_data", "logo_mime_type", "logo_placement", "logo_scale",
-    "watermark_applied", "original_format",
+    "watermark_applied", "original_format", "password_reset_token_hash",
 }
 
 
