@@ -14,7 +14,7 @@ from .api import auth, projects, studio
 from .api.billing import routes as billing_routes
 from .api.admin import router as admin_router
 from .middleware.auth import authenticate_middleware, get_current_user
-from .models import init_db, SessionLocal, Role, User, engine
+from .models import init_db, SessionLocal, Role, User, Subscription, engine
 from .schemas.auth import UserResponse
 from .services.auth import hash_password, get_user_by_email
 
@@ -55,8 +55,15 @@ def ensure_admin_user():
             is_superuser=True,
         )
         db.add(admin_user)
+        db.flush()  # get admin_user.id without closing the transaction
+        admin_sub = Subscription(
+            user_id=admin_user.id,
+            plan_tier="enterprise",
+            status="active",
+        )
+        db.add(admin_sub)
         db.commit()
-        logger.info(f"Created admin user: {admin_email} with role ADMIN")
+        logger.info(f"Created admin user: {admin_email} with role ADMIN (enterprise subscription)")
     except Exception as e:
         logger.critical(f"CRITICAL: Failed to create admin user — {e}")
         db.rollback()

@@ -1,7 +1,7 @@
 import type { Viewport } from "next";
 import "../globals.css";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages } from "next-intl/server";
+import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { locales } from "../../i18n/config";
 import AuthProviderWrapper from "../../components/AuthProviderWrapper";
@@ -24,12 +24,12 @@ export default async function LocaleLayout({
 }) {
   const { locale } = await params;
 
-  // Ensure that the incoming `locale` is valid
   if (!locales.includes(locale as any)) {
     notFound();
   }
 
-  // Providing all messages to the client...
+  setRequestLocale(locale);
+
   const messages = await getMessages();
 
   return (
