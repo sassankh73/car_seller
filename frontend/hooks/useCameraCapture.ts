@@ -2,6 +2,8 @@
 
 import { useState, useRef, useCallback } from 'react';
 
+const debug = process.env.NODE_ENV !== 'production' ? console.log : () => {};
+
 export interface CameraState {
   isAvailable: boolean;
   hasPermission: boolean;
@@ -40,11 +42,11 @@ async function logDeviceInfo(stream: MediaStream, requestedFacingMode: string) {
       .map((d) => ({ id: d.deviceId.slice(0, 8), label: d.label || '(unlabeled)' }));
   } catch {}
 
-  console.log('[Camera] Available video devices:', deviceLabels);
-  console.log('[Camera] Selected device:', track?.label ?? '(unknown)');
-  console.log('[Camera] FacingMode requested:', requestedFacingMode);
-  console.log('[Camera] FacingMode actual:', (settings as any).facingMode ?? '(not reported)');
-  console.log(
+  debug('[Camera] Available video devices:', deviceLabels);
+  debug('[Camera] Selected device:', track?.label ?? '(unknown)');
+  debug('[Camera] FacingMode requested:', requestedFacingMode);
+  debug('[Camera] FacingMode actual:', (settings as any).facingMode ?? '(not reported)');
+  debug(
     '[Camera] Active stream tracks:',
     stream.getVideoTracks().map((t) => t.label),
   );
@@ -139,24 +141,24 @@ export function useCameraCapture() {
 
   const startStream = useCallback(
     async (videoElement: HTMLVideoElement): Promise<boolean> => {
-      console.log('[Camera] startStream called');
+      debug('[Camera] startStream called');
 
       if (!streamRef.current) {
-        console.log('[Camera] No existing stream, requesting permission...');
+        debug('[Camera] No existing stream, requesting permission...');
         const hasPermission = await requestPermission();
         if (!hasPermission) {
-          console.log('[Camera] Permission not granted');
+          debug('[Camera] Permission not granted');
           return false;
         }
       }
 
       if (videoElement && streamRef.current) {
-        console.log('[Camera] Assigning stream to video element');
+        debug('[Camera] Assigning stream to video element');
         videoElement.srcObject = streamRef.current;
 
         try {
           await videoElement.play();
-          console.log('[Camera] play() succeeded, dimensions:', {
+          debug('[Camera] play() succeeded, dimensions:', {
             width: videoElement.videoWidth,
             height: videoElement.videoHeight,
           });
@@ -185,7 +187,7 @@ export function useCameraCapture() {
     const newFacingMode =
       activeFacingModeRef.current === 'environment' ? 'user' : 'environment';
 
-    console.log('[Camera] Switching camera to facingMode:', newFacingMode);
+    debug('[Camera] Switching camera to facingMode:', newFacingMode);
 
     // Stop current tracks before opening the new camera
     if (streamRef.current) {
