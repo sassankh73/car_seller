@@ -33,6 +33,7 @@ async def authenticate_middleware(request: Request, call_next):
         "/docs",
         "/openapi.json",
         "/health",
+        "/api/version",
     }
     # Prefix matches for static assets and public plan listing
     public_prefixes = [
