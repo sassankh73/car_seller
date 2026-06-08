@@ -14,6 +14,7 @@ from app.schemas.auth import (
     LogoUploadResponse,
     ProfileUpdateRequest,
     ProfileResponse,
+    ResetPasswordRequest,
     SubscriptionInfoResponse,
     UsageInfoResponse,
     TokenResponse,
@@ -27,7 +28,11 @@ from app.services.auth import (
     get_user_by_email,
     hash_password,
     verify_password,
+    create_password_reset_token,
+    decode_password_reset_token,
+    hash_reset_token,
 )
+from app.services.email import send_password_reset
 from app.middleware.auth import get_current_user, get_db_session
 from app.services.billing import get_plan_features, get_plan_tier_str, PLAN_NAMES
 
@@ -459,8 +464,71 @@ def update_logo_settings(
 
 
 @router.post("/forgot-password")
-def forgot_password(payload: ForgotPasswordRequest):
-    return {"detail": "If an account with that email exists, a reset link has been sent."}
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """
+    Request a password-reset link. Always returns the same response regardless
+    of whether the email exists (anti-enumeration).
+    """
+    _GENERIC = {"detail": "If an account with that email exists, a reset link has been sent."}
+
+    user = get_user_by_email(db, payload.email)
+    if not user or user.is_disabled:
+        return _GENERIC
+
+    token = create_password_reset_token(user.email)
+    token_hash = hash_reset_token(token)
+
+    # Store token hash for single-use enforcement
+    user.password_reset_token_hash = token_hash
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.error("Failed to store reset token hash for user %s", user.id)
+        return _GENERIC
+
+    # Detect locale from Accept-Language or from email domain (best-effort)
+    locale = "en"
+    send_password_reset(user.email, token, locale)
+
+    return _GENERIC
+
+
+@router.post("/reset-password")
+def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """
+    Complete password reset using the token from the reset-password email link.
+    Unauthenticated flow — no current password required.
+    """
+    email = decode_password_reset_token(payload.token)
+    if not email:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    db_user = get_user_by_email(db, email)
+    if not db_user or db_user.is_disabled:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    # Single-use check: stored hash must match
+    expected_hash = hash_reset_token(payload.token)
+    if db_user.password_reset_token_hash != expected_hash:
+        raise HTTPException(status_code=400, detail="This reset link has already been used")
+
+    if payload.new_password != payload.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+
+    _validate_password_strength(payload.new_password)
+
+    db_user.hashed_password = hash_password(payload.new_password)
+    db_user.password_changed_at = datetime.utcnow()
+    db_user.force_password_reset = False
+    db_user.password_reset_token_hash = None  # Consume the token
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to reset password")
+
+    return {"detail": "Password reset successfully. You can now log in with your new password."}
 
 
 @router.post("/signup")

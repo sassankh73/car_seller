@@ -2,12 +2,15 @@
 Stripe payment and subscription management for AutoStudio AI.
 """
 
+import logging
 import os
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import stripe
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "whsec_placeholder")
@@ -282,38 +285,233 @@ class BillingService:
         except stripe.error.StripeError as e:
             return {"success": False, "error": str(e)}
 
-    def handle_webhook_event(self, payload: bytes, sig_header: str) -> Dict[str, Any]:
+    # ── Stripe price-ID → plan tier reverse lookup ────────────────────────────
+    @staticmethod
+    def _price_to_tier() -> Dict[str, str]:
+        """Build a mapping from Stripe price ID → plan tier string."""
+        mapping: Dict[str, str] = {}
+        for tier in ("starter", "pro", "enterprise"):
+            for cycle in ("monthly", "yearly"):
+                env_key = f"STRIPE_PRICE_{tier.upper()}_{cycle.upper()}"
+                price_id = os.getenv(env_key, "")
+                if price_id and not price_id.startswith("price_"):
+                    # Only add real (non-placeholder) price IDs
+                    mapping[price_id] = tier
+                elif price_id.startswith("price_") and not price_id.endswith("_placeholder"):
+                    mapping[price_id] = tier
+        return mapping
+
+    def handle_webhook_event(self, payload: bytes, sig_header: str, db=None) -> Dict[str, Any]:
         try:
             event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
         except (ValueError, stripe.error.SignatureVerificationError) as e:
             return {"success": False, "error": f"Invalid webhook: {str(e)}"}
 
         handlers = {
-            "customer.subscription.created": self._handle_subscription_created,
-            "customer.subscription.updated": self._handle_subscription_updated,
+            "checkout.session.completed": self._handle_checkout_completed,
+            "customer.subscription.created": self._handle_subscription_upsert,
+            "customer.subscription.updated": self._handle_subscription_upsert,
             "customer.subscription.deleted": self._handle_subscription_deleted,
             "invoice.payment_succeeded": self._handle_payment_succeeded,
             "invoice.payment_failed": self._handle_payment_failed,
         }
         handler = handlers.get(event.type)
         if handler:
-            return handler(event.data.object)
+            return handler(event.data.object, db=db)
         return {"success": True, "message": f"Event {event.type} received"}
 
-    def _handle_subscription_created(self, subscription) -> Dict[str, Any]:
-        return {"action": "subscription_created", "subscription_id": subscription.id}
+    def _handle_checkout_completed(self, session, db=None) -> Dict[str, Any]:
+        """Link Stripe customer_id to the user when checkout completes."""
+        if db is None:
+            return {"success": True, "action": "skipped_no_db"}
 
-    def _handle_subscription_updated(self, subscription) -> Dict[str, Any]:
-        return {"action": "subscription_updated", "subscription_id": subscription.id}
+        user_id = session.metadata.get("user_id") if session.metadata else None
+        customer_id = getattr(session, "customer", None)
+        plan_tier = session.metadata.get("plan_tier", "free") if session.metadata else "free"
 
-    def _handle_subscription_deleted(self, subscription) -> Dict[str, Any]:
-        return {"action": "subscription_deleted", "subscription_id": subscription.id}
+        if not user_id or not customer_id:
+            logger.warning(
+                "checkout.session.completed: missing user_id or customer_id in metadata: %s",
+                session.id,
+            )
+            return {"success": True, "action": "checkout_completed_no_user"}
 
-    def _handle_payment_succeeded(self, invoice) -> Dict[str, Any]:
-        return {"action": "payment_succeeded", "amount_paid": invoice.amount_paid}
+        from app.models import Subscription as SubscriptionModel
 
-    def _handle_payment_failed(self, invoice) -> Dict[str, Any]:
-        return {"action": "payment_failed", "amount_due": invoice.amount_due}
+        try:
+            sub_row = (
+                db.query(SubscriptionModel)
+                .filter(SubscriptionModel.user_id == int(user_id))
+                .first()
+            )
+            if sub_row:
+                sub_row.stripe_customer_id = customer_id
+                sub_row.plan_tier = plan_tier
+                sub_row.status = "active"
+                sub_row.updated_at = datetime.utcnow()
+                db.commit()
+                logger.info(
+                    "checkout.session.completed: linked customer_id=%s to user_id=%s plan=%s",
+                    customer_id, user_id, plan_tier,
+                )
+            return {"success": True, "action": "checkout_completed", "user_id": user_id}
+        except Exception:
+            db.rollback()
+            logger.exception("Webhook: DB error on checkout.session.completed for user %s", user_id)
+            return {"success": False, "error": "DB error on checkout completed"}
+
+    def _handle_subscription_upsert(self, subscription, db=None) -> Dict[str, Any]:
+        """Sync a Stripe subscription (created or updated) into the database."""
+        if db is None:
+            logger.warning("Webhook handler called without DB session — skipping DB sync")
+            return {"success": True, "action": "skipped_no_db", "subscription_id": subscription.id}
+
+        from app.models import User, Subscription as SubscriptionModel
+
+        customer_id = subscription.customer
+        stripe_sub_id = subscription.id
+        status = subscription.status  # active, past_due, canceled, trialing, etc.
+
+        # Determine plan tier from the first price item
+        price_to_tier = self._price_to_tier()
+        plan_tier = "free"
+        items = getattr(subscription, "items", None)
+        if items and items.data:
+            price_id = items.data[0].price.id
+            plan_tier = price_to_tier.get(price_id, "free")
+
+        period_start = None
+        period_end = None
+        if subscription.current_period_start:
+            period_start = datetime.utcfromtimestamp(subscription.current_period_start)
+        if subscription.current_period_end:
+            period_end = datetime.utcfromtimestamp(subscription.current_period_end)
+
+        try:
+            # Find the user by stripe_customer_id (set on checkout completion)
+            sub_row = (
+                db.query(SubscriptionModel)
+                .filter(SubscriptionModel.stripe_customer_id == customer_id)
+                .first()
+            )
+            if sub_row is None:
+                # Try matching by stripe_subscription_id for updates
+                sub_row = (
+                    db.query(SubscriptionModel)
+                    .filter(SubscriptionModel.stripe_subscription_id == stripe_sub_id)
+                    .first()
+                )
+            if sub_row is None:
+                logger.warning(
+                    "Webhook: no subscription row found for customer_id=%s sub_id=%s",
+                    customer_id, stripe_sub_id,
+                )
+                return {"success": True, "action": "no_user_found", "customer_id": customer_id}
+
+            sub_row.stripe_subscription_id = stripe_sub_id
+            sub_row.stripe_customer_id = customer_id
+            sub_row.plan_tier = plan_tier
+            sub_row.status = status
+            sub_row.current_period_start = period_start
+            sub_row.current_period_end = period_end
+            sub_row.updated_at = datetime.utcnow()
+            db.commit()
+            logger.info(
+                "Webhook: synced subscription %s → user_id=%s plan=%s status=%s",
+                stripe_sub_id, sub_row.user_id, plan_tier, status,
+            )
+            return {
+                "success": True,
+                "action": "subscription_synced",
+                "subscription_id": stripe_sub_id,
+                "plan_tier": plan_tier,
+                "status": status,
+            }
+        except Exception:
+            db.rollback()
+            logger.exception("Webhook: DB error syncing subscription %s", stripe_sub_id)
+            return {"success": False, "error": "DB error during subscription sync"}
+
+    def _handle_subscription_deleted(self, subscription, db=None) -> Dict[str, Any]:
+        """Downgrade user to free when their Stripe subscription is cancelled."""
+        if db is None:
+            return {"success": True, "action": "skipped_no_db", "subscription_id": subscription.id}
+
+        from app.models import Subscription as SubscriptionModel
+
+        stripe_sub_id = subscription.id
+        try:
+            sub_row = (
+                db.query(SubscriptionModel)
+                .filter(SubscriptionModel.stripe_subscription_id == stripe_sub_id)
+                .first()
+            )
+            if sub_row:
+                sub_row.plan_tier = "free"
+                sub_row.status = "canceled"
+                sub_row.stripe_subscription_id = None
+                sub_row.current_period_end = None
+                sub_row.updated_at = datetime.utcnow()
+                db.commit()
+                logger.info(
+                    "Webhook: subscription %s canceled — user_id=%s downgraded to free",
+                    stripe_sub_id, sub_row.user_id,
+                )
+            return {"success": True, "action": "subscription_canceled", "subscription_id": stripe_sub_id}
+        except Exception:
+            db.rollback()
+            logger.exception("Webhook: DB error canceling subscription %s", stripe_sub_id)
+            return {"success": False, "error": "DB error during subscription cancellation"}
+
+    def _handle_payment_succeeded(self, invoice, db=None) -> Dict[str, Any]:
+        """Mark subscription as active after a successful payment."""
+        stripe_sub_id = getattr(invoice, "subscription", None)
+        if not stripe_sub_id or db is None:
+            return {"success": True, "action": "payment_succeeded_no_sync"}
+
+        from app.models import Subscription as SubscriptionModel
+
+        try:
+            sub_row = (
+                db.query(SubscriptionModel)
+                .filter(SubscriptionModel.stripe_subscription_id == stripe_sub_id)
+                .first()
+            )
+            if sub_row and sub_row.status == "past_due":
+                sub_row.status = "active"
+                sub_row.updated_at = datetime.utcnow()
+                db.commit()
+                logger.info("Webhook: payment succeeded for sub %s — status → active", stripe_sub_id)
+            return {"success": True, "action": "payment_succeeded", "subscription_id": stripe_sub_id}
+        except Exception:
+            db.rollback()
+            logger.exception("Webhook: DB error on payment_succeeded for sub %s", stripe_sub_id)
+            return {"success": False, "error": "DB error on payment succeeded"}
+
+    def _handle_payment_failed(self, invoice, db=None) -> Dict[str, Any]:
+        """Mark subscription as past_due after a failed payment."""
+        stripe_sub_id = getattr(invoice, "subscription", None)
+        if not stripe_sub_id or db is None:
+            return {"success": True, "action": "payment_failed_no_sync"}
+
+        from app.models import Subscription as SubscriptionModel
+
+        try:
+            sub_row = (
+                db.query(SubscriptionModel)
+                .filter(SubscriptionModel.stripe_subscription_id == stripe_sub_id)
+                .first()
+            )
+            if sub_row:
+                sub_row.status = "past_due"
+                sub_row.updated_at = datetime.utcnow()
+                db.commit()
+                logger.info("Webhook: payment failed for sub %s — status → past_due", stripe_sub_id)
+            return {"success": True, "action": "payment_failed", "subscription_id": stripe_sub_id}
+        except Exception:
+            db.rollback()
+            logger.exception("Webhook: DB error on payment_failed for sub %s", stripe_sub_id)
+            return {"success": False, "error": "DB error on payment failed"}
 
     def record_usage(
         self,

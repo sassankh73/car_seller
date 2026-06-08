@@ -200,9 +200,10 @@ async def stripe_webhook(request: Request):
     """
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
+    db = _get_db(request)
 
     billing_service = get_billing_service()
-    result = billing_service.handle_webhook_event(payload, sig_header)
+    result = billing_service.handle_webhook_event(payload, sig_header, db=db)
 
     if not result["success"]:
         raise HTTPException(

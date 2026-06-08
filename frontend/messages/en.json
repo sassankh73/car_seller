@@ -514,15 +514,21 @@
       "title": "Reset Password",
       "email": "Email",
       "submit": "Send Reset Link",
+      "submitting": "Sending...",
       "backToLogin": "Back to Login",
       "description": "We'll send you a link to reset your password",
-      "genericError": "An error occurred. Please try again."
+      "genericError": "An error occurred. Please try again.",
+      "successMessage": "Reset link sent! Check your email."
     },
     "resetPassword": {
-      "title": "New Password",
+      "title": "Set New Password",
       "newPassword": "New Password",
       "confirmPassword": "Confirm Password",
-      "submit": "Change Password"
+      "submit": "Set New Password",
+      "submitting": "Saving...",
+      "success": "Password reset successfully. You can now log in.",
+      "invalidToken": "This reset link is invalid or has expired.",
+      "backToLogin": "Back to Login"
     }
   },
   "branding": {

@@ -1,40 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import Spinner from "@/components/ui/Spinner";
 
-export default function ForgotPasswordPage() {
-  const t = useTranslations("auth.forgotPassword");
+function ResetPasswordForm() {
+  const t = useTranslations("auth.resetPassword");
   const locale = useLocale();
-  const [email, setEmail] = useState("");
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token") ?? "";
+
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  useEffect(() => {
+    if (!token) setError(t("invalidToken"));
+  }, [token, t]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
     try {
-      const response = await fetch("/api/auth/forgot-password", {
+      const response = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ token, new_password: newPassword, confirm_password: confirmPassword }),
       });
 
       if (response.ok) {
         setSuccess(true);
       } else {
         const data = await response.json();
-        setError(data.detail || data.message || t("genericError"));
+        setError(data.detail || t("invalidToken"));
       }
-    } catch (err) {
-      setError(t("genericError"));
+    } catch {
+      setError(t("invalidToken"));
     } finally {
       setLoading(false);
     }
@@ -58,10 +72,7 @@ export default function ForgotPasswordPage() {
         >
           <div className="bg-gray-800 rounded-2xl p-8 border border-gray-700 shadow-2xl">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-white mb-2">
-                {t("title")}
-              </h1>
-              <p className="text-gray-400">{t("description")}</p>
+              <h1 className="text-3xl font-bold text-white mb-2">{t("title")}</h1>
             </div>
 
             {success ? (
@@ -71,7 +82,7 @@ export default function ForgotPasswordPage() {
                 className="text-center"
               >
                 <div className="bg-green-500/10 border border-green-500 text-green-400 px-4 py-3 rounded-lg mb-6">
-                  {t("successMessage")}
+                  {t("success")}
                 </div>
                 <Link
                   href={`/${locale}/auth/login`}
@@ -89,28 +100,42 @@ export default function ForgotPasswordPage() {
                 )}
 
                 <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-gray-300 mb-2"
-                  >
-                    {t("email")}
+                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-300 mb-2">
+                    {t("newPassword")}
                   </label>
                   <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
                     required
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="you@example.com"
+                    minLength={8}
+                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
+                    {t("confirmPassword")}
+                  </label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="••••••••"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !token}
                   className={`w-full py-3 rounded-lg font-semibold transition ${
-                    loading
+                    loading || !token
                       ? "bg-gray-600 text-gray-400 cursor-not-allowed"
                       : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30"
                   }`}
@@ -126,10 +151,7 @@ export default function ForgotPasswordPage() {
                 </button>
 
                 <div className="text-center">
-                  <Link
-                    href={`/${locale}/auth/login`}
-                    className="text-sm text-gray-400 hover:text-gray-300"
-                  >
+                  <Link href={`/${locale}/auth/login`} className="text-sm text-gray-400 hover:text-gray-300">
                     ← {t("backToLogin")}
                   </Link>
                 </div>
@@ -139,5 +161,13 @@ export default function ForgotPasswordPage() {
         </motion.div>
       </main>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

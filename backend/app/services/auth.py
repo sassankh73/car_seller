@@ -7,6 +7,7 @@ Handles:
 - User authentication flow
 """
 
+import hashlib
 import os
 from datetime import datetime, timedelta
 from typing import Optional
@@ -22,6 +23,7 @@ from app.schemas.auth import TokenPayload
 SECRET_KEY = os.getenv("SECRET_KEY", "")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+RESET_TOKEN_EXPIRE_MINUTES = 60  # 1 hour for password reset tokens
 
 
 def hash_password(password: str) -> str:
@@ -90,6 +92,30 @@ def decode_access_token(token: str) -> Optional[TokenPayload]:
         return TokenPayload(**payload)
     except JWTError:
         return None
+
+
+def create_password_reset_token(email: str) -> str:
+    """Create a short-lived JWT for password reset (1 hour)."""
+    return create_access_token(
+        data={"sub": email, "type": "password_reset"},
+        expires_delta=timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES),
+    )
+
+
+def decode_password_reset_token(token: str) -> Optional[str]:
+    """Decode a password-reset JWT. Returns the email on success, None on failure."""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "password_reset":
+            return None
+        return payload.get("sub")
+    except JWTError:
+        return None
+
+
+def hash_reset_token(token: str) -> str:
+    """SHA-256 hash of the raw JWT (stored in DB for single-use enforcement)."""
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 def get_user_by_email(db: Session, email: str) -> Optional[User]:

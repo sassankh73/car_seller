@@ -87,6 +87,9 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Password reset (single-use token enforcement)
+    password_reset_token_hash = Column(String(64), nullable=True)
+
     # Logo branding (PRO / ENTERPRISE only)
     logo_data = Column(LargeBinary, nullable=True)
     logo_mime_type = Column(String(50), nullable=True)
@@ -195,6 +198,7 @@ def init_db():
         _add_col_if_missing(conn, "users", "logo_mime_type", "VARCHAR(50)", user_cols)
         _add_col_if_missing(conn, "users", "logo_placement", "VARCHAR(20) DEFAULT 'bottom_right'", user_cols)
         _add_col_if_missing(conn, "users", "logo_scale", "FLOAT DEFAULT 0.12", user_cols)
+        _add_col_if_missing(conn, "users", "password_reset_token_hash", "VARCHAR(64)", user_cols)
 
         # Migrate plan_tier column from native PG enum to plain VARCHAR (idempotent)
         try:

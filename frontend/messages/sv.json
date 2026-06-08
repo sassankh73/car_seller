@@ -497,15 +497,21 @@
       "title": "Återställ lösenord",
       "email": "E-post",
       "submit": "Skicka återställningslänk",
+      "submitting": "Skickar...",
       "backToLogin": "Tillbaka till inloggning",
       "description": "Vi skickar dig en länk för att återställa ditt lösenord",
-      "genericError": "Ett fel uppstod. Försök igen."
+      "genericError": "Ett fel uppstod. Försök igen.",
+      "successMessage": "Återställningslänk skickad! Kontrollera din e-post."
     },
     "resetPassword": {
-      "title": "Nytt lösenord",
+      "title": "Välj nytt lösenord",
       "newPassword": "Nytt lösenord",
       "confirmPassword": "Bekräfta lösenord",
-      "submit": "Ändra lösenord"
+      "submit": "Spara nytt lösenord",
+      "submitting": "Sparar...",
+      "success": "Lösenordet har återställts. Du kan nu logga in.",
+      "invalidToken": "Den här återställningslänken är ogiltig eller har gått ut.",
+      "backToLogin": "Tillbaka till inloggning"
     }
   },
   "branding": {
