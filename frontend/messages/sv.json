@@ -180,11 +180,91 @@
       "product": "Produkt",
       "company": "Företag",
       "getStarted": "Kom igång",
+      "startFreeTrial": "Starta gratis",
       "dashboard": "Instrumentpanel",
       "about": "Om oss",
+      "contact": "Kontakt",
       "privacy": "Integritetspolicy",
       "terms": "Villkor för tjänsten"
+    },
+    "pricing": {
+      "label": "Priser",
+      "title": "Enkla, transparenta priser",
+      "description": "Välj den plan som passar din bilhandel. Uppgradera eller avsluta när som helst.",
+      "monthly": "Månadsvis",
+      "yearly": "Årsvis",
+      "savePercent": "Spara 17%",
+      "mostPopular": "Populärast",
+      "getStarted": "Kom igång",
+      "getStartedFree": "Starta gratis",
+      "logoBranding": "Logotypbranding",
+      "premiumAI": "Premium AI-bearbetning",
+      "priorityProcessing": "Prioriterad bearbetning",
+      "loadingPlans": "Laddar planer…",
+      "viewPlans": "Visa alla planer",
+      "studioCount": {
+        "one": "1 studio ingår",
+        "other": "{count} studior ingår"
+      }
     }
+  },
+  "about": {
+    "backHome": "Tillbaka till AutoStudio",
+    "eyebrow": "Om AutoStudio AI",
+    "headline": "Professionell fordonsfotografering – utan studio",
+    "subheadline": "Vi byggde AutoStudio AI för att högkvalitativ bilfotografering inte ska kräva en dedikerad studio, dyr utrustning eller dagar av planering. Det ska ta sekunder.",
+    "whatWeDoTitle": "Vad vi gör",
+    "whatWeDoBody": "AutoStudio AI använder artificiell intelligens för att ta bort bakgrunder från fordonsfoton och ersätta dem med professionella studiomiljöer. Ladda upp ett foto av vilken bil som helst – taget med en telefon eller kamera – och få en polerad, dealerklar bild på under 30 sekunder.",
+    "whatWeDoBody2": "Vi erbjuder flera studiostilsalternativ lämpade för varje fordon och märke: ljusa vita utställningslokaler, mörka dramatiska miljöer, urbana omgivningar och mer. Varje resultat är optimerat för webben, marknadsplatslistor och print.",
+    "features": {
+      "feature1": "Bakgrundsborttagning på under 30 sekunder",
+      "feature2": "Flera professionella studiomiljöer",
+      "feature3": "HD och 4K-export för webb och print",
+      "feature4": "Anpassad logotypbranding på varje bild"
+    },
+    "problemTitle": "Problemet vi löser",
+    "problemBody": "En professionell fordonsfototagning kräver vanligtvis en dedikerad studio, belysningsutrustning, en fotograf och efterproduktionsredigering. För ett enskilt fordon kan detta kosta tusentals kronor och ta dagar att schemalägga – innan en enda annons publiceras.",
+    "problemBody2": "AutoStudio AI komprimerar det arbetsflödet till några sekunder och en bråkdel av kostnaden. Bilhandlare kan bearbeta hela sitt lager på en eftermiddag, upprätthålla konsekvent visuell identitet i varje annons och uppdatera bilder när ett fordon tvättas eller omfotograferas.",
+    "whoTitle": "Vem det är för",
+    "audience": {
+      "dealers": {
+        "title": "Bilhandlare",
+        "description": "Bearbeta hela ditt lager i stor skala. Konsekventa studiokvalitetsbilder i varje annons, varje gång."
+      },
+      "sellers": {
+        "title": "Privatsäljare",
+        "description": "Låt din annons sticka ut med professionella bilder – ingen fotograferingskunskap krävs."
+      },
+      "marketplaces": {
+        "title": "Fordonsmarknadsplatser",
+        "description": "Erbjud bildförbättring som en mervärdestjänst till säljare och bilhandlare på din plattform."
+      }
+    },
+    "ctaTitle": "Redo att prova?",
+    "ctaBody": "Skapa ett gratis konto och bearbeta dina första fem fordon utan kostnad.",
+    "ctaButton": "Starta gratis",
+    "ctaPlans": "Visa priser"
+  },
+  "contact": {
+    "backHome": "Tillbaka till AutoStudio",
+    "eyebrow": "Kontakta oss",
+    "headline": "Vi vill gärna höra från dig",
+    "subheadline": "Oavsett om du har en fråga om planer, behöver teknisk hjälp eller vill diskutera en anpassad integration – vi finns här.",
+    "emailLabel": "E-post",
+    "responseTimeLabel": "Svarstid",
+    "responseTimeValue": "Vi strävar efter att svara inom en arbetsdag.",
+    "formTitle": "Skicka ett meddelande",
+    "formSubtitle": "Fyll i formuläret nedan så öppnas din e-postklient med allt förifyllt.",
+    "nameLabel": "Ditt namn",
+    "namePlaceholder": "Anna Svensson",
+    "subjectLabel": "Ämne (valfritt)",
+    "subjectPlaceholder": "Hur kan vi hjälpa?",
+    "messageLabel": "Meddelande",
+    "messagePlaceholder": "Berätta vad du funderar på…",
+    "submitButton": "Skicka meddelande",
+    "defaultSubject": "Förfrågan från webbplats",
+    "successTitle": "Öppnar din e-postklient…",
+    "successBody": "Ditt meddelande är förifyllt. Skicka det från din e-postapp för att nå oss."
   },
   "home": {
     "tagline": "Förvandla dina mobilbilder av bilar till premiumstudioskott direkt.",

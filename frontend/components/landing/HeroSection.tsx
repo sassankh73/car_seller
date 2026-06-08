@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import Image from "next/image";
 import { memo } from "react";
 
@@ -50,6 +50,7 @@ const HERO_CARDS: readonly HeroCardData[] = [
 
 export default function HeroSection() {
   const t = useTranslations("landing.hero");
+  const locale = useLocale();
 
   return (
     <section className="relative overflow-hidden bg-white">
@@ -81,11 +82,11 @@ export default function HeroSection() {
 
             {/* CTAs */}
             <div className="flex items-center gap-4 mt-2">
-              <a href="/register" className="btn-primary">
+              <a href={`/${locale}/auth/register`} className="btn-primary">
                 {t("startFreeTrial")}
               </a>
               <a
-                href="#demo"
+                href={`/${locale}/auth/register`}
                 className="btn-outline"
               >
                 {t("viewDemo")}
@@ -136,17 +137,6 @@ const HeroCard = memo(function HeroCard({
         className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/5 pointer-events-none transition-opacity duration-500 group-hover:from-black/50"
         aria-hidden="true"
       />
-
-      {/* Category badge — top left */}
-      <div
-        className={`absolute top-3 left-3 text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-md transition-all duration-300 group-hover:scale-105 ${
-          isDark
-            ? "bg-white/15 text-white/90 border border-white/10"
-            : "bg-white/80 text-charcoal-800 border border-white/50 shadow-sm"
-        }`}
-      >
-        {t(`categories.${card.categoryKey}`)}
-      </div>
 
       {/* Studio name badge — bottom left */}
       <div

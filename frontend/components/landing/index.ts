@@ -3,6 +3,7 @@ export { default as FeaturesBentoSection } from "./FeaturesBentoSection";
 export { default as StudioShowcaseSection } from "./StudioShowcaseSection";
 export { default as HowItWorksSection } from "./HowItWorksSection";
 export { default as TrustSection } from "./TrustSection";
+export { default as PricingSection } from "./PricingSection";
 export { default as CTASection } from "./CTASection";
 export { default as Footer } from "./Footer";
 export { default as Navbar } from "./Navbar";

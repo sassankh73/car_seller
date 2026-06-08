@@ -1,10 +1,11 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import Link from "next/link";
 
 export default function Footer() {
   const t = useTranslations("landing.footer");
+  const locale = useLocale();
 
   return (
     <footer className="relative bg-charcoal-900 text-white/80 pt-16 lg:pt-20 pb-8">
@@ -33,9 +34,9 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3">
               <li>
-                <a href="#features" className="text-sm text-white/50 hover:text-white/80 transition-colors">
+                <Link href={`/${locale}/dashboard`} className="text-sm text-white/50 hover:text-white/80 transition-colors">
                   {t("dashboard")}
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#studios" className="text-sm text-white/50 hover:text-white/80 transition-colors">
@@ -57,8 +58,13 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3">
               <li>
-                <Link href="/about" className="text-sm text-white/50 hover:text-white/80 transition-colors">
+                <Link href={`/${locale}/about`} className="text-sm text-white/50 hover:text-white/80 transition-colors">
                   {t("about")}
+                </Link>
+              </li>
+              <li>
+                <Link href={`/${locale}/contact`} className="text-sm text-white/50 hover:text-white/80 transition-colors">
+                  {t("contact")}
                 </Link>
               </li>
               <li>
@@ -79,12 +85,12 @@ export default function Footer() {
             <h4 className="text-sm font-semibold text-white mb-4 tracking-wide">
               {t("getStarted")}
             </h4>
-            <a
-              href="/register"
+            <Link
+              href={`/${locale}/auth/register`}
               className="inline-flex items-center justify-center px-5 py-2.5 bg-red-500 text-white text-sm font-medium rounded-xl hover:bg-red-600 transition-colors"
             >
-              Start Free Trial
-            </a>
+              {t("startFreeTrial")}
+            </Link>
           </div>
         </div>
 

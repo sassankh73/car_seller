@@ -6,6 +6,7 @@ import {
   StudioShowcaseSection,
   HowItWorksSection,
   TrustSection,
+  PricingSection,
   CTASection,
   Footer,
 } from "@/components/landing";
@@ -43,6 +44,7 @@ export default function LandingPage() {
         <StudioShowcaseSection />
         <HowItWorksSection />
         <TrustSection />
+        <PricingSection />
         <CTASection />
       </main>
       <Footer />

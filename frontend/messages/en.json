@@ -180,11 +180,91 @@
       "product": "Product",
       "company": "Company",
       "getStarted": "Get Started",
+      "startFreeTrial": "Start Free Trial",
       "dashboard": "Dashboard",
       "about": "About",
+      "contact": "Contact",
       "privacy": "Privacy Policy",
       "terms": "Terms of Service"
+    },
+    "pricing": {
+      "label": "Pricing",
+      "title": "Simple, transparent pricing",
+      "description": "Choose the plan that fits your dealership. Upgrade or cancel anytime.",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "savePercent": "Save 17%",
+      "mostPopular": "Most Popular",
+      "getStarted": "Get Started",
+      "getStartedFree": "Start for Free",
+      "logoBranding": "Logo branding",
+      "premiumAI": "Premium AI processing",
+      "priorityProcessing": "Priority processing",
+      "loadingPlans": "Loading plans…",
+      "viewPlans": "View all plans",
+      "studioCount": {
+        "one": "1 studio included",
+        "other": "{count} studios included"
+      }
     }
+  },
+  "about": {
+    "backHome": "Back to AutoStudio",
+    "eyebrow": "About AutoStudio AI",
+    "headline": "Professional vehicle photography — without the studio",
+    "subheadline": "We built AutoStudio AI because high-quality car photography should not require a dedicated studio, expensive equipment, or days of scheduling. It should take seconds.",
+    "whatWeDoTitle": "What we do",
+    "whatWeDoBody": "AutoStudio AI uses artificial intelligence to remove backgrounds from vehicle photos and replace them with professional studio environments. Upload a photo of any car — taken on a phone or with a camera — and receive a polished, dealership-ready image in under 30 seconds.",
+    "whatWeDoBody2": "We offer multiple studio styles suited to every vehicle and brand: bright white showrooms, dark dramatic settings, urban environments, and more. Every output is optimised for the web, marketplace listings, and print.",
+    "features": {
+      "feature1": "Background removal in under 30 seconds",
+      "feature2": "Multiple professional studio environments",
+      "feature3": "HD and 4K export for web and print",
+      "feature4": "Custom logo branding on every image"
+    },
+    "problemTitle": "The problem we solve",
+    "problemBody": "A professional automotive photoshoot typically requires a dedicated studio, lighting rigs, a photographer, and post-production editing. For a single vehicle this can cost thousands of SEK and take days to schedule — before a single listing goes live.",
+    "problemBody2": "AutoStudio AI compresses that workflow to a few seconds and a fraction of the cost. Dealerships can process their entire inventory in an afternoon, maintain consistent visual identity across every listing, and update images whenever a vehicle is detailed or rephotographed.",
+    "whoTitle": "Who it's for",
+    "audience": {
+      "dealers": {
+        "title": "Car dealerships",
+        "description": "Process your full inventory at scale. Consistent studio-quality images across every listing, every time."
+      },
+      "sellers": {
+        "title": "Private sellers",
+        "description": "Make your listing stand out with professional imagery, no photography experience required."
+      },
+      "marketplaces": {
+        "title": "Automotive marketplaces",
+        "description": "Offer image enhancement as a value-added service to sellers and dealerships on your platform."
+      }
+    },
+    "ctaTitle": "Ready to try it?",
+    "ctaBody": "Create a free account and process your first five vehicles at no cost.",
+    "ctaButton": "Start for Free",
+    "ctaPlans": "View Pricing"
+  },
+  "contact": {
+    "backHome": "Back to AutoStudio",
+    "eyebrow": "Get in touch",
+    "headline": "We'd love to hear from you",
+    "subheadline": "Whether you have a question about plans, need technical help, or want to discuss a custom integration — we're here.",
+    "emailLabel": "Email",
+    "responseTimeLabel": "Response time",
+    "responseTimeValue": "We aim to respond within one business day.",
+    "formTitle": "Send us a message",
+    "formSubtitle": "Fill in the form below and your email client will open with everything pre-filled.",
+    "nameLabel": "Your name",
+    "namePlaceholder": "Jane Smith",
+    "subjectLabel": "Subject (optional)",
+    "subjectPlaceholder": "How can we help?",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Tell us what's on your mind…",
+    "submitButton": "Send Message",
+    "defaultSubject": "Enquiry from website",
+    "successTitle": "Opening your email client…",
+    "successBody": "Your message has been pre-filled. Send it from your email app to reach us."
   },
   "home": {
     "tagline": "Transform your mobile car photos into premium studio shots instantly.",

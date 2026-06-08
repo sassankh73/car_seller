@@ -1,9 +1,10 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 export default function CTASection() {
   const t = useTranslations("landing.cta");
+  const locale = useLocale();
 
   return (
     <section id="cta" className="relative bg-warm-50 py-20 lg:py-32">
@@ -33,13 +34,13 @@ export default function CTASection() {
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <a
-                href="/register"
+                href={`/${locale}/auth/register`}
                 className="inline-flex items-center justify-center px-8 py-3.5 bg-white text-red-500 font-semibold rounded-xl hover:bg-white/90 transition-all duration-300 hover:scale-[1.02]"
               >
                 {t("startFreeTrial")}
               </a>
               <a
-                href="#demo"
+                href={`/${locale}/auth/register`}
                 className="inline-flex items-center justify-center px-8 py-3.5 bg-white/10 text-white font-medium rounded-xl border border-white/20 hover:bg-white/15 hover:border-white/30 transition-all duration-300"
               >
                 {t("bookDemo")}
