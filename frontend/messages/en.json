@@ -257,6 +257,7 @@
     "formSubtitle": "Fill in the form below and your email client will open with everything pre-filled.",
     "nameLabel": "Your name",
     "namePlaceholder": "Jane Smith",
+    "emailPlaceholder": "jane@example.com",
     "subjectLabel": "Subject (optional)",
     "subjectPlaceholder": "How can we help?",
     "messageLabel": "Message",

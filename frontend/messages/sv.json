@@ -257,6 +257,7 @@
     "formSubtitle": "Fyll i formuläret nedan så öppnas din e-postklient med allt förifyllt.",
     "nameLabel": "Ditt namn",
     "namePlaceholder": "Anna Svensson",
+    "emailPlaceholder": "anna@exempel.se",
     "subjectLabel": "Ämne (valfritt)",
     "subjectPlaceholder": "Hur kan vi hjälpa?",
     "messageLabel": "Meddelande",
