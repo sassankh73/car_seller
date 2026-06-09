@@ -1,0 +1,111 @@
+{
+  "project": "AutoStudio AI — FINAL Dashboard Redesign Completion (Localhost + VPS)",
+  "framing": "This is the final, complete request meant to resolve the redesign in one session without stopping. Do not report partial progress as done — work through all parts and only stop at the Definition of DONE checklist with evidence for each item.",
+  "scope_reminder": "Frontend only. Do not modify any backend files, API routes, or auth logic.",
+  "ground_truth_rule": "Every checkbox in 'definition_of_done' must be confirmed with pasted command output (curl results, tsc output, docker ps, screenshots) — not restated as a claim. This project has had repeated 'done/deployed/confirmed' claims that turned out to be false; that pattern stops here.",
+  "parts": [
+    {
+      "id": "PART-1",
+      "title": "Diagnose why the new design isn't showing",
+      "commands": [
+        "git branch",
+        "git log --oneline -5",
+        "find . -path \"*/components/dashboard*\" -type f 2>/dev/null",
+        "find . -name \"WorkflowSidebar*\" -o -name \"RightPanel*\" -o -name \"StudioCard*\" 2>/dev/null",
+        "cat 'frontend/src/app/[locale]/dashboard/page.tsx'",
+        "docker compose ps",
+        "docker compose logs frontend --tail=20"
+      ],
+      "purpose": "Establish ground truth on whether the previously-reported redesign actually exists in the working tree and is wired into the page, or whether the report was inaccurate. Paste the raw output of each command — do not summarize it away."
+    },
+    {
+      "id": "PART-2",
+      "title": "If files are missing or page.tsx is unchanged, build the redesign now — do not wait for permission, this is the build step",
+      "condition": "Only execute this part if PART-1 shows the components don't exist or aren't wired into the dashboard page. If they already exist and are wired in correctly, skip to PART-3 and say explicitly why (with the PART-1 output as proof).",
+      "files_to_create_or_replace": [
+        {
+          "path": "frontend/src/app/[locale]/dashboard/page.tsx",
+          "requirement": "Replace entirely with the new 3-column layout (Sidebar 200px | Main flex:1 | Right Panel 240px), composed from the components below."
+        },
+        {
+          "path": "frontend/src/components/dashboard/WorkflowSidebar.tsx",
+          "requirement": "5-step tracker: Choose Studio → Upload Photo → Photo Guide → Processing → Result & Download. Active step = red filled circle + red left border + red text. Completed step = green circle with checkmark. Default = outlined gray circle. Steps connected by vertical lines. Footer shows LIVE credits remaining and photos-this-month pulled from /api/auth/account — not hardcoded."
+        },
+        {
+          "path": "frontend/src/components/dashboard/StudioGrid.tsx",
+          "requirement": "Loads studios from the real /api/studio endpoint. 4 cards in a row: Dark Showroom (navy bg), White Studio (light gray bg), Urban Night (charcoal bg), Sunrise (warm orange bg). Selected card gets red border + red checkmark badge in the corner. Clicking selects one and deselects the rest."
+        },
+        {
+          "path": "frontend/src/components/dashboard/PhotoGuide.tsx",
+          "requirement": "6 tips in a 2x3 grid with emoji icons: '☀️ Good lighting', '📐 3/4 angle', '🚗 Full car in frame', '🧹 Simple background', '📱 High resolution', '🚫 No interiors'. Plus a Good (green-tinted) vs Bad (red-tinted) examples section side by side with placeholder boxes. All copy must be added to en.json and sv.json — no hardcoded strings."
+        },
+        {
+          "path": "frontend/src/components/dashboard/UploadZones.tsx",
+          "requirement": "Two dashed-border upload zones side by side: '📤 Upload from device' (drag & drop, JPG/PNG) and '📷 Use camera (mobile capture)'. Hover state = red dashed border + light red background. Includes the '⚡ Process with AI →' button, disabled (gray) until BOTH a studio is selected AND a photo is uploaded — driven by real component state. After processing completes, show the result image and a working download button inline."
+        },
+        {
+          "path": "frontend/src/components/dashboard/RightPanel.tsx",
+          "requirement": "Recent projects pulled live from /api/projects (thumbnail, name, studio, status badge — adapt to the real response shape, do not invent fields). Usage stats (credits left, photos this month, plan name) pulled live from /api/auth/account. Upgrade card with dark-navy-to-red gradient, '🚀 Go Pro' copy, and an 'Upgrade Now' button that links to the real /dashboard/billing route."
+        }
+      ],
+      "design_tokens": {
+        "--red": "#e63946",
+        "--navy": "#1a1a2e",
+        "--bg": "#f5f5f7",
+        "--white": "#ffffff",
+        "--border": "#e8e8e8",
+        "--text": "#111111",
+        "--muted": "#888888",
+        "--radius": "8px"
+      }
+    },
+    {
+      "id": "PART-3",
+      "title": "Fix and verify localhost",
+      "commands": [
+        "git checkout fix/dashboard-redesign 2>/dev/null || true",
+        "docker compose down",
+        "docker compose build --no-cache frontend",
+        "docker compose up -d",
+        "docker compose logs frontend --tail=30",
+        "curl -s http://localhost:3000/en/dashboard | grep -i \"Choose Your Studio\\|WorkflowSidebar\\|studio\""
+      ],
+      "requirement": "Paste the actual curl output. If the grep returns nothing, the redesign is NOT live on localhost — say so plainly and keep working, do not move to PART-4."
+    },
+    {
+      "id": "PART-4",
+      "title": "Push and deploy to VPS (162.245.186.99)",
+      "commands": [
+        "git add -A",
+        "git commit -m \"feat: complete dashboard redesign - 3 column layout with step tracker\"",
+        "git push origin fix/dashboard-redesign",
+        "ssh root@162.245.186.99 \"cd /root/car_seller && git fetch origin && git checkout fix/dashboard-redesign && git pull origin fix/dashboard-redesign && docker compose down && docker compose build --no-cache frontend && docker compose up -d && sleep 5 && docker compose ps && curl -s -o /dev/null -w 'VPS HTTP status: %{http_code}\\n' http://127.0.0.1:3000\""
+      ],
+      "requirement": "If SSH still fails (key rejected), STOP and tell the user explicitly what is blocking it and what they need to do (e.g. add the public key to the VPS provider's console) — do not silently skip the VPS deploy and report the task as complete. A localhost-only fix is not a complete deliverable for this task."
+    },
+    {
+      "id": "PART-5",
+      "title": "Final verification — both environments, with pasted evidence",
+      "commands": [
+        "curl -s http://localhost:3000/en/dashboard | grep -i \"Choose Your Studio\"",
+        "curl -s https://autostudio.cc/en/dashboard | grep -i \"Choose Your Studio\"",
+        "cd frontend && npx tsc --noEmit"
+      ],
+      "requirement": "Paste the raw output of all three commands. A grep that returns a match is proof of presence in the rendered HTML; tsc must show zero errors."
+    }
+  ],
+  "definition_of_done": [
+    "localhost:3000/dashboard shows the new 3-column layout with step sidebar — proven by the PART-3/PART-5 curl output containing the expected text",
+    "https://autostudio.cc/dashboard shows the same — proven by the PART-5 curl output against the live domain",
+    "Studio cards load from the real /api/studio endpoint — proven by showing the network call/response, not just the rendered card",
+    "Process button is disabled until both a studio AND a photo are selected — proven by describing/screenshotting both states",
+    "Result + download appears after processing — proven by a screenshot or recording of one full successful run",
+    "Zero TypeScript errors — proven by pasting the tsc --noEmit output",
+    "No backend files were touched — proven by `git diff --stat` against the base branch showing only frontend/ paths"
+  ],
+  "communication_rules": [
+    "Do not mark this task complete until every item in definition_of_done has its proof pasted in the same message.",
+    "If something is blocked by something only the user can do (SSH key, credentials, a decision), stop, explain exactly what's blocking it and what the user needs to do, and do not report the overall task as done.",
+    "If the live VPS still doesn't reflect the change after a deploy attempt, say so directly — do not repeat the earlier mistake of claiming 'deployed and confirmed' without verifying against the actual public URL."
+  ]
+}

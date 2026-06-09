@@ -325,7 +325,7 @@ export default function Dashboard() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#e63946]/10 text-[10px] font-bold text-[#e63946] uppercase tracking-wider">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#CC2020]/10 text-[10px] font-bold text-[#CC2020] uppercase tracking-wider">
                       Step 1
                     </span>
                   </div>
@@ -358,10 +358,10 @@ export default function Dashboard() {
                           setSelectedStudio(studio.key);
                           setStudioExplicitlyChosen(true);
                         }}
-                        className={`relative rounded-xl overflow-hidden border-2 transition-all text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e63946]/50 ${
+                        className={`relative rounded-xl overflow-hidden border-2 transition-all text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#CC2020]/50 ${
                           isSelected
-                            ? "border-[#e63946] ring-2 ring-[#e63946]/15 shadow-sm"
-                            : "border-[#e8e8e8] hover:border-[#e63946]/50 hover:shadow-sm"
+                            ? "border-[#CC2020] ring-2 ring-[#CC2020]/15 shadow-sm"
+                            : "border-[#e8e8e8] hover:border-[#CC2020]/50 hover:shadow-sm"
                         }`}
                       >
                         {/* Preview block */}
@@ -384,7 +384,7 @@ export default function Dashboard() {
                         </div>
                         {/* Checkmark badge */}
                         {isSelected && (
-                          <div className="absolute top-2 right-2 w-5 h-5 bg-[#e63946] rounded-full flex items-center justify-center shadow-md">
+                          <div className="absolute top-2 right-2 w-5 h-5 bg-[#CC2020] rounded-full flex items-center justify-center shadow-md">
                             <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                             </svg>
@@ -400,7 +400,7 @@ export default function Dashboard() {
             {/* ─ STEP 2: Photo Guide ─ */}
             <section className="bg-white rounded-xl border border-[#e8e8e8] p-5">
               <div className="mb-4">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#e63946]/10 text-[10px] font-bold text-[#e63946] uppercase tracking-wider">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#CC2020]/10 text-[10px] font-bold text-[#CC2020] uppercase tracking-wider">
                   Step 2
                 </span>
                 <h2 className="text-base font-bold text-[#111111] mt-1.5">{rt("step2.heading")}</h2>
@@ -428,7 +428,7 @@ export default function Dashboard() {
             {/* ─ STEP 3: Good vs Bad Examples ─ */}
             <section className="bg-white rounded-xl border border-[#e8e8e8] p-5">
               <div className="mb-4">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#e63946]/10 text-[10px] font-bold text-[#e63946] uppercase tracking-wider">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#CC2020]/10 text-[10px] font-bold text-[#CC2020] uppercase tracking-wider">
                   Step 3
                 </span>
                 <h2 className="text-base font-bold text-[#111111] mt-1.5">{rt("step3.heading")}</h2>
@@ -454,7 +454,7 @@ export default function Dashboard() {
                 </div>
                 {/* Bad examples */}
                 <div>
-                  <p className="text-xs font-semibold text-[#e63946] mb-2.5 flex items-center gap-1">
+                  <p className="text-xs font-semibold text-[#CC2020] mb-2.5 flex items-center gap-1">
                     ❌ <span>{rt("step3.bad")}</span>
                   </p>
                   <div className="grid grid-cols-3 gap-1.5">
@@ -478,7 +478,7 @@ export default function Dashboard() {
             {/* ─ STEP 4: Upload ─ */}
             <section className="bg-white rounded-xl border border-[#e8e8e8] p-5">
               <div className="mb-4">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#e63946]/10 text-[10px] font-bold text-[#e63946] uppercase tracking-wider">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#CC2020]/10 text-[10px] font-bold text-[#CC2020] uppercase tracking-wider">
                   Step 4
                 </span>
                 <h2 className="text-base font-bold text-[#111111] mt-1.5">{rt("step4.heading")}</h2>
@@ -504,8 +504,8 @@ export default function Dashboard() {
                   onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
                   className={`rounded-xl border-2 border-dashed p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
                     uploadHover === "device" || previewUrl
-                      ? "border-[#e63946] bg-red-50/60"
-                      : "border-[#e8e8e8] bg-[#f9f9f9] hover:border-[#e63946]/60 hover:bg-red-50/40"
+                      ? "border-[#CC2020] bg-red-50/60"
+                      : "border-[#e8e8e8] bg-[#f9f9f9] hover:border-[#CC2020]/60 hover:bg-red-50/40"
                   }`}
                 >
                   {previewUrl ? (
@@ -543,8 +543,8 @@ export default function Dashboard() {
                   onKeyDown={(e) => e.key === "Enter" && setUseGuidedCapture(true)}
                   className={`rounded-xl border-2 border-dashed p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
                     uploadHover === "camera"
-                      ? "border-[#e63946] bg-red-50/60"
-                      : "border-[#e8e8e8] bg-[#f9f9f9] hover:border-[#e63946]/60 hover:bg-red-50/40"
+                      ? "border-[#CC2020] bg-red-50/60"
+                      : "border-[#e8e8e8] bg-[#f9f9f9] hover:border-[#CC2020]/60 hover:bg-red-50/40"
                   }`}
                   onMouseEnter={() => setUploadHover("camera")}
                   onMouseLeave={() => setUploadHover(null)}
@@ -566,7 +566,7 @@ export default function Dashboard() {
             {/* ─ STEP 5: CTA ─ */}
             <section className="bg-white rounded-xl border border-[#e8e8e8] p-5">
               <div className="mb-4">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#e63946]/10 text-[10px] font-bold text-[#e63946] uppercase tracking-wider">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#CC2020]/10 text-[10px] font-bold text-[#CC2020] uppercase tracking-wider">
                   Step 5
                 </span>
               </div>
@@ -578,7 +578,7 @@ export default function Dashboard() {
                     type="checkbox"
                     checked={enhanceWheels}
                     onChange={(e) => setEnhanceWheels(e.target.checked)}
-                    className="w-4 h-4 rounded border-[#e8e8e8] accent-[#e63946]"
+                    className="w-4 h-4 rounded border-[#e8e8e8] accent-[#CC2020]"
                   />
                   <span className="text-xs text-[#333333]">{rt("options.enhanceWheels")}</span>
                 </label>
@@ -587,7 +587,7 @@ export default function Dashboard() {
                     type="checkbox"
                     checked={enhancePaint}
                     onChange={(e) => setEnhancePaint(e.target.checked)}
-                    className="w-4 h-4 rounded border-[#e8e8e8] accent-[#e63946]"
+                    className="w-4 h-4 rounded border-[#e8e8e8] accent-[#CC2020]"
                   />
                   <span className="text-xs text-[#333333]">{rt("options.enhancePaint")}</span>
                 </label>
@@ -599,7 +599,7 @@ export default function Dashboard() {
                       onClick={() => setExportQuality(q)}
                       className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
                         exportQuality === q
-                          ? "bg-[#e63946] text-white"
+                          ? "bg-[#CC2020] text-white"
                           : "bg-[#f5f5f7] text-[#888888] hover:bg-[#ebebeb]"
                       }`}
                     >
@@ -618,7 +618,7 @@ export default function Dashboard() {
                     disabled={!canProcess}
                     className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
                       canProcess
-                        ? "bg-[#e63946] hover:bg-red-700 text-white shadow-lg shadow-red-500/20 active:scale-[0.99]"
+                        ? "bg-[#CC2020] hover:bg-red-700 text-white shadow-lg shadow-red-500/20 active:scale-[0.99]"
                         : "bg-[#ebebeb] text-[#aaaaaa] cursor-not-allowed"
                     }`}
                   >
@@ -713,7 +713,7 @@ export default function Dashboard() {
                   <div className="flex gap-3 mt-3">
                     <button
                       onClick={handleDownload}
-                      className="flex-1 py-2.5 rounded-xl bg-[#e63946] text-white text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm"
+                      className="flex-1 py-2.5 rounded-xl bg-[#CC2020] text-white text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm"
                     >
                       {rt("step5.download")}
                     </button>

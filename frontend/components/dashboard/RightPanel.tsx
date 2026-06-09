@@ -189,7 +189,7 @@ export default function RightPanel({ projects, usage, planName, studioLabel, onP
       </div>
 
       {/* Upgrade Card */}
-      <div className="mx-3 mb-3 rounded-xl p-4 text-white overflow-hidden relative" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #e63946 100%)" }}>
+      <div className="mx-3 mb-3 rounded-xl p-4 text-white overflow-hidden relative" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #CC2020 100%)" }}>
         {/* Decorative circle */}
         <div className="absolute -right-4 -top-4 w-16 h-16 rounded-full bg-white/5" />
         <div className="absolute -right-2 -bottom-6 w-20 h-20 rounded-full bg-white/5" />
@@ -197,7 +197,7 @@ export default function RightPanel({ projects, usage, planName, studioLabel, onP
         <p className="text-[11px] text-white/75 mb-3 leading-relaxed relative">{t("upgrade.subtitle")}</p>
         <Link
           href={`/${locale}/dashboard/billing`}
-          className="block text-center text-xs font-bold bg-white text-[#e63946] rounded-lg py-1.5 hover:bg-white/90 transition-colors relative"
+          className="block text-center text-xs font-bold bg-white text-[#CC2020] rounded-lg py-1.5 hover:bg-white/90 transition-colors relative"
         >
           {t("upgrade.button")}
         </Link>

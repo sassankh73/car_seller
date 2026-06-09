@@ -1,0 +1,140 @@
+{
+  "project": "AutoStudio AI — Landing Page Structure & Routing Fix Plan (NOT a redesign)",
+  "framing": "This is a CONTENT / STRUCTURE / ROUTING fix pass — separate from the visual redesign instructions already prepared. Keep the existing visual design and branding exactly as-is. The only goal here is: build what's missing, fix what's broken, and make every link go somewhere real.",
+  "hard_constraints": [
+    "Do NOT modify backend code, APIs, or business logic.",
+    "Do NOT redesign the UI or change the existing visual design/branding — match the current look exactly when building new sections/pages.",
+    "Do NOT alter the dashboard (structure or design).",
+    "Do NOT change or replace any images. Only remove text-overlay elements where specified — the underlying image files stay untouched.",
+    "Scope is strictly: missing content, missing pages, broken links, routing/404 issues, and landing-page structural completeness."
+  ],
+  "process_requirement": "Provide a complete written report of ALL findings (this document is that report) BEFORE making any changes. Then implement only the approved fixes — do not start building until the user signs off on the list below.",
+
+  "part_a_verified_findings_report": {
+    "note": "Everything below was confirmed directly in the codebase (file/line evidence), not assumed.",
+
+    "category_label_overlays_to_remove": {
+      "finding": "The 'Sedan', 'SUV', 'Wagon', 'Coupe' (and 'Pickup / EV') labels are NOT baked into the images — they are separate HTML badge overlays rendered on top of the hero showcase images.",
+      "evidence": "components/landing/HeroSection.tsx lines 140-149: a <div> styled as a rounded pill badge ('Category badge — top left') renders {t(`categories.${card.categoryKey}`)} absolutely positioned over each hero card image. The text comes from messages/en.json 'landing.hero.categories' (sedan/suv/wagon/coupe/pickupEv).",
+      "fix": "Remove only this badge <div> block (the top-left category badge) from the HeroCard component. The <Image> element and its src stay completely untouched — this is a pure markup removal, zero image changes. (Note: there is a second badge at the bottom-left showing the studio name — leave that one alone unless told otherwise; the user only asked to remove the vehicle-type labels.)"
+    },
+
+    "broken_or_incorrect_links": [
+      {
+        "issue": "'Start Free Trial' button does not lead to account creation",
+        "where": "components/landing/HeroSection.tsx:84, CTASection.tsx:36, Footer.tsx:83 — all three point to href=\"/register\"",
+        "root_cause": "The actual registration route in the app is /auth/register (app/[locale]/auth/register/), not /register. The button currently 404s instead of opening the signup page.",
+        "fix": "Change all three hrefs from \"/register\" to the correct locale-aware path, e.g. `/${locale}/auth/register` (matching how other internal links in Navbar already build locale-prefixed paths)."
+      },
+      {
+        "issue": "Pricing section does not exist — '#pricing' anchor points to nothing",
+        "where": "Linked from components/landing/Navbar.tsx:59 and Footer.tsx:46 (both href=\"#pricing\")",
+        "root_cause": "No <section id=\"pricing\"> exists anywhere in the landing page composition (app/[locale]/page.tsx only renders Navbar, HeroSection, FeaturesBentoSection, StudioShowcaseSection, HowItWorksSection, TrustSection, CTASection, Footer — confirmed no pricing component exists in components/landing/). The section was never built.",
+        "fix": "Build a real Pricing section showing the actual plans/packages and prices (pull the real plan data/copy that already exists for Billing — Starter/Pro/etc — do not invent new plans), give it id=\"pricing\", and add it to the landing page composition. Match existing visual style exactly (no redesign)."
+      },
+      {
+        "issue": "'/about' link leads to a 404 — no About page exists",
+        "where": "components/landing/Footer.tsx:60 — <Link href=\"/about\">",
+        "root_cause": "No app/[locale]/about route exists in the codebase (confirmed via directory search — only privacy, terms, auth, admin, dashboard, select-language exist).",
+        "fix": "Create app/[locale]/about/page.tsx with real, specific company/product copy (no lorem/filler) styled to match the existing site, and link Footer's About item to it correctly with the locale prefix."
+      },
+      {
+        "issue": "No Contact page exists anywhere, despite an orphaned translation key",
+        "where": "messages/en.json line 705 contains \"contactUs\": \"Contact Us\" — but it is referenced by NO component, page, or link anywhere in the codebase.",
+        "root_cause": "A contact page/section was apparently planned (translation key exists) but never built and never linked.",
+        "fix": "Create a Contact page (app/[locale]/contact/page.tsx) with a real contact method (email/form — clarify with the user which they want), styled to match the site, add it to the Footer's Company links, and wire the existing 'contactUs' translation key to it (add the matching sv.json entry too if missing)."
+      },
+      {
+        "issue": "'View Demo' / 'Book Demo' buttons point to a '#demo' anchor that doesn't exist, and there is no demo video anywhere",
+        "where": "components/landing/HeroSection.tsx:88 (href=\"#demo\", label 'View Demo') and CTASection.tsx:42 (href=\"#demo\", label 'Book Demo')",
+        "root_cause": "No <section id=\"demo\"> exists in any landing component, and there is zero <video>/.mp4/YouTube/Vimeo reference anywhere in the codebase. The anchor resolves to nothing.",
+        "fix": "Build a Demo section/modal containing an actual demo video (.mp4 or embedded player — the user needs to supply the video asset, or confirm where it should come from), give it id=\"demo\", and link both buttons to it. If no demo video asset exists yet, flag that explicitly to the user rather than inventing a placeholder."
+      },
+      {
+        "issue": "Footer 'Dashboard' link is mismatched — labeled as Dashboard but points to the Features anchor",
+        "where": "components/landing/Footer.tsx:36 — <a href=\"#features\">{t(\"dashboard\")}</a>",
+        "root_cause": "The link text says 'Dashboard' (from the 'dashboard' translation key) but its destination is the on-page #features anchor, not the actual /dashboard route.",
+        "fix": "Either (a) point it to the real dashboard route `/${locale}/dashboard` if the intent is a dashboard link, or (b) relabel it to something accurate like 'Features' if the intent was always to scroll to that section. Needs a decision on which was intended — flagging for the user to confirm."
+      }
+    ],
+
+    "links_verified_working_no_action_needed": [
+      "#studios anchor → resolves correctly to <section id=\"studios\"> in StudioShowcaseSection.tsx:42",
+      "#features anchor → resolves correctly to <section id=\"features\"> in FeaturesBentoSection.tsx:62",
+      "/privacy → app/[locale]/privacy exists",
+      "/terms → app/[locale]/terms exists",
+      "Navbar dashboard links → point to `/${locale}/dashboard`, which exists and is correct"
+    ]
+  },
+
+  "part_b_implementation_plan_pending_approval": {
+    "note": "Do not start any of this until the user reviews part_a and gives explicit go-ahead. Order reflects dependency (routes/sections must exist before links can correctly point to them).",
+    "steps": [
+      {
+        "step": 1,
+        "title": "Remove vehicle-category text overlays from hero images",
+        "action": "Delete the 'Category badge — top left' <div> block in components/landing/HeroSection.tsx's HeroCard (the element rendering {t(`categories.${card.categoryKey}`)}). Leave the <Image> and the studio-name badge untouched. Optionally remove the now-unused 'categories' keys from en.json/sv.json if nothing else references them — confirm nothing else uses `landing.hero.categories.*` first."
+      },
+      {
+        "step": 2,
+        "title": "Fix the 'Start Free Trial' link path",
+        "action": "Update href in HeroSection.tsx:84, CTASection.tsx:36, and Footer.tsx:83 from \"/register\" to the correct locale-aware registration path (`/${locale}/auth/register`), matching the pattern already used elsewhere (e.g. Navbar's `/${locale}/dashboard`)."
+      },
+      {
+        "step": 3,
+        "title": "Build the missing Pricing section",
+        "action": "Create a new landing component (e.g. PricingSection.tsx) that displays the real plans and prices already defined for Billing — same plan names, prices, and feature lists, just presented for the marketing page. Give the section id=\"pricing\" and add it to app/[locale]/page.tsx in a sensible position (near Features/Trust). Match existing visual language exactly — same card style, spacing, typography as the rest of the landing page."
+      },
+      {
+        "step": 4,
+        "title": "Build the missing About page",
+        "action": "Create app/[locale]/about/page.tsx with real company/product copy (who AutoStudio is, what it does, why it exists for dealerships — no filler/lorem), styled to match existing pages (e.g. /privacy or /terms as a structural reference). Update Footer's About link to the correct locale-prefixed path."
+      },
+      {
+        "step": 5,
+        "title": "Build the missing Contact page",
+        "action": "Create app/[locale]/contact/page.tsx with a real contact method. NEEDS A DECISION FROM THE USER: should this be a simple mailto/contact-info display, or an actual contact form (which would need a backend endpoint to receive submissions — out of scope per 'do not modify backend')? Recommend starting with a static contact-info page (email, etc.) to stay within the no-backend-changes constraint, unless the user confirms a form wired to an existing endpoint. Add it to the Footer's Company links and wire up the existing 'contactUs' translation key (and add to sv.json if missing)."
+      },
+      {
+        "step": 6,
+        "title": "Build the missing Demo section/modal and resolve the video asset question",
+        "action": "NEEDS INPUT FROM THE USER: is there an existing demo .mp4 file or hosted video (YouTube/Vimeo) to embed, or does one need to be produced/uploaded first? Once the asset/source is confirmed, build a Demo section or modal with id=\"demo\" containing the video player, and point both 'View Demo' (HeroSection) and 'Book Demo' (CTASection) buttons to it. Do not ship a placeholder/fake video — flag and wait if no asset exists."
+      },
+      {
+        "step": 7,
+        "title": "Resolve the Footer 'Dashboard' link mismatch",
+        "action": "NEEDS A DECISION FROM THE USER: should this link go to the actual /dashboard route, or should its label be changed to match its current #features destination? Implement whichever the user confirms."
+      },
+      {
+        "step": 8,
+        "title": "Final link sweep",
+        "action": "After all the above is built, re-check every href/Link across Navbar, Footer, Hero, CTA, and all new pages to confirm each one resolves to a real route or in-page anchor with matching id — zero dead links remaining."
+      }
+    ]
+  },
+
+  "open_questions_for_user_before_implementation": [
+    "Contact page: static contact info, or a working form? (A form needs a backend endpoint — which is out of scope unless one already exists.)",
+    "Demo: do you have an existing .mp4 / hosted video to use, or does this need to wait until a video asset is produced?",
+    "Footer 'Dashboard' link: should it point to the real /dashboard route, or be relabeled to match its current #features destination?",
+    "Should the now-possibly-unused 'categories' translation keys (sedan/suv/wagon/coupe/pickupEv) be removed from en.json/sv.json after the badges are removed, or left in place in case they're used elsewhere later?"
+  ],
+
+  "verification_before_done": [
+    "Screenshot of each hero card showing the category label removed and the image unchanged",
+    "Screenshot/recording proving 'Start Free Trial' now opens the real registration page",
+    "Screenshot of the new Pricing section showing real plans/prices, reachable via the #pricing anchor from Navbar and Footer",
+    "Screenshot of the working /about page reachable from the Footer",
+    "Screenshot of the working contact page/section reachable from the Footer",
+    "Screenshot/recording of the working demo video reachable via 'View Demo' and 'Book Demo'",
+    "A full link-by-link list confirming every nav/footer/CTA link resolves correctly (no 404s, no dead anchors)",
+    "`git diff --stat` proving no backend/** files and no dashboard files were touched",
+    "Confirmation that any new copy exists in both en.json and sv.json"
+  ],
+
+  "communication_rules": [
+    "Do not invent plan prices, contact details, company copy, or a demo video — use real data/assets or ask the user for them.",
+    "If a fix would require a backend change (e.g. a working contact form submitting to an API), stop and flag it rather than building a fake/non-functional version.",
+    "Report back after each major step (new page/section built) with a screenshot before moving to the next, so the user can course-correct early."
+  ]
+}

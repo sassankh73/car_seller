@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useAuth } from "@/context/AuthContext";
@@ -26,7 +27,7 @@ export default function DashboardNav({ active, planName }: DashboardNavProps) {
         href={href}
         className={`text-sm font-medium transition-colors ${
           isActive
-            ? "text-[#111111] border-b-2 border-[#e63946] pb-1"
+            ? "text-[#111111] border-b-2 border-[#CC2020] pb-1"
             : "text-[#888888] hover:text-[#111111]"
         }`}
       >
@@ -41,9 +42,15 @@ export default function DashboardNav({ active, planName }: DashboardNavProps) {
         <div className="flex justify-between h-14 items-center">
           {/* Left: logo + nav links */}
           <div className="flex items-center gap-7">
-            <Link href={`/${locale}`} className="text-[15px] font-bold text-[#111111] tracking-tight">
-              AutoStudio{" "}
-              <span className="text-[#e63946]">AI</span>
+            <Link href={`/${locale}`} className="flex items-center gap-2">
+              <Image
+                src="/autostudio-logo.svg"
+                alt="AutoStudio"
+                width={120}
+                height={22}
+                className="h-[22px] w-auto"
+                priority
+              />
             </Link>
             <div className="hidden md:flex items-center gap-6">
               {link(`/${locale}/dashboard`, "dashboard", t("navigation.projects"))}
@@ -53,7 +60,7 @@ export default function DashboardNav({ active, planName }: DashboardNavProps) {
               {user?.role === "ADMIN" && (
                 <Link
                   href={`/${locale}/admin/dashboard`}
-                  className="text-sm font-medium text-[#e63946] hover:text-red-700 transition-colors"
+                  className="text-sm font-medium text-[#CC2020] hover:text-red-700 transition-colors"
                 >
                   Admin
                 </Link>

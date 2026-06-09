@@ -1,0 +1,177 @@
+{
+  "project": "AutoStudio AI — Landing Page + Dashboard VISUAL/CSS Redesign (Design-Only Pass)",
+  "framing": "This is a DESIGN-ONLY pass. You are restyling existing pages, not rebuilding them. Do not rewrite components, do not change data flow, do not change routes.",
+  "hard_constraints": [
+    "Do NOT touch any backend code, API routes, services, or database logic (backend/** is off-limits).",
+    "Do NOT change the structure, layout architecture, components, or data wiring of the dashboard (the 3-column dashboard layout and its components — sidebar, studio grid, photo guide, upload zones, right panel — were already redesigned separately and must stay structurally as-is).",
+    "This pass is CSS / visual design / styling ONLY: colors, typography, spacing, radius, shadows, motion, tokens, responsive behavior. No new features, no new pages, no new data sources, no renamed props/routes.",
+    "All existing routes, links, auth-gated navigation, and i18n keys must keep working exactly as they do now.",
+    "Any new or changed UI copy must be added to BOTH frontend/messages/en.json and sv.json — never hardcoded."
+  ],
+  "ground_truth_rule": "Do not report anything as 'done' without pasting actual evidence: screenshots of the rendered pages at desktop AND mobile (375px) widths, a tsc --noEmit output with zero errors, and a git diff --stat proving only frontend style/markup-level files changed (no backend/**, no changes to dashboard component logic/data-fetching).",
+
+  "scope_pages": [
+    "Landing page (marketing/home page, whatever its current route is — verify the real path first)",
+    "Dashboard shell + all dashboard sub-pages: Billing, Settings, Account (visual restyle only — do not change their structure or logic, only their look)",
+    "Global design tokens (Tailwind config + globals.css :root variables) since the color clash lives there"
+  ],
+
+  "problems_to_fix": [
+    {
+      "id": 1,
+      "problem": "Flat, utilitarian look — plain white cards on flat gray, no depth, no motion. Feels like an internal tool, not a premium AI product.",
+      "fix": "Add depth via layered shadows (--shadow-card / --shadow-card-lg / --shadow-card-hover), soft ambient background gradient (cream → soft-lilac), and restrained motion (see Motion section). Cards should float, not sit flat."
+    },
+    {
+      "id": 2,
+      "problem": "Two clashing accent colors. Top-nav active state, the logo 'AI', and Account 'Edit' link are red, while Billing/Settings/Account buttons, badges, toggles, and sliders are purple/indigo.",
+      "fix": "Unify to ONE brand accent token `--accent` used everywhere (primary actions, active states, selection, focus rings). Remove the separate purple/indigo palette entirely from these surfaces. Update tailwind.config.js and globals.css so there is exactly one accent family, not a `red` palette plus a separate `accent: {coral, terracotta, gold}` plus indigo/purple utility classes scattered in pages."
+    },
+    {
+      "id": 3,
+      "problem": "Misleading progress bar. Account → Subscription shows 'Generations 0 (Unlimited)' as a full RED bar — reads like an error or maxed quota.",
+      "fix": "For unlimited plans (generations_limit <= 0): show NO filled bar — replace with an 'Unlimited' chip / ∞ symbol. Filled bars are only for real consumed/total ratios, and must never render danger-red for a normal/healthy state (use --accent or a neutral/positive tone, reserve red for genuine warning/error states ≥ ~85% usage)."
+    },
+    {
+      "id": 4,
+      "problem": "Data & copy bugs: pricing rows duplicate numbers ('1 1 studios included', '2 2 studios included', '3 3 studios included') and use awkward copy ('none support').",
+      "fix": "Fix the duplicate-number rendering in the Billing page so each row reads '1 studio included' / '2 studios included' / '3 studios included' (singular/plural handled correctly, number shown once). Map raw support_level values to proper display copy on the frontend ONLY — do not change backend values: none → 'No support', email → 'Email support', priority → 'Priority support', dedicated → 'Dedicated support'."
+    },
+    {
+      "id": 5,
+      "problem": "Inconsistent plan labels across pages ('Free' vs 'Premium (Enterprise)').",
+      "fix": "Establish a single source of truth for displaying the user's current plan name (one shared formatting/lookup used by Account, Billing, and Settings) so the same plan renders identically everywhere. Frontend display-layer fix only — do not change how the backend stores plan/tier data."
+    },
+    {
+      "id": 6,
+      "problem": "Inconsistent styling of form fields, button radius, and section spacing between Billing, Settings, and Account.",
+      "fix": "Unify via design tokens: one radius scale, one spacing rhythm (8px base, tiers 16/24/32/48), one set of input/button styles applied consistently across all three pages."
+    },
+    {
+      "id": 7,
+      "problem": "Numbered list used as a stepper with no progress feedback.",
+      "fix": "Replace with a real animated stepper: active dot fills with --accent plus a single gentle pulse on arrival, completed steps animate a checkmark, connector line fills as the user advances. Visual/motion change only — do not alter the underlying step logic or data."
+    },
+    {
+      "id": 8,
+      "problem": "Weak mobile adaptation on every page and the dashboard.",
+      "fix": "Apply the full responsive system described below to landing, billing, settings, account, and the dashboard shell — mobile-first, breakpoints 375 / 768 / 1024 / 1440, no horizontal scroll, ≥44px touch targets."
+    },
+    {
+      "id": 9,
+      "problem": "Dense, cramped right rail.",
+      "fix": "Restyle into calm bento-style cards with breathing room (varied spacing tiers, not one uniform gap) — visual restyle only, the rail's content/data sources stay exactly as they are."
+    }
+  ],
+
+  "design_vision": {
+    "summary": "Warm, minimalist, motion-light interface — a 'soft bento' layout. The feeling: a premium, modern AI studio — calm, confident, effortless. NOT a corporate SaaS table, NOT a neon hype gradient.",
+    "moodboard_cues": [
+      "Soft bento layout: content in large rounded cards on a grid with generous gaps; calm and scannable.",
+      "Warm, airy palette: a subtle cream → soft-lilac ambient background gradient behind crisp white cards, with a few pastel accent tiles (lemon, mint, peach, lilac) used sparingly — max 1–2 per view.",
+      "Big, confident typography: oversized, tight display headings/numerals (think a giant clock readout) paired with quiet, readable body text.",
+      "Floating pill controls: rounded nav, segmented toggles, soft switches that feel tactile.",
+      "Restrained motion: gentle fades, springy scale on press, staggered card entrances, smooth shared-element transitions between steps. Nothing flashy; nothing that blocks input."
+    ]
+  },
+
+  "look_human_designed_not_ai_generated": {
+    "note": "Read carefully — the result must look like a senior designer crafted it with intent, not a default AI/template output. Treat as hard requirements.",
+    "avoid_these_ai_tells": [
+      "Default purple/indigo → blue gradients, gradient-filled headings, glowing 'AI' gradients",
+      "Everything centered, everything the same size; three identical feature cards in a perfect row with generic round icons",
+      "Emoji used as icons or section bullets; generic sparkle/rocket/checkmark emoji decoration",
+      "Over-rounded blobs everywhere, heavy uniform drop shadows, glassmorphism on every surface",
+      "Placeholder/lorem text or vague filler copy ('Empower your workflow'); repeating the same icon for different things",
+      "Symmetric, evenly-spaced 'safe' layouts with no focal point; uniform 16px gaps everywhere with no rhythm",
+      "A wall of equal-weight text with no clear hierarchy; tiny gray-on-gray captions"
+    ],
+    "do_these_instead": [
+      "Opinionated hierarchy — one clear focal point per screen; deliberate size jumps (a genuinely large display heading vs. quiet body)",
+      "Intentional asymmetry & editorial layout — bento tiles of varied sizes, off-grid accents, content that breathes",
+      "Real, specific copy — concrete labels and microcopy, real plan names and numbers, never lorem",
+      "Consistent professional icon system — lucide only, uniform 1.5px stroke, outline style throughout, restrained tinted containers (no rainbow circles, no mixing filled/outline at the same level)",
+      "One or two memorable signature details (e.g. studio-card selected ring + glow, before/after slider handle, stepper connector that fills, pill toggle thumb) — not ten",
+      "Restraint with color — mostly neutral surfaces + warm ambient gradient; accent appears only where it means something (primary action, active state, selection); pastel tiles max 1–2 per view",
+      "Deliberate spacing rhythm — 8px scale with varied tiers (16/24/32/48) to group and separate, not one uniform gap",
+      "Typographic craft — tight tracking on big display text, comfortable line-height on body, tabular numerals for data, real font pairing",
+      "Considered empty/loading/error states — make these thoughtful, not lazy filler"
+    ],
+    "litmus_test": "If a screen could be any generic SaaS starter template, it's wrong. It should feel specific to AutoStudio — an automotive AI photo studio — calm, premium, and a little editorial."
+  },
+
+  "motion_spec": {
+    "global_rules": "Every animation conveys cause→effect. Animate only transform/opacity. Max 1–2 animated elements per view. Exits faster than entrances (~65%). Always honor prefers-reduced-motion (drop to instant/opacity-only). Never block input. Animations interruptible by tap/gesture.",
+    "patterns": [
+      "Page/step transitions: shared-element + directional. Forward = enter from below/right (fade + translateY 8px); back = reverse. Active step content cross-fades; stepper indicator slides.",
+      "Card entrances: staggered 30–50ms/item, translateY 12px→0 + fade, ease-out, base duration.",
+      "Option/studio/pricing cards: hover lift (translateY −2px + shadow-md); press scale 0.98 spring; on select → animated check badge (scale 0.6→1 spring) + accent ring draws in + soft accent-soft glow.",
+      "Buttons: press scale 0.97 spring; primary CTA subtle hover sheen (opacity-driven). Loading = swap label for inline spinner, keep width stable, disable.",
+      "Stepper: active dot fills accent + a single gentle pulse on arrival; completed steps animate a checkmark; connector line fills as you advance.",
+      "Upload dropzone: drag-over → animated dashed border + accent-soft tint + 4px icon bob. On drop → thumbnail scales in (0.9→1).",
+      "Processing: calm premium loading — shimmering skeleton of the result frame + soft indeterminate bar OR % counter (tabular numerals). NO hype spinner. Rotating reassurance copy.",
+      "Result reveal: before/after draggable comparison slider; AI result fades/scales in (0.98→1) when ready; Download button shows a one-time success checkmark flash after click.",
+      "Toasts: slide + fade from edge, auto-dismiss 3–5s, aria-live='polite', never steal focus.",
+      "Number changes (credits/usage): quick count-up with tabular figures so layout never jumps.",
+      "Theme toggle: crossfade surfaces; do not flash.",
+      "Segmented toggles (Monthly/Yearly): animated thumb slide between options."
+    ]
+  },
+
+  "layout_system": {
+    "desktop_1024_plus": "Sticky left workflow sidebar · centered content column (cards max-width ~880px) · right rail (usage + recent + upsell). Ambient gradient behind everything; cards float with shadow-md.",
+    "dashboard_bento": "Mixed card sizes (hero 'Start new project' + usage + recent projects + tips) on a responsive grid — visual restyle of existing cards only, do not change what data each card shows.",
+    "container": "Consistent max width; adaptive gutters: 16px mobile → 24px tablet → 32–48px desktop.",
+    "rhythm": "8px spacing base; vertical section tiers 16/24/32/48.",
+    "z_index_scale": "0 base · 10 sticky bars · 20 dropdowns · 40 drawers · 100 modals · 1000 toasts."
+  },
+
+  "mobile_responsive_required_for_all_pages_and_dashboard": {
+    "principles": "Mobile-first. Breakpoints 375 / 768 / 1024 / 1440. No horizontal scroll. Use min-h-dvh not 100vh. Respect safe areas (notch, Dynamic Island, home indicator). Test at 375px and landscape.",
+    "requirements": [
+      "Top nav → mobile: logo + avatar + hamburger; primary destinations in a bottom tab bar (max 5, icon + label, active highlighted, safe-area padding) OR a slide-in drawer.",
+      "Workflow stepper → mobile: compact 'Step X of 5' + segmented progress; sticky bottom Continue/Back bar (height ≥44px).",
+      "Studio / pricing grids → mobile: 2-up (or 1-up smallest); comfortable spacing.",
+      "Right rail → mobile: reflows below content as stacked cards (Usage first); Go Pro as a single card; nothing critical hidden.",
+      "Dashboard bento → mobile: single column, core content first, secondary content folded below.",
+      "Billing/Account tables & rows → mobile: stacked cards, never horizontal scroll.",
+      "Touch: targets ≥44×44px, ≥8px apart, touch-action: manipulation, feedback within 100ms, no hover-only actions.",
+      "Forms → mobile: input height ≥44px, semantic keyboards (email/tel/number), autofill attributes, password show/hide."
+    ]
+  },
+
+  "design_tokens_to_consolidate": {
+    "note": "Currently the codebase has a partial/conflicting token system (tailwind.config.js defines a separate `red` palette AND a separate `accent: {coral, terracotta, gold}` palette; globals.css defines both --accent-red and --accent-coral). Consolidate this into ONE coherent token system — this is itself part of fixing problem #2.",
+    "required_token_groups": [
+      "Single --accent (+ --accent-soft for tints/glows) — replacing both the red family and the coral/terracotta/gold family on these surfaces",
+      "Warm ambient background tokens (cream → soft-lilac gradient stops)",
+      "Neutral surface/text scale (keep consistent with existing charcoal/warm tones where they already work)",
+      "Radius scale, spacing scale (8/16/24/32/48), shadow scale (card / card-lg / card-hover)",
+      "Motion tokens (durations + easing curves) for the patterns listed above"
+    ]
+  },
+
+  "verification_before_done": [
+    "Screenshot or recording of the landing page at desktop width AND at 375px mobile width",
+    "Screenshot or recording of Billing, Settings, and Account pages at desktop AND 375px mobile width, showing the unified accent color and consistent styling",
+    "Screenshot of the Account 'Unlimited' usage state showing the chip/∞ instead of a full red bar",
+    "Screenshot of the Billing pricing rows showing corrected copy ('1 studio included', 'No support', etc., no duplicated numbers)",
+    "Screenshot of the dashboard shell restyled (NOT restructured) at desktop and mobile widths",
+    "`npx tsc --noEmit` output showing zero errors",
+    "`git diff --stat` proving: (a) no files under backend/** were touched, (b) no changes to dashboard component logic/data-fetching files — only style/markup-level changes in pages, globals.css, and tailwind.config.js",
+    "Confirmation that any new/changed copy exists in both en.json and sv.json"
+  ],
+
+  "final_step_instructions_for_claude_code": [
+    "After all visual changes are made and verified locally (screenshots + tsc + diff as listed above), STOP.",
+    "Do NOT run `git push`. Do NOT open a pull request. Do NOT push to GitHub.",
+    "Report back with: a summary of what was changed, the verification evidence listed above, and the exact `git status` / `git diff --stat` output.",
+    "Then explicitly WAIT for the user's permission before pushing anything to GitHub. The user will review the local result first and give a clear go-ahead before any push happens."
+  ],
+
+  "communication_rules": [
+    "If you discover that fixing the accent-color clash properly requires editing tailwind.config.js / globals.css in a way that affects pages outside this list, say so explicitly before doing it — don't silently expand scope.",
+    "If something the brief asks for would require touching backend code or restructuring the dashboard, stop and flag it — do not work around the constraint by changing scope quietly.",
+    "Do not claim a step is done without pasting the actual evidence (screenshot, command output) in the same message."
+  ]
+}

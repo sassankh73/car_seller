@@ -227,7 +227,7 @@ export default function SettingsPage() {
                 <p className="text-amber-700 text-sm">{t("freeUserWarning")}</p>
                 <Link
                   href={`/${locale}/dashboard/billing`}
-                  className="inline-block mt-3 px-4 py-2 bg-[#e63946] hover:bg-[#c8303b] text-white rounded-lg text-sm font-medium transition"
+                  className="inline-block mt-3 px-4 py-2 bg-[#CC2020] hover:bg-[#991818] text-white rounded-lg text-sm font-medium transition"
                 >
                   {t("upgradeToPro")}
                 </Link>
@@ -245,7 +245,7 @@ export default function SettingsPage() {
                     onClick={() => canUseLogo && fileInputRef.current?.click()}
                     className={`border-2 border-dashed rounded-lg p-6 text-center transition ${
                       canUseLogo
-                        ? "border-stone-300 hover:border-[#e63946] cursor-pointer"
+                        ? "border-stone-300 hover:border-[#CC2020] cursor-pointer"
                         : "border-stone-200 opacity-50 cursor-not-allowed"
                     }`}
                   >
@@ -304,7 +304,7 @@ export default function SettingsPage() {
                           value={option.value}
                           checked={logoPlacement === option.value}
                           onChange={(e) => handlePlacementChange(e.target.value)}
-                          className="w-4 h-4 text-[#e63946] bg-stone-100 border-stone-300 focus:ring-[#e63946]"
+                          className="w-4 h-4 text-[#CC2020] bg-stone-100 border-stone-300 focus:ring-[#CC2020]"
                           disabled={!canUseLogo}
                         />
                         <span className="text-stone-700 text-sm">{option.label}</span>
@@ -326,7 +326,7 @@ export default function SettingsPage() {
                         value={logoScale}
                         onChange={(e) => handleScaleChange(parseFloat(e.target.value))}
                         disabled={!canUseLogo}
-                        className="flex-1 h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-[#e63946] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-[#CC2020] disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <span className="text-xs text-stone-400 w-10 text-right">{t("logoScale.large")}</span>
                     </div>
@@ -396,7 +396,7 @@ export default function SettingsPage() {
                     type="text"
                     value={profileName}
                     onChange={(e) => setProfileName(e.target.value)}
-                    className="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#e63946]"
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#CC2020]"
                   />
                 </div>
                 <div>
@@ -405,7 +405,7 @@ export default function SettingsPage() {
                     type="email"
                     value={profileEmail}
                     onChange={(e) => setProfileEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#e63946]"
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#CC2020]"
                   />
                 </div>
               </div>
@@ -416,7 +416,7 @@ export default function SettingsPage() {
                 className={`px-6 py-3 rounded-lg font-semibold transition ${
                   loading
                     ? "bg-stone-200 text-stone-400 cursor-not-allowed"
-                    : "bg-[#e63946] hover:bg-[#c8303b] text-white"
+                    : "bg-[#CC2020] hover:bg-[#991818] text-white"
                 }`}
               >
                 {loading ? profileT("saving") : profileT("saveChanges")}

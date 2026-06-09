@@ -23,7 +23,7 @@ function StepCircle({ state }: { state: StepState }) {
   }
   if (state === "active") {
     return (
-      <div className="w-5 h-5 rounded-full bg-[#e63946] flex items-center justify-center flex-shrink-0 ring-2 ring-red-200">
+      <div className="w-5 h-5 rounded-full bg-[#CC2020] flex items-center justify-center flex-shrink-0 ring-2 ring-red-200">
         <div className="w-1.5 h-1.5 rounded-full bg-white" />
       </div>
     );
@@ -72,7 +72,7 @@ export default function WorkflowSidebar({
                 <div className="relative">
                   {/* Left accent bar — absolute so it doesn't shift circle alignment */}
                   {state === "active" && (
-                    <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full bg-[#e63946]" />
+                    <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full bg-[#CC2020]" />
                   )}
                   <div
                     className={`flex items-center gap-2 py-2 pl-3 pr-2 rounded-r-lg transition-colors ${
@@ -83,7 +83,7 @@ export default function WorkflowSidebar({
                     <span
                       className={`text-[11px] font-bold flex-shrink-0 w-3 ${
                         state === "active"
-                          ? "text-[#e63946]"
+                          ? "text-[#CC2020]"
                           : state === "completed"
                           ? "text-emerald-500"
                           : "text-[#cccccc]"
@@ -94,7 +94,7 @@ export default function WorkflowSidebar({
                     <span
                       className={`text-[11px] leading-tight ${
                         state === "active"
-                          ? "text-[#e63946] font-semibold"
+                          ? "text-[#CC2020] font-semibold"
                           : state === "completed"
                           ? "text-emerald-600 font-medium"
                           : "text-[#999999]"

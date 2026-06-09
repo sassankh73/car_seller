@@ -224,7 +224,7 @@ export default function BillingPage() {
                 <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
                   <div
                     className={`h-full transition-all ${
-                      usage.generation_count / usage.generations_limit > 0.85 ? "bg-red-500" : "bg-[#e63946]"
+                      usage.generation_count / usage.generations_limit > 0.85 ? "bg-red-500" : "bg-[#CC2020]"
                     }`}
                     style={{ width: `${Math.min(100, (usage.generation_count / usage.generations_limit) * 100)}%` }}
                   />
@@ -240,7 +240,7 @@ export default function BillingPage() {
             <button
               onClick={() => setBillingCycle("monthly")}
               className={`px-6 py-2 rounded-md font-medium transition ${
-                billingCycle === "monthly" ? "bg-[#e63946] text-white" : "text-stone-600 hover:text-stone-900"
+                billingCycle === "monthly" ? "bg-[#CC2020] text-white" : "text-stone-600 hover:text-stone-900"
               }`}
             >
               {t("billingCycle.monthly")}
@@ -248,7 +248,7 @@ export default function BillingPage() {
             <button
               onClick={() => setBillingCycle("yearly")}
               className={`px-6 py-2 rounded-md font-medium transition flex items-center ${
-                billingCycle === "yearly" ? "bg-[#e63946] text-white" : "text-stone-600 hover:text-stone-900"
+                billingCycle === "yearly" ? "bg-[#CC2020] text-white" : "text-stone-600 hover:text-stone-900"
               }`}
             >
               {t("billingCycle.yearly")}
@@ -274,15 +274,15 @@ export default function BillingPage() {
                 key={plan.tier}
                 className={`relative rounded-2xl p-8 border transition-all ${
                   isCurrentPlan
-                    ? "bg-red-50 border-[#e63946]/50"
+                    ? "bg-red-50 border-[#CC2020]/50"
                     : isPopular
-                      ? "bg-white border-[#e63946] shadow-xl shadow-red-100"
+                      ? "bg-white border-[#CC2020] shadow-xl shadow-red-100"
                       : "bg-white border-stone-200 shadow-sm"
                 }`}
               >
                 {isPopular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-[#e63946] text-white text-sm font-medium px-4 py-1 rounded-full">
+                    <span className="bg-[#CC2020] text-white text-sm font-medium px-4 py-1 rounded-full">
                       {t("plans.professional.mostPopular")}
                     </span>
                   </div>
@@ -337,7 +337,7 @@ export default function BillingPage() {
                   className={`w-full py-3 rounded-lg font-semibold transition ${
                     isCurrentPlan
                       ? "bg-stone-200 text-stone-400 cursor-not-allowed"
-                      : "bg-[#e63946] hover:bg-[#c8303b] text-white"
+                      : "bg-[#CC2020] hover:bg-[#991818] text-white"
                   }`}
                 >
                   {checkoutLoading === plan.tier ? (

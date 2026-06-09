@@ -4,6 +4,19 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        brand: {
+          DEFAULT: "#CC2020",
+          dark: "#991818",
+          light: "#E53535",
+        },
+        surface: {
+          DEFAULT: "#1a1a1a",
+          raised: "#242424",
+          base: "#0f0f0f",
+        },
+        border: {
+          DEFAULT: "#2e2e2e",
+        },
         charcoal: {
           900: "#1A1A1A",
           800: "#222222",
@@ -16,10 +29,10 @@ module.exports = {
           100: "#F5F5F5",
         },
         red: {
-          700: "#a32733",
-          600: "#c8303b",
-          500: "#e63946",
-          400: "#f05060",
+          700: "#991818",
+          600: "#991818",
+          500: "#CC2020",
+          400: "#E53535",
           300: "#f88a93",
           200: "#fbb8bc",
           100: "#fde8ea",
@@ -33,19 +46,26 @@ module.exports = {
           clay: "#E8DDD4",
         },
         accent: {
-          DEFAULT: "#e63946",
-          hover: "#c8303b",
-          soft: "rgba(230, 57, 70, 0.08)",
+          DEFAULT: "#CC2020",
+          hover: "#991818",
+          soft: "rgba(204, 32, 32, 0.08)",
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
-        display: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        sans: ["Fira Sans", "system-ui", "-apple-system", "sans-serif"],
+        display: ["Fira Sans", "system-ui", "-apple-system", "sans-serif"],
+        mono: ["Fira Code", "ui-monospace", "monospace"],
+        heading: ["Fira Code", "ui-monospace", "monospace"],
       },
       borderRadius: {
+        sm: "6px",
+        md: "8px",
+        lg: "12px",
+        xl: "16px",
         "2xl": "16px",
         "3xl": "24px",
         "4xl": "32px",
+        full: "9999px",
       },
       boxShadow: {
         "card-sm":
@@ -55,7 +75,13 @@ module.exports = {
           "0 10px 25px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.03)",
         "card-hover":
           "0 12px 30px rgba(0, 0, 0, 0.07), 0 6px 12px rgba(0, 0, 0, 0.04)",
-        "red-glow": "0 0 20px rgba(214, 40, 40, 0.15), 0 0 40px rgba(214, 40, 40, 0.05)",
+        "brand-glow": "0 0 20px rgba(204, 32, 32, 0.15), 0 0 40px rgba(204, 32, 32, 0.05)",
+        "red-glow": "0 0 20px rgba(204, 32, 32, 0.15), 0 0 40px rgba(204, 32, 32, 0.05)",
+      },
+      transitionDuration: {
+        fast: "150",
+        normal: "200",
+        slow: "300",
       },
       animation: {
         "fade-in": "fadeIn 0.8s ease-out forwards",
@@ -95,7 +121,7 @@ module.exports = {
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
         "hero-warm":
-          "radial-gradient(ellipse at 70% 30%, rgba(214, 40, 40, 0.04) 0%, transparent 50%), radial-gradient(ellipse at 30% 70%, rgba(214, 108, 86, 0.04) 0%, transparent 50%)",
+          "radial-gradient(ellipse at 70% 30%, rgba(204, 32, 32, 0.04) 0%, transparent 50%), radial-gradient(ellipse at 30% 70%, rgba(204, 32, 32, 0.04) 0%, transparent 50%)",
         "dot-warm":
           "radial-gradient(rgba(0, 0, 0, 0.04) 0.5px, transparent 0.5px)",
       },
@@ -108,6 +134,13 @@ module.exports = {
         30: "7.5rem",
       },
       fontSize: {
+        xs: "11px",
+        sm: "13px",
+        base: "14px",
+        md: "16px",
+        lg: "18px",
+        xl: "22px",
+        "2xl": "28px",
         hero: [
           "clamp(2.5rem, 5vw, 4.25rem)",
           { lineHeight: "1.08", letterSpacing: "-0.03em", fontWeight: "600" },

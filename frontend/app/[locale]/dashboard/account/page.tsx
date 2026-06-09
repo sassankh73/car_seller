@@ -188,7 +188,7 @@ export default function AccountPage() {
       case "ADMIN":
         return { label: "Admin", classes: "bg-red-500/20 text-red-400 border-red-500/30" };
       case "PREMIUM":
-        return { label: "Premium", classes: "bg-red-50 text-[#e63946] border-red-200" };
+        return { label: "Premium", classes: "bg-red-50 text-[#CC2020] border-red-200" };
       default:
         return { label: "Free", classes: "bg-gray-500/20 text-gray-400 border-gray-500/30" };
     }
@@ -471,7 +471,7 @@ export default function AccountPage() {
                               className={`h-full rounded-full transition-all ${
                                 accountData.usage.generation_count / accountData.usage.generations_limit > 0.85
                                   ? "bg-red-500"
-                                  : "bg-[#e63946]"
+                                  : "bg-[#CC2020]"
                               }`}
                               style={{
                                 width: `${Math.min(100, (accountData.usage.generation_count / accountData.usage.generations_limit) * 100)}%`,

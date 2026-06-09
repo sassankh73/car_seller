@@ -1,0 +1,101 @@
+{
+  "project": "AutoStudio AI — Guided Vehicle Capture: Full Mobile Workflow Fix",
+  "framing": "Complete redesign + bug-fix pass on the guided capture system (components/GuidedCapture.tsx, components/GuidedCaptureOverlay.tsx, hooks/useCameraCapture.ts) plus related account/admin issues. This note adds pre-checks and feasibility flags based on what's actually in the codebase today — read these BEFORE starting so effort isn't wasted on assumptions that don't match reality.",
+  "ground_truth_rule": "This project has a history of 'done/fixed/deployed' claims that turned out false. Every item below must be proven with pasted command output and/or screenshots in the same message it's reported as complete — not restated as a claim.",
+  "scope_constraints": [
+    "Frontend-first. Touch backend ONLY where explicitly listed below (item 10 admin bug, item 8 persistence endpoints if they don't exist) — and even then, keep changes minimal and additive (new endpoints/columns), do not rewrite existing business logic.",
+    "Do not break existing auth, routing, i18n, or the dashboard layout that was separately redesigned.",
+    "All new UI copy goes into both en.json and sv.json — no hardcoded strings."
+  ],
+
+  "pre_checks_before_coding": [
+    "CONFIRMED: the current capture flow is exactly 4 steps (id step1-step4: 'Front Left 45°', 'Side View', 'Rear Left 45°', 'Rear or Front View'), defined in components/GuidedCaptureOverlay.tsx around line 18 as `export const CAPTURE_STEPS`. Expanding to 6 means editing this array (and its i18n keys) — not a deep architecture change.",
+    "CONFIRMED: the silhouette guides are hand-drawn SVG <path> shapes with red dashed strokes (stroke='#ef4444', strokeDasharray='5,5') defined per positionType inside GuidedCaptureOverlay.tsx (~line 209 onward) — replacing them means writing new SVG/guide-shape definitions per the new spec (square for front/rear, horizontal rectangle for sides, dedicated perspective shape for 45° angles), not swapping an image asset.",
+    "IMPORTANT FEASIBILITY FLAG — 'real validation' (item 3): the overlay component already HAS a feedback/messaging system wired for a `validationResult` object (vehicleDetected, vehicleSize, vehicleCentered, cameraAngle, wheelsVisible, horizonLevel — see GuidedCaptureOverlay.tsx ~line 100-195), but grep found NO code anywhere that actually PRODUCES a `validationResult` — it is always undefined, so all that feedback UI is currently dead/unreachable. Building 'real' detection (vehicle present/centered/sized/fits-guide from a live camera frame) requires an actual computer-vision model running client-side (e.g. TensorFlow.js / ONNX runtime / a vehicle-detection model) or a backend inference call per frame. This is a SIGNIFICANT scope item — Claude Code must explicitly confirm with the user which approach to take (client-side ML model vs. backend inference vs. simpler heuristic-based checks) BEFORE building it, rather than silently picking one or faking it with placeholder logic.",
+    "CONFIRMED: there is currently ZERO persistence layer for in-progress captures — no IndexedDB, no localStorage, no sessionStorage usage anywhere in the capture code. The 'lost photos on refresh' bug (item 4) is real and explained simply: captured images live only in React state (`useState<CapturedImage[]>`) with no storage backing at all.",
+    "CONFIRMED: `useCameraCapture.ts` already calls `enumerateDevices()` and supports `facingMode` ('user'/'environment') and device switching — there is a partial foundation for camera selection (item 6), but no UI exposing Rear Wide / Ultra Wide / Telephoto / Front choices to the user, and no persistence of the chosen camera between steps. This is a UI + state-memory addition on top of an existing hook, not a from-scratch build.",
+    "CONFIRMED: the admin 'Failed to load users' bug (item 10) — the frontend calls `/api/admin/users/search` and the backend route exists at `backend/app/api/admin.py` line 233 (`search_users`). The error is a generic catch-all ('Failed to load users' is thrown whenever `response.ok` is false), so the actual root cause (auth/permission failure, response-model validation mismatch, a query exception, etc.) is NOT yet known — Claude Code must inspect the actual network response/error (status code + response body, and backend logs) to find the real cause before changing anything. Do not guess-patch this."
+  ],
+
+  "tasks": [
+    {
+      "id": "TASK-1",
+      "title": "Expand capture flow from 4 to 6 required photos",
+      "requirement": "Replace the CAPTURE_STEPS array (GuidedCaptureOverlay.tsx) with this exact 6-step sequence: 1) Front Left 45°, 2) Left Side, 3) Rear Left 45°, 4) Rear View, 5) Right Side, 6) Front View. Each step needs its own id, title, subtitle ('Step N of 6'), description, requirements list, and positionType. The workflow must not allow completion/finish until all 6 are captured and stored. Update the progress indicator everywhere it appears to read 'Step 1 of 6' through 'Step 6 of 6'. Add/update all new copy in en.json AND sv.json — do not hardcode."
+    },
+    {
+      "id": "TASK-2",
+      "title": "Replace decorative silhouette guides with real framing-target guides",
+      "requirement": "Remove the current red dashed decorative vehicle outline. Build framing guides that represent the actual target framing per angle: Front View = large centered square (vehicle fits inside, mirrors + wheels visible, centered); Rear View = same square treatment; Side Views (left/right) = large horizontal rectangle showing full vehicle length with both wheels visible, vehicle centered; 45° views = a dedicated perspective guide where the vehicle should fill roughly 75-90% of the guide area. These are functional framing targets, not decoration — design them to actually communicate where/how large the vehicle should appear in frame."
+    },
+    {
+      "id": "TASK-3",
+      "title": "Build real pre-capture validation (requires a decision first — see feasibility flag above)",
+      "requirement": "Before allowing capture, detect: vehicle present, vehicle centered, vehicle size acceptable, vehicle fits the guide for that angle. Show live feedback (✓ Vehicle detected / ✓ Vehicle centered / ✗ Move closer / ✗ Move left / ✗ Vehicle too small, etc. — the message scaffolding for this already exists in GuidedCaptureOverlay.tsx and can be reused). The capture button must stay disabled until minimum requirements are met.",
+      "must_do_first": "STOP and confirm with the user which detection approach to use — client-side ML model (e.g. TensorFlow.js with a vehicle/object-detection model), a backend inference endpoint that scores frames, or a simpler heuristic approach (e.g. edge/contour-based size & position estimation). Each has very different performance, accuracy, and implementation cost on mobile Safari. Do not silently choose one, and do not ship fake/random validation results that merely look real."
+    },
+    {
+      "id": "TASK-4",
+      "title": "Fix lost-photo bug with persistent storage",
+      "requirement": "Implement persistent storage so captured images survive closing Safari, locking the phone, switching apps, or refreshing. Use IndexedDB as the primary store (with localStorage as a fallback only if IndexedDB is unavailable). Store each captured image immediately upon capture — not just in React state. On return to the page, detect an in-progress session and show a 'Resume previous capture session?' prompt; if accepted, restore all previously captured steps exactly as they were."
+    },
+    {
+      "id": "TASK-5",
+      "title": "Fix the 'only 3 of 6 photos saved' bug",
+      "requirement": "Audit the full capturedImages array lifecycle end to end — state updates, the step-advance logic, and whatever persists/submits the final set. Verify capturedImages.length progresses 1→2→3→4→5→6 with no step ever overwriting a previous one (the existing code comment at GuidedCapture.tsx ~line 89-90 already flags a likely stale-closure bug: 'setCapturedImages schedules a re-render but does not mutate capturedImages in this closure' — start there, this is almost certainly the root cause). Confirm all 6 photos are present and distinct before allowing the user to proceed to processing."
+    },
+    {
+      "id": "TASK-6",
+      "title": "Fix camera selection (wrong lens used on iPhone)",
+      "requirement": "Build a camera-selection UI on top of the existing enumerateDevices()/facingMode foundation in useCameraCapture.ts. Enumerate and label available cameras as Rear Wide / Rear Ultra Wide / Rear Telephoto / Front (map from device labels/capabilities — iOS exposes these via device label strings and/or getCapabilities()). Default to Rear Wide. If an Ultra Wide camera is available, let the user switch to it. Remember the chosen camera across all 6 steps (persist the selection in component/session state, not per-step)."
+    },
+    {
+      "id": "TASK-7",
+      "title": "Fix mobile overlay blocking the camera image",
+      "requirement": "Mobile overlay must be transparent with no large dark panels — guide must be clearly visible through it. Replace any blocking dark panels with a small floating status indicator. Capture/navigation buttons must be fixed to the bottom, always readable against the live camera feed, and meet large-touch-target sizing (≥44×44px). Test and screenshot at: iPhone Safari 390×844, Android Chrome 400×683, and Tablet 768×1024."
+    },
+    {
+      "id": "TASK-8",
+      "title": "Persist generated results to the user's account / project history",
+      "requirement": "Every generated image must be stored and retrievable. Build/confirm a persistent project history that stores: original captures, processed outputs, creation date, background used, and studio used. From the dashboard, the user must always be able to View, Download, Delete, and Regenerate from this history. If the existing /api/projects endpoint and data model already cover this, wire the UI to it (do not duplicate); if fields are missing (e.g. background/studio metadata isn't currently stored per result), flag exactly what's missing and confirm with the user before adding backend fields/migrations — keep any backend changes minimal and additive."
+    },
+    {
+      "id": "TASK-9",
+      "title": "Verify and complete logo branding integration per plan tier",
+      "requirement": "Confirm and fix branding behavior per tier: FREE = AutoStudio watermark applied; STARTER = no watermark; PRO = custom logo appears on the studio wall, no watermark; ENTERPRISE = full branding controls. Verify logo upload works, logo preview works, and the uploaded logo actually appears in the final generated image — not just in the settings preview. The branding settings UI exists in dashboard/settings but per the brief is 'not fully integrated' — trace the full path from upload → storage → render-time application and fix any broken links in that chain. Do not change the underlying tier/business-rule logic without confirming with the user — only fix the integration/wiring."
+    },
+    {
+      "id": "TASK-10",
+      "title": "Fix admin user-management 'Failed to load users' bug",
+      "requirement": "The frontend calls /api/admin/users/search (route exists in backend/app/api/admin.py:233). 'Failed to load users' is a generic error shown whenever the response isn't OK — the actual cause is unknown. FIRST capture the real failure: open browser devtools / check network tab for the actual HTTP status code and response body, and check backend logs for any exception trace at that moment. Only after identifying the real cause (could be an auth/permission check, a Pydantic response-model validation error, a query exception, a CORS issue, etc.) should a fix be made. Then verify the admin dashboard's user count and the user-management list both query the same underlying data and show matching results."
+    }
+  ],
+
+  "testing_and_verification": {
+    "build_and_run": [
+      "docker compose down",
+      "docker compose build --no-cache",
+      "docker compose up -d"
+    ],
+    "must_confirm_healthy": ["postgres", "backend", "frontend", "rembg"],
+    "evidence_required": [
+      "Screenshots of all 6 capture steps in sequence, each showing the correct guide shape for its angle",
+      "Screenshots from mobile Safari (390x844) showing the transparent overlay, visible guide, and fixed bottom buttons",
+      "Screenshots from Android Chrome (400x683) and Tablet (768x1024) of the same",
+      "Screenshot/recording proving capturedImages.length reaches 6 and all 6 are distinct (e.g. a debug overlay or console log captured on screen)",
+      "Screenshot/recording proving the 'Resume previous capture session?' prompt appears and restores prior captures after a refresh/app-switch",
+      "Screenshots of the camera-selection UI showing Rear Wide / Ultra Wide / Telephoto / Front options and the remembered selection across steps",
+      "Screenshots of branding settings for at least FREE and PRO tiers, plus a generated image showing the watermark (FREE) or custom logo (PRO) actually applied",
+      "Screenshot of the working user-management page listing users, alongside the admin dashboard's user count, showing they match",
+      "Screenshot/confirmation that processed images appear in the user's project history with View/Download/Delete/Regenerate all functional"
+    ]
+  },
+
+  "communication_rules": [
+    "Do not start TASK-3 (real validation) until the detection-approach question has been put to the user and answered.",
+    "Do not start TASK-10 (admin bug) by guessing — paste the actual error/status/log evidence first, THEN propose and apply a fix.",
+    "If TASK-8 requires new backend fields or storage beyond what already exists, stop and confirm with the user before adding them.",
+    "Do not report any task as done without the screenshots/evidence specified above in the same message.",
+    "Build, run, and verify the entire workflow end-to-end after coding — do not stop at 'code complete'."
+  ]
+}

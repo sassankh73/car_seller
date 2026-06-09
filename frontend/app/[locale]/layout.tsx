@@ -9,6 +9,7 @@ import AuthProviderWrapper from "../../components/AuthProviderWrapper";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: "#CC2020",
 };
 
 export function generateStaticParams() {
@@ -34,6 +35,14 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="bg-white min-h-screen flex flex-col">
         <NextIntlClientProvider messages={messages}>
           <AuthProviderWrapper>

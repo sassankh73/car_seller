@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useTranslations, useLocale } from "next-intl";
 import LanguageSwitcher from "../LanguageSwitcher";
 
@@ -28,14 +29,16 @@ export default function Navbar() {
     >
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
         <div className="flex items-center justify-between h-16 lg:h-18">
-          {/* Logo — dual color */}
-          <Link href={`/${locale}`} className="flex items-center gap-0 select-none">
-            <span className="text-xl font-bold tracking-tight text-charcoal-900">
-              Auto
-            </span>
-            <span className="text-xl font-bold tracking-tight text-red-500">
-              Studio
-            </span>
+          {/* Logo */}
+          <Link href={`/${locale}`} className="flex items-center select-none">
+            <Image
+              src="/autostudio-logo.svg"
+              alt="AutoStudio"
+              width={130}
+              height={24}
+              className="h-[24px] w-auto"
+              priority
+            />
           </Link>
 
           {/* Center — Nav links */}

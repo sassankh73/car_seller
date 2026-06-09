@@ -1,0 +1,62 @@
+{
+  "project": "AutoStudio AI — PERMANENT fix for 'VPS still shows old dashboard'",
+  "framing": "This is not a code bug. It is a BRANCH/DEPLOYMENT PIPELINE problem, and it has been confirmed at the git level. Read the root_cause section before doing anything — fixing the wrong thing again is how this loop has repeated.",
+  "root_cause_confirmed": {
+    "finding": "All recent dashboard/redesign work — the 3-column dashboard redesign, accent-token unification, billing/account fixes, landing page fixes, and the 6-step guided capture rebuild (10 commits, latest = '2504087 feat: guided capture 6-step flow...') — exists ONLY on the branch `fix/dashboard-redesign`. It has NEVER been merged into `main`.",
+      "evidence": "`git log origin/main..origin/fix/dashboard-redesign --oneline` lists all 10 of these commits as present on the feature branch and absent from `main`. `origin/main`'s latest commits are old work ('Fix dashboard process', 'Redsigne front page', etc. from the stable-vps-backup merge).",
+    "why_this_causes_the_loop": "DEPLOYMENT.md documents the VPS process as `git clone <repo> → docker compose up -d --build` — i.e. it runs whatever the default branch (`main`) contains. Every rebuild/redeploy on the VPS pulls `main`, which still has the OLD dashboard, regardless of how much work has been done on `fix/dashboard-redesign`. This is why 'we keep having the same problem' — the fix has never been on the branch the server actually deploys from."
+  },
+
+  "the_one_time_fix": {
+    "principle": "Make the branch that contains the new dashboard become the branch the VPS deploys — permanently — and add a verification step so a mismatch can never silently persist again.",
+    "steps": [
+      {
+        "step": 1,
+        "title": "Confirm exactly which branch is currently checked out and running on the VPS",
+        "action": "SSH into the VPS and run `cd /path/to/car_seller && git branch --show-current && git log -1 --oneline && git status`. This proves — with actual command output, not assumption — what commit is actually live right now. Paste the raw output."
+      },
+      {
+        "step": 2,
+        "title": "Merge the working dashboard branch into main (the branch that gets deployed)",
+        "action": "On the local/dev machine: `git checkout main && git pull origin main && git merge fix/dashboard-redesign` (resolve any conflicts carefully — do not force anything). Then `git push origin main`. This is the permanent fix for the branch mismatch: from this point forward, the dashboard work lives on the branch the deploy process actually uses.",
+        "rule": "Do NOT force-push, do NOT rebase main, do NOT delete the feature branch yet (keep it until the merge is verified live). If the merge has conflicts that aren't trivial, STOP and report them — do not auto-resolve blindly on a production-facing branch."
+      },
+      {
+        "step": 3,
+        "title": "Redeploy the VPS from the now-updated main, with zero cache",
+        "action": "SSH to the VPS and run: `cd /path/to/car_seller && git checkout main && git fetch origin && git reset --hard origin/main && docker compose down && docker compose build --no-cache frontend backend && docker compose up -d && sleep 5 && docker compose ps`. The `--no-cache` is mandatory — a cached layer is a classic cause of 'I deployed but nothing changed'."
+      },
+      {
+        "step": 4,
+        "title": "Prove the live site matches the new commit — not just that containers restarted",
+        "action": "Run and paste raw output of: `git log -1 --oneline` (on the VPS, confirms which commit is checked out) AND `curl -s https://autostudio.cc/en/dashboard | grep -i 'studio\\|workflow\\|step'` (confirms the NEW dashboard markup is actually being served, not cached HTML). A restarted container serving old code is indistinguishable from a working deploy unless you check the actual served content — this step is what has been missing every time before.",
+        "rule": "If the curl output doesn't show the new dashboard's markup, the deploy did NOT work — say so plainly, do not report success."
+      },
+      {
+        "step": 5,
+        "title": "Set `main` as the one and only branch the VPS ever deploys from, going forward",
+        "action": "Update DEPLOYMENT.md (and any deploy scripts) to explicitly state: 'The VPS always deploys from `main`. All feature work must be merged into `main` and verified locally BEFORE any VPS deploy is attempted. Never deploy a feature branch directly to production, and never let production drift onto a branch that isn't `main`.' This single rule is what prevents the recurrence — as long as it's followed, 'wrong branch on the VPS' becomes structurally impossible."
+      },
+      {
+        "step": 6,
+        "title": "Add a standing 'deployed-version' check so drift is caught immediately, not discovered weeks later",
+        "action": "Add a small, visible build/version marker (e.g. the short git commit hash) somewhere it can be checked at a glance — for example in the admin dashboard footer, or a simple `/api/version` endpoint returning the running commit hash. After every future deploy, the user (or Claude Code) can compare this against `git log -1 --oneline` on `main` to instantly confirm the live site matches what was just pushed — no more guessing whether a deploy 'took'."
+      }
+    ]
+  },
+
+  "definition_of_permanently_fixed": [
+    "git log -1 on the VPS shows the SAME commit hash as origin/main's HEAD",
+    "curl against the live URL shows the NEW dashboard markup (not cached/old HTML)",
+    "DEPLOYMENT.md explicitly states main is the only branch ever deployed to the VPS",
+    "A version marker exists that lets anyone verify, in seconds, that the live site matches the latest main commit",
+    "fix/dashboard-redesign and any other stale feature branches are merged (or explicitly closed/abandoned) so no future deploy can accidentally diverge onto them again"
+  ],
+
+  "communication_rules": [
+    "Do not report this as fixed without pasting: (a) the VPS git log -1 output, (b) the curl output proving new markup is served, and (c) the version-marker comparison.",
+    "If the merge from fix/dashboard-redesign into main has non-trivial conflicts, stop and show them — do not resolve blindly on a branch that feeds production.",
+    "If SSH or any step fails, say so plainly and explain exactly what is blocking it and what the user needs to do — do not silently skip ahead and claim completion.",
+    "This is meant to be the LAST TIME this specific problem needs fixing — treat step 5 (the deploy-from-main rule) and step 6 (the version marker) as just as important as the merge itself, since skipping them is exactly how the loop restarts."
+  ]
+}
