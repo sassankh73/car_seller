@@ -940,6 +940,79 @@
       "loadProjects": "Failed to load user projects"
     }
   },
+  "editor": {
+    "nav": {
+      "myTickets": "My Tickets",
+      "myProfile": "My Profile",
+      "editorPortal": "Editor Portal"
+    },
+    "tickets": {
+      "title": "My Tickets",
+      "empty": "No tickets assigned yet",
+      "filterAll": "All",
+      "filterOpen": "Open",
+      "filterInProgress": "In Progress",
+      "filterReview": "In Review",
+      "filterDone": "Done",
+      "priority": {
+        "low": "Low",
+        "normal": "Normal",
+        "high": "High",
+        "urgent": "Urgent"
+      },
+      "status": {
+        "open": "Open",
+        "in_progress": "In Progress",
+        "review": "In Review",
+        "done": "Done",
+        "rejected": "Rejected"
+      },
+      "overdue": "Overdue",
+      "dueDate": "Due",
+      "createdAt": "Created",
+      "assignedTo": "Assigned To",
+      "instructions": "Admin Instructions",
+      "noInstructions": "No instructions provided",
+      "originalImage": "Original Image",
+      "downloadOriginal": "Download Original",
+      "uploadResult": "Upload Result",
+      "uploadResultHint": "Drag and drop or click to upload your edited image (JPEG or PNG)",
+      "resultPreview": "Result Preview",
+      "editorNote": "Your Note (optional)",
+      "editorNotePlaceholder": "Add a note for the admin...",
+      "submitResult": "Submit for Review",
+      "submitResultDisabled": "Upload your result first",
+      "notesTitle": "Notes",
+      "addNote": "Add Note",
+      "notePlaceholder": "Write a note...",
+      "postNote": "Post Note"
+    },
+    "admin": {
+      "dashboardTitle": "Editor Portal",
+      "totalOpen": "Open",
+      "totalInProgress": "In Progress",
+      "awaitingReview": "Awaiting Review",
+      "completedThisWeek": "Completed This Week",
+      "createTicket": "Create Ticket",
+      "editorsTitle": "Manage Editors",
+      "promoteUser": "Promote to Editor",
+      "demoteEditor": "Demote to User",
+      "demoteConfirm": "This will unassign all open tickets. Continue?",
+      "internalNote": "Internal — not visible to editor",
+      "markDone": "Mark as Done",
+      "reject": "Reject",
+      "deleteTicket": "Delete Ticket",
+      "deleteConfirm": "Delete this ticket and all its notes permanently?",
+      "saveChanges": "Save Changes",
+      "downloadResult": "Download Result",
+      "assignEditor": "Assign Editor",
+      "noEditors": "No editors available"
+    },
+    "profile": {
+      "title": "My Profile",
+      "changePassword": "Change Password"
+    }
+  },
   "account": {
     "title": "Account Settings",
     "subtitle": "Manage your profile, password, and subscription",

@@ -13,6 +13,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from .api import auth, projects, studio
 from .api.billing import routes as billing_routes
 from .api.admin import router as admin_router
+from .api.editor import router as editor_router
 from .middleware.auth import authenticate_middleware, get_current_user
 from .models import init_db, SessionLocal, Role, User, Subscription, engine
 from .schemas.auth import UserResponse
@@ -211,6 +212,7 @@ app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
 app.include_router(studio.router, prefix="/api/studio", tags=["studio"])
 app.include_router(billing_routes.router, prefix="/api/billing", tags=["billing"])
 app.include_router(admin_router, prefix="/api", tags=["admin"])
+app.include_router(editor_router, prefix="/api", tags=["editor"])
 
 
 @app.get("/health")

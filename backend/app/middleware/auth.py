@@ -178,6 +178,18 @@ def get_db_session(request: Request):
     return getattr(request.state, "db", None)
 
 
+def get_current_editor(request: Request):
+    """
+    Get the current authenticated editor (EDITOR or ADMIN) or raise 403.
+
+    ADMIN can access all editor endpoints — mirrors get_current_admin pattern.
+    """
+    user = get_current_user(request)
+    if not user or user.role not in (Role.EDITOR, Role.ADMIN):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Editor access required")
+    return user
+
+
 def get_current_admin(request: Request):
     """
     Get the current authenticated admin user or raise 403.

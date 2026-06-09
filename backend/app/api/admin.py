@@ -10,6 +10,7 @@ This module contains admin-only endpoints for:
 """
 
 import logging
+import math
 import secrets
 import string
 from datetime import datetime, timedelta
@@ -20,9 +21,22 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models import Project, Subscription, User, get_db, Role, PlanTier
-from app.middleware.auth import get_current_admin
+from app.models import Project, Subscription, Ticket, TicketNote, User, get_db, Role, PlanTier
+from app.middleware.auth import get_current_admin, get_db_session
 from app.services.auth import hash_password
+from app.schemas.editor import (
+    EditorUserResponse,
+    TicketCreate,
+    TicketListResponse,
+    TicketNoteCreate,
+    TicketNoteResponse,
+    TicketResponse,
+    TicketUpdate,
+)
+from app.api.editor import (
+    PRIORITY_ORDER,
+    _build_ticket_response,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -614,3 +628,268 @@ async def get_available_roles(
 ):
     """Get all available roles."""
     return [{"value": r.value, "label": r.value.capitalize()} for r in Role]
+
+
+# ============================================================================
+# Editor Portal — Ticket Management (Admin)
+# ============================================================================
+
+@router.get("/admin/editor/tickets", response_model=TicketListResponse)
+async def admin_list_tickets(
+    request: Request,
+    status_filter: Optional[str] = Query(None, alias="status"),
+    priority: Optional[str] = None,
+    assigned_to_id: Optional[int] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db_session),
+):
+    q = db.query(Ticket)
+    if status_filter:
+        q = q.filter(Ticket.status == status_filter)
+    if priority:
+        q = q.filter(Ticket.priority == priority)
+    if assigned_to_id:
+        q = q.filter(Ticket.assigned_to_id == assigned_to_id)
+    total = q.count()
+    tickets = q.order_by(Ticket.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    tickets.sort(key=lambda t: (PRIORITY_ORDER.get(t.priority, 0), t.created_at.timestamp()), reverse=True)
+    return TicketListResponse(
+        items=[_build_ticket_response(t, hide_internal=False) for t in tickets],
+        total=total, page=page, page_size=page_size,
+        pages=max(1, math.ceil(total / page_size)),
+    )
+
+
+@router.post("/admin/editor/tickets", response_model=TicketResponse, status_code=201)
+async def admin_create_ticket(
+    body: TicketCreate,
+    request: Request,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db_session),
+):
+    from app.models import Project as ProjectModel
+    project = db.query(ProjectModel).filter(ProjectModel.id == body.project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if body.assigned_to_id is not None:
+        assignee = db.query(User).filter(User.id == body.assigned_to_id).first()
+        if not assignee:
+            raise HTTPException(status_code=404, detail="Editor not found")
+        if assignee.role != Role.EDITOR:
+            raise HTTPException(status_code=400, detail="Assigned user is not an editor")
+    else:
+        assignee = None
+
+    ticket = Ticket(
+        project_id=body.project_id,
+        assigned_to_id=body.assigned_to_id,
+        created_by_id=current_user.id,
+        title=body.title,
+        description=body.description,
+        priority=body.priority,
+        due_date=body.due_date,
+        original_image_url=project.image_url,
+        status="open",
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
+
+    if assignee:
+        try:
+            from app.services.email import send_ticket_assignment_email
+            send_ticket_assignment_email(
+                editor_email=assignee.email,
+                editor_name=assignee.name or assignee.email,
+                ticket_id=ticket.id,
+                ticket_title=ticket.title,
+                project_name=project.name,
+                due_date=ticket.due_date,
+                admin_instructions=ticket.description,
+            )
+        except Exception:
+            logger.exception("Failed to send ticket assignment email (non-fatal)")
+
+    return _build_ticket_response(ticket, hide_internal=False)
+
+
+@router.patch("/admin/editor/tickets/{ticket_id}", response_model=TicketResponse)
+async def admin_update_ticket(
+    ticket_id: int,
+    body: TicketUpdate,
+    request: Request,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db_session),
+):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    prev_assigned = ticket.assigned_to_id
+    if body.assigned_to_id is not None:
+        assignee = db.query(User).filter(User.id == body.assigned_to_id).first()
+        if not assignee:
+            raise HTTPException(status_code=404, detail="Editor not found")
+        if assignee.role != Role.EDITOR:
+            raise HTTPException(status_code=400, detail="Assigned user is not an editor")
+        ticket.assigned_to_id = body.assigned_to_id
+    if body.title is not None:
+        ticket.title = body.title
+    if body.description is not None:
+        ticket.description = body.description
+    if body.priority is not None:
+        ticket.priority = body.priority
+    if body.due_date is not None:
+        ticket.due_date = body.due_date
+    if body.status is not None:
+        ticket.status = body.status
+        if body.status == "done":
+            ticket.completed_at = datetime.utcnow()
+    ticket.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(ticket)
+
+    # Send assignment email if editor changed
+    if body.assigned_to_id is not None and body.assigned_to_id != prev_assigned:
+        try:
+            from app.services.email import send_ticket_assignment_email
+            from app.models import Project as ProjectModel
+            project = db.query(ProjectModel).filter(ProjectModel.id == ticket.project_id).first()
+            assignee = db.query(User).filter(User.id == body.assigned_to_id).first()
+            if assignee:
+                send_ticket_assignment_email(
+                    editor_email=assignee.email,
+                    editor_name=assignee.name or assignee.email,
+                    ticket_id=ticket.id,
+                    ticket_title=ticket.title,
+                    project_name=project.name if project else "",
+                    due_date=ticket.due_date,
+                    admin_instructions=ticket.description,
+                )
+        except Exception:
+            logger.exception("Failed to send reassignment email (non-fatal)")
+
+    return _build_ticket_response(ticket, hide_internal=False)
+
+
+@router.delete("/admin/editor/tickets/{ticket_id}")
+async def admin_delete_ticket(
+    ticket_id: int,
+    request: Request,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db_session),
+):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    db.delete(ticket)
+    db.commit()
+    return {"deleted": True}
+
+
+@router.post("/admin/editor/tickets/{ticket_id}/notes", response_model=TicketNoteResponse, status_code=201)
+async def admin_add_note(
+    ticket_id: int,
+    body: TicketNoteCreate,
+    request: Request,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db_session),
+):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    note = TicketNote(
+        ticket_id=ticket_id,
+        author_id=current_user.id,
+        body=body.body,
+        is_internal=body.is_internal,
+        created_at=datetime.utcnow(),
+    )
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    return TicketNoteResponse(
+        id=note.id,
+        ticket_id=note.ticket_id,
+        author_id=note.author_id,
+        author_name=current_user.name or current_user.email,
+        body=note.body,
+        is_internal=note.is_internal,
+        created_at=note.created_at,
+    )
+
+
+@router.get("/admin/editor/editors", response_model=List[EditorUserResponse])
+async def admin_list_editors(
+    request: Request,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db_session),
+):
+    editors = db.query(User).filter(User.role == Role.EDITOR, User.is_active.is_(True)).all()
+    result = []
+    for e in editors:
+        open_count = db.query(Ticket).filter(
+            Ticket.assigned_to_id == e.id,
+            Ticket.status.in_(["open", "in_progress"]),
+        ).count()
+        result.append(EditorUserResponse(
+            id=e.id, email=e.email, name=e.name,
+            is_active=e.is_active, open_ticket_count=open_count,
+        ))
+    return result
+
+
+class PromoteEditorRequest(BaseModel):
+    user_id: int
+
+
+@router.post("/admin/editor/editors", response_model=EditorUserResponse, status_code=201)
+async def admin_promote_editor(
+    body: PromoteEditorRequest,
+    request: Request,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db_session),
+):
+    user = db.query(User).filter(User.id == body.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.role = Role.EDITOR
+    db.commit()
+    db.refresh(user)
+    open_count = db.query(Ticket).filter(
+        Ticket.assigned_to_id == user.id,
+        Ticket.status.in_(["open", "in_progress"]),
+    ).count()
+    return EditorUserResponse(
+        id=user.id, email=user.email, name=user.name,
+        is_active=user.is_active, open_ticket_count=open_count,
+    )
+
+
+@router.delete("/admin/editor/editors/{user_id}")
+async def admin_demote_editor(
+    user_id: int,
+    request: Request,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db_session),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Editor not found")
+    # Unassign open tickets
+    open_tickets = db.query(Ticket).filter(
+        Ticket.assigned_to_id == user_id,
+        Ticket.status.in_(["open", "in_progress", "review"]),
+    ).all()
+    for t in open_tickets:
+        t.assigned_to_id = None
+        t.status = "open"
+        t.updated_at = datetime.utcnow()
+    user.role = Role.USER
+    db.commit()
+    return {"demoted": True, "tickets_unassigned": len(open_tickets)}

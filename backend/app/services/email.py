@@ -130,3 +130,108 @@ def send_password_reset(to_email: str, reset_token: str, locale: str = "en") -> 
         )
 
     return _send(to_email, subject, html_body, text_body)
+
+
+_FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+
+def send_ticket_assignment_email(
+    editor_email: str,
+    editor_name: str,
+    ticket_id: int,
+    ticket_title: str,
+    project_name: str,
+    due_date: Optional[datetime] = None,
+    admin_instructions: Optional[str] = None,
+) -> bool:
+    """Notify an editor that a ticket has been assigned to them."""
+    subject = f"New editing assignment: {ticket_title}"
+    ticket_url = f"{_FRONTEND_URL}/editor/tickets/{ticket_id}"
+    due_str = due_date.strftime("%Y-%m-%d") if due_date else "No due date"
+    instructions_block = (
+        f"<p><strong>Instructions:</strong></p><p>{admin_instructions}</p>"
+        if admin_instructions else ""
+    )
+    html_body = f"""<!DOCTYPE html>
+<html><body style="font-family:sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;padding:24px">
+<h2 style="color:#CC2020">New Editing Assignment</h2>
+<p>Hi {editor_name},</p>
+<p>You have been assigned a new editing ticket.</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0">
+  <tr><td style="padding:8px;background:#f5f5f7;font-weight:600;width:140px">Ticket #</td><td style="padding:8px">{ticket_id}</td></tr>
+  <tr><td style="padding:8px;background:#f5f5f7;font-weight:600">Title</td><td style="padding:8px">{ticket_title}</td></tr>
+  <tr><td style="padding:8px;background:#f5f5f7;font-weight:600">Project</td><td style="padding:8px">{project_name}</td></tr>
+  <tr><td style="padding:8px;background:#f5f5f7;font-weight:600">Due Date</td><td style="padding:8px">{due_str}</td></tr>
+</table>
+{instructions_block}
+<p style="text-align:center;margin:32px 0">
+  <a href="{ticket_url}" style="background:#CC2020;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;display:inline-block">View Ticket</a>
+</p>
+<p style="color:#a8a29e;font-size:12px">AutoStudio AI &middot; autostudio.cc</p>
+</body></html>"""
+    text_body = f"New assignment: {ticket_title} (#{ticket_id})\nProject: {project_name}\nDue: {due_str}\nView: {ticket_url}"
+    try:
+        return _send(editor_email, subject, html_body, text_body)
+    except Exception:
+        logger.exception("send_ticket_assignment_email failed (non-fatal)")
+        return False
+
+
+def send_ticket_result_notification(
+    admin_email: str,
+    ticket_id: int,
+    ticket_title: str,
+    editor_name: str,
+    editor_note: Optional[str] = None,
+) -> bool:
+    """Notify admin that an editor has uploaded a result ready for review."""
+    subject = f"Editor result ready for review: {ticket_title}"
+    ticket_url = f"{_FRONTEND_URL}/admin/editor-portal/tickets/{ticket_id}"
+    note_block = f"<p><strong>Editor note:</strong> {editor_note}</p>" if editor_note else ""
+    html_body = f"""<!DOCTYPE html>
+<html><body style="font-family:sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;padding:24px">
+<h2 style="color:#CC2020">Result Ready for Review</h2>
+<p>Editor <strong>{editor_name}</strong> has uploaded a result for ticket #{ticket_id}.</p>
+<p><strong>Title:</strong> {ticket_title}</p>
+{note_block}
+<p style="text-align:center;margin:32px 0">
+  <a href="{ticket_url}" style="background:#CC2020;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;display:inline-block">Review Result</a>
+</p>
+<p style="color:#a8a29e;font-size:12px">AutoStudio AI &middot; autostudio.cc</p>
+</body></html>"""
+    text_body = f"Result ready: {ticket_title} (#{ticket_id}) by {editor_name}\nReview: {ticket_url}"
+    try:
+        return _send(admin_email, subject, html_body, text_body)
+    except Exception:
+        logger.exception("send_ticket_result_notification failed (non-fatal)")
+        return False
+
+
+def send_ticket_status_update_email(
+    editor_email: str,
+    ticket_id: int,
+    ticket_title: str,
+    new_status: str,
+    admin_note: Optional[str] = None,
+) -> bool:
+    """Notify editor that their ticket status has been updated."""
+    subject = f"Ticket update: {ticket_title} is now {new_status}"
+    ticket_url = f"{_FRONTEND_URL}/editor/tickets/{ticket_id}"
+    note_block = f"<p><strong>Admin note:</strong> {admin_note}</p>" if admin_note else ""
+    html_body = f"""<!DOCTYPE html>
+<html><body style="font-family:sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;padding:24px">
+<h2 style="color:#CC2020">Ticket Status Update</h2>
+<p>Your ticket <strong>{ticket_title}</strong> (#{ticket_id}) status has changed to <strong>{new_status}</strong>.</p>
+{note_block}
+<p style="text-align:center;margin:32px 0">
+  <a href="{ticket_url}" style="background:#CC2020;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;display:inline-block">View Ticket</a>
+</p>
+<p style="color:#a8a29e;font-size:12px">AutoStudio AI &middot; autostudio.cc</p>
+</body></html>"""
+    text_body = f"Ticket update: {ticket_title} (#{ticket_id}) → {new_status}\nView: {ticket_url}"
+    try:
+        return _send(editor_email, subject, html_body, text_body)
+    except Exception:
+        logger.exception("send_ticket_status_update_email failed (non-fatal)")
+        return False
+

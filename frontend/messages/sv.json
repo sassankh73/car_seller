@@ -940,6 +940,79 @@
       "loadProjects": "Misslyckades att ladda användarprojekt"
     }
   },
+  "editor": {
+    "nav": {
+      "myTickets": "Mina ärenden",
+      "myProfile": "Min profil",
+      "editorPortal": "Redigeringsportal"
+    },
+    "tickets": {
+      "title": "Mina ärenden",
+      "empty": "Inga tilldelade ärenden ännu",
+      "filterAll": "Alla",
+      "filterOpen": "Öppna",
+      "filterInProgress": "Pågående",
+      "filterReview": "Granskning",
+      "filterDone": "Klara",
+      "priority": {
+        "low": "Låg",
+        "normal": "Normal",
+        "high": "Hög",
+        "urgent": "Brådskande"
+      },
+      "status": {
+        "open": "Öppen",
+        "in_progress": "Pågående",
+        "review": "Granskning",
+        "done": "Klar",
+        "rejected": "Avvisad"
+      },
+      "overdue": "Försenad",
+      "dueDate": "Förfaller",
+      "createdAt": "Skapad",
+      "assignedTo": "Tilldelad",
+      "instructions": "Admins instruktioner",
+      "noInstructions": "Inga instruktioner angivna",
+      "originalImage": "Originalbild",
+      "downloadOriginal": "Ladda ner original",
+      "uploadResult": "Ladda upp resultat",
+      "uploadResultHint": "Dra och släpp eller klicka för att ladda upp din redigerade bild (JPEG eller PNG)",
+      "resultPreview": "Förhandsgranskning av resultat",
+      "editorNote": "Din anteckning (valfritt)",
+      "editorNotePlaceholder": "Lägg till en anteckning för admin...",
+      "submitResult": "Skicka för granskning",
+      "submitResultDisabled": "Ladda upp ditt resultat först",
+      "notesTitle": "Anteckningar",
+      "addNote": "Lägg till anteckning",
+      "notePlaceholder": "Skriv en anteckning...",
+      "postNote": "Posta anteckning"
+    },
+    "admin": {
+      "dashboardTitle": "Redigeringsportal",
+      "totalOpen": "Öppna",
+      "totalInProgress": "Pågående",
+      "awaitingReview": "Väntar på granskning",
+      "completedThisWeek": "Klara denna vecka",
+      "createTicket": "Skapa ärende",
+      "editorsTitle": "Hantera redaktörer",
+      "promoteUser": "Uppgradera till redaktör",
+      "demoteEditor": "Nedgradera till användare",
+      "demoteConfirm": "Detta avtilldelar alla öppna ärenden. Fortsätt?",
+      "internalNote": "Intern — inte synlig för redaktören",
+      "markDone": "Markera som klar",
+      "reject": "Avvisa",
+      "deleteTicket": "Radera ärende",
+      "deleteConfirm": "Radera detta ärende och alla anteckningar permanent?",
+      "saveChanges": "Spara ändringar",
+      "downloadResult": "Ladda ner resultat",
+      "assignEditor": "Tilldela redaktör",
+      "noEditors": "Inga redaktörer tillgängliga"
+    },
+    "profile": {
+      "title": "Min profil",
+      "changePassword": "Byt lösenord"
+    }
+  },
   "account": {
     "title": "Kontoinställningar",
     "subtitle": "Hantera din profil, lösenord och prenumeration",

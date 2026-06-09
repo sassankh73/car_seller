@@ -51,6 +51,7 @@ class Role(str, Enum):
 
     ADMIN = "ADMIN"
     USER = "USER"
+    EDITOR = "EDITOR"
     # Legacy aliases — present in DB, treated as USER everywhere in code
     PREMIUM = "PREMIUM"
     FREE = "FREE"
@@ -100,6 +101,7 @@ class User(Base):
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
     subscription = relationship("Subscription", back_populates="user", uselist=False, cascade="all, delete-orphan")
     usage = relationship("Usage", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    assigned_tickets = relationship("Ticket", foreign_keys="Ticket.assigned_to_id", back_populates="assigned_to")
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email='{self.email}', role='{self.role.value}')>"
@@ -161,14 +163,68 @@ class Project(Base):
     image_url = Column(Text, nullable=True)
     original_format = Column(String(50), nullable=True)
     watermark_applied = Column(Boolean, default=False)
+    original_image_url = Column(Text, nullable=True)
+    editor_result_url = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     owner = relationship("User", back_populates="projects")
+    tickets = relationship("Ticket", back_populates="project", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Project(id={self.id}, name='{self.name}', user_id={self.user_id})>"
+
+
+class Ticket(Base):
+    """Editor workflow ticket — links a project to an editor for manual retouching."""
+
+    __tablename__ = "tickets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    assigned_to_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    status = Column(String(30), default="open")
+    priority = Column(String(20), default="normal")
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    editor_note = Column(Text, nullable=True)
+    original_image_url = Column(Text, nullable=True)
+    result_image_url = Column(Text, nullable=True)
+    due_date = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    project = relationship("Project", back_populates="tickets")
+    assigned_to = relationship("User", foreign_keys=[assigned_to_id], back_populates="assigned_tickets")
+    created_by = relationship("User", foreign_keys=[created_by_id])
+    notes = relationship("TicketNote", back_populates="ticket", cascade="all, delete-orphan", order_by="TicketNote.created_at")
+
+    def __repr__(self) -> str:
+        return f"<Ticket(id={self.id}, title='{self.title}', status='{self.status}')>"
+
+
+class TicketNote(Base):
+    """Notes thread on a ticket — visible to Editor unless is_internal=True."""
+
+    __tablename__ = "ticket_notes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    body = Column(Text, nullable=False)
+    is_internal = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    ticket = relationship("Ticket", back_populates="notes")
+    author = relationship("User", foreign_keys=[author_id])
+
+    def __repr__(self) -> str:
+        return f"<TicketNote(id={self.id}, ticket_id={self.ticket_id}, internal={self.is_internal})>"
 
 
 def get_db():
@@ -243,6 +299,19 @@ def init_db():
         except Exception:
             conn.rollback()
 
+        # Add EDITOR enum value — must run outside transaction block on PG
+        try:
+            conn.execute(text("COMMIT"))
+            conn.execute(text("ALTER TYPE role ADD VALUE IF NOT EXISTS 'EDITOR'"))
+            conn.execute(text("COMMIT"))
+            logger.info("Added EDITOR to role enum (or already existed)")
+        except Exception as e:
+            logger.warning("ALTER TYPE role ADD VALUE 'EDITOR' skipped: %s", e)
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+
         # Add UNIQUE(user_id) to subscriptions — deduplicate first, then constrain
         try:
             dup_rows = conn.execute(text(
@@ -279,13 +348,23 @@ def init_db():
         proj_cols = [c["name"] for c in inspector.get_columns("projects")]
         _add_col_if_missing(conn, "projects", "watermark_applied", "BOOLEAN DEFAULT FALSE", proj_cols)
         _add_col_if_missing(conn, "projects", "original_format", "VARCHAR(50)", proj_cols)
+        _add_col_if_missing(conn, "projects", "original_image_url", "TEXT", proj_cols)
+        _add_col_if_missing(conn, "projects", "editor_result_url", "TEXT", proj_cols)
 
 
-_ALLOWED_TABLES = {"users", "subscriptions", "usages", "projects"}
+_ALLOWED_TABLES = {"users", "subscriptions", "usages", "projects", "tickets", "ticket_notes"}
 _ALLOWED_COLS = {
     "last_login", "password_changed_at", "is_disabled", "force_password_reset",
     "logo_data", "logo_mime_type", "logo_placement", "logo_scale",
     "watermark_applied", "original_format", "password_reset_token_hash",
+    # projects — editor workflow
+    "original_image_url", "editor_result_url",
+    # tickets
+    "id", "project_id", "assigned_to_id", "created_by_id", "status", "priority",
+    "title", "description", "editor_note", "result_image_url", "due_date",
+    "completed_at", "created_at", "updated_at",
+    # ticket_notes
+    "ticket_id", "author_id", "body", "is_internal",
 }
 
 
