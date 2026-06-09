@@ -10,10 +10,10 @@ export default function Footer() {
   return (
     <footer className="relative bg-charcoal-900 text-white/80 pt-16 lg:pt-20 pb-8">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10">
-        {/* Top row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-16 mb-12 lg:mb-16">
-          {/* Brand */}
-          <div className="sm:col-span-2 lg:col-span-1">
+        {/* Top row — 2 cols on mobile, 4 on lg */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-16 mb-12 lg:mb-16">
+          {/* Brand — full width on mobile */}
+          <div className="col-span-2 lg:col-span-1">
             <div className="flex items-center gap-0 mb-4">
               <span className="text-xl font-bold tracking-tight text-white">
                 Auto
@@ -32,22 +32,18 @@ export default function Footer() {
             <h4 className="text-sm font-semibold text-white mb-4 tracking-wide">
               {t("product")}
             </h4>
-            <ul className="space-y-3">
-              <li>
-                <Link href={`/${locale}/dashboard`} className="text-sm text-white/50 hover:text-white/80 transition-colors">
-                  {t("dashboard")}
-                </Link>
-              </li>
-              <li>
-                <a href="#studios" className="text-sm text-white/50 hover:text-white/80 transition-colors">
-                  Studios
-                </a>
-              </li>
-              <li>
-                <a href="#pricing" className="text-sm text-white/50 hover:text-white/80 transition-colors">
-                  Pricing
-                </a>
-              </li>
+            <ul className="space-y-1">
+              {[
+                { href: `/${locale}/dashboard`, label: t("dashboard") },
+                { href: "#studios", label: "Studios" },
+                { href: "#pricing", label: "Pricing" },
+              ].map(({ href, label }) => (
+                <li key={label}>
+                  <a href={href} className="flex items-center py-2 text-sm text-white/50 hover:text-white/80 transition-colors min-h-[36px]">
+                    {label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -56,38 +52,30 @@ export default function Footer() {
             <h4 className="text-sm font-semibold text-white mb-4 tracking-wide">
               {t("company")}
             </h4>
-            <ul className="space-y-3">
-              <li>
-                <Link href={`/${locale}/about`} className="text-sm text-white/50 hover:text-white/80 transition-colors">
-                  {t("about")}
-                </Link>
-              </li>
-              <li>
-                <Link href={`/${locale}/contact`} className="text-sm text-white/50 hover:text-white/80 transition-colors">
-                  {t("contact")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/privacy" className="text-sm text-white/50 hover:text-white/80 transition-colors">
-                  {t("privacy")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="text-sm text-white/50 hover:text-white/80 transition-colors">
-                  {t("terms")}
-                </Link>
-              </li>
+            <ul className="space-y-1">
+              {[
+                { href: `/${locale}/about`, label: t("about") },
+                { href: `/${locale}/contact`, label: t("contact") },
+                { href: "/privacy", label: t("privacy") },
+                { href: "/terms", label: t("terms") },
+              ].map(({ href, label }) => (
+                <li key={label}>
+                  <Link href={href} className="flex items-center py-2 text-sm text-white/50 hover:text-white/80 transition-colors min-h-[36px]">
+                    {label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Get Started */}
-          <div>
+          {/* Get Started — full width on mobile */}
+          <div className="col-span-2 lg:col-span-1">
             <h4 className="text-sm font-semibold text-white mb-4 tracking-wide">
               {t("getStarted")}
             </h4>
             <Link
               href={`/${locale}/auth/register`}
-              className="inline-flex items-center justify-center px-5 py-2.5 bg-red-500 text-white text-sm font-medium rounded-xl hover:bg-red-600 transition-colors"
+              className="inline-flex items-center justify-center px-5 py-3 bg-[#CC2020] text-white text-sm font-medium rounded-xl hover:bg-[#991818] transition-colors min-h-[44px]"
             >
               {t("startFreeTrial")}
             </Link>

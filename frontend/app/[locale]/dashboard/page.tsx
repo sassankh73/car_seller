@@ -7,8 +7,10 @@ import DashboardNav from "@/components/DashboardNav";
 import GuidedCapture from "@/components/GuidedCapture";
 import WorkflowSidebar from "@/components/dashboard/WorkflowSidebar";
 import RightPanel from "@/components/dashboard/RightPanel";
+import MobileDashboard from "@/components/dashboard/mobile/MobileDashboard";
 import { useAuth, authFetch } from "@/context/AuthContext";
 import Spinner from "@/components/ui/Spinner";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface Project {
   id: number | string;
@@ -59,6 +61,7 @@ export default function Dashboard() {
   const rt = useTranslations("dashboard.redesign");
   const commonT = useTranslations("common");
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const isMobile = useIsMobile();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [studios, setStudios] = useState<Studio[]>([]);
@@ -279,6 +282,14 @@ export default function Dashboard() {
   const canProcess = !!file && !!selectedStudio && !processing;
   const selectedStudioObj = studios.find((s) => s.key === selectedStudio);
 
+  const newGeneration = () => {
+    setResultImage(null);
+    setFile(null);
+    setPreviewUrl(null);
+    setProcessingStatus("idle");
+    setStudioExplicitlyChosen(false);
+  };
+
   if (authLoading) {
     return (
       <main className="min-h-screen bg-[#f5f5f7] flex items-center justify-center">
@@ -290,6 +301,42 @@ export default function Dashboard() {
     );
   }
 
+  // ── Mobile branch ──────────────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <MobileDashboard
+        projects={projects}
+        studios={studios}
+        account={account}
+        selectedStudio={selectedStudio}
+        setSelectedStudio={setSelectedStudio}
+        setStudioExplicitlyChosen={setStudioExplicitlyChosen}
+        file={file}
+        previewUrl={previewUrl}
+        resultImage={resultImage}
+        processing={processing}
+        processingStatus={processingStatus}
+        batchLabel={batchLabel}
+        enhanceWheels={enhanceWheels}
+        setEnhanceWheels={setEnhanceWheels}
+        enhancePaint={enhancePaint}
+        setEnhancePaint={setEnhancePaint}
+        exportQuality={exportQuality}
+        setExportQuality={setExportQuality}
+        apiError={apiError}
+        isLoading={isLoading}
+        studioLabel={studioLabel}
+        blobToFile={blobToFile}
+        pickFile={pickFile}
+        handleGenerate={handleGenerate}
+        handleGenerateAll={handleGenerateAll}
+        handleDownload={handleDownload}
+        onNewGeneration={newGeneration}
+      />
+    );
+  }
+
+  // ── Desktop branch (unchanged) ─────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#f5f5f7]" style={{ fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <DashboardNav active="dashboard" planName={account?.subscription?.plan_name} />
@@ -309,6 +356,28 @@ export default function Dashboard() {
 
         {/* ── MAIN CONTENT ── */}
         <main className="flex-1 overflow-y-auto">
+          {/* Tablet-only horizontal step indicator (md visible, lg hidden) */}
+          <div className="hidden md:flex lg:hidden items-center gap-1 overflow-x-auto px-5 pt-4 pb-2 scrollbar-hide">
+            {[1,2,3,4,5].map((s) => (
+              <div
+                key={s}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                  activeStep === s
+                    ? "bg-[#CC2020] text-white border-[#CC2020]"
+                    : activeStep > s
+                    ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                    : "bg-white text-[#888888] border-[#e8e8e8]"
+                }`}
+              >
+                {activeStep > s && (
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                )}
+                Step {s}
+              </div>
+            ))}
+          </div>
           <div className="max-w-3xl mx-auto px-5 py-6 space-y-5">
 
             {apiError && (
@@ -348,7 +417,7 @@ export default function Dashboard() {
                   <Spinner size="md" />
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 sm:grid-cols-4 gap-3">
                   {studios.map((studio) => {
                     const isSelected = selectedStudio === studio.key;
                     return (
@@ -762,7 +831,7 @@ export default function Dashboard() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <div className="h-[70vh]">
+            <div className="h-full md:h-[70vh]">
               <GuidedCapture
                 onCaptureComplete={(images) => {
                   setUseGuidedCapture(false);

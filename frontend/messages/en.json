@@ -22,7 +22,10 @@
       "dashboard": "Dashboard",
       "studios": "Studios",
       "pricing": "Pricing",
-      "about": "About"
+      "about": "About",
+      "menu": "Menu",
+      "close": "Close",
+      "startFreeTrial": "Start Free Trial"
     },
     "hero": {
       "eyebrow": "Professional Vehicle Photography",
@@ -423,23 +426,6 @@
         "upgrade": "Upgrade Plan"
       }
     },
-    "upload": {
-      "title": "Upload Vehicle Photo",
-      "clickToUpload": "Click to upload or drag and drop",
-      "dropImage": "Drop your image here",
-      "dragDropTitle": "Drag & drop your vehicle photo here",
-      "orClickToBrowse": "or click to browse",
-      "supportedFormats": "Supported formats:",
-      "maxSize": "Maximum file size: 50MB",
-      "clickToReplace": "Click to replace the image",
-      "errors": {
-        "unsupportedFormat": "Unsupported file format. Please upload a valid image.",
-        "corrupted": "The image file is corrupted or cannot be read.",
-        "resolutionTooSmall": "Image resolution is too small. Minimum is 640x480px.",
-        "fileSizeExceeded": "File size exceeds the maximum limit of {max}MB.",
-        "emptyFile": "The uploaded file is empty."
-      }
-    },
     "studio": {
       "title": "Select Studio",
       "studios": {
@@ -563,6 +549,50 @@
           "subtitle": "Unlimited photos, priority & HD",
           "button": "Upgrade Now"
         }
+      }
+    },
+    "mobile": {
+      "bottomNav": {
+        "projects": "Projects",
+        "capture": "Capture",
+        "account": "Account"
+      },
+      "workflow": {
+        "stepOf": "Step {current} of {total}"
+      },
+      "step1": {
+        "confirmStudio": "Confirm Studio"
+      },
+      "step2": {
+        "continue": "Got it, Continue"
+      },
+      "step3": {
+        "readyToCapture": "Ready to Capture",
+        "tip1": "Daylight or open shade for best results",
+        "tip2": "Full car in frame, 3/4 angle",
+        "tip3": "Clean exterior, no people or obstructions"
+      },
+      "step4": {
+        "takePhotos": "Take Photos (Guided)",
+        "uploadGallery": "Upload from Gallery",
+        "useThis": "Use This Photo",
+        "orLabel": "or"
+      },
+      "step5": {
+        "processAI": "Process with AI",
+        "startNew": "Start New",
+        "processing": "Processing…"
+      },
+      "results": {
+        "download": "Download",
+        "share": "Share",
+        "viewOriginal": "View Original",
+        "newPhoto": "New Photo",
+        "linkCopied": "Link copied!"
+      },
+      "projects": {
+        "empty": "No projects yet — capture your first vehicle",
+        "emptyHint": "Tap the camera button below to start"
       }
     }
   },

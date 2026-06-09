@@ -62,48 +62,61 @@ export default function HeroSection() {
       <div className="relative max-w-[1400px] mx-auto px-6 lg:px-10 pt-28 pb-16 lg:pt-36 lg:pb-24">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left — Copy */}
-          <div className="flex flex-col items-start gap-6 animate-fadeInUp">
+          <div className="flex flex-col items-center md:items-start gap-6 animate-fadeInUp text-center md:text-left">
             {/* Eyebrow */}
             <div className="section-label">
               {t("eyebrow")}
             </div>
 
-            {/* Headline */}
-            <h1 className="text-[2.75rem] lg:text-[3.75rem] leading-[1.08] font-bold tracking-[-0.03em] text-charcoal-900">
+            {/* Headline — clamp for mobile */}
+            <h1
+              className="leading-[1.08] font-bold tracking-[-0.03em] text-charcoal-900"
+              style={{ fontSize: "clamp(2rem, 8vw, 3.75rem)" }}
+            >
               {t("headlineLine1")}
               <br />
-              <span className="text-red-500">{t("headlineLine2")}</span>
+              <span className="text-[#CC2020]">{t("headlineLine2")}</span>
             </h1>
 
             {/* Subheadline */}
-            <p className="text-lg lg:text-xl text-charcoal-500 leading-relaxed max-w-[480px]">
+            <p className="text-base md:text-lg lg:text-xl text-charcoal-500 leading-relaxed max-w-[480px]">
               {t("subheadline")}
             </p>
 
-            {/* CTAs */}
-            <div className="flex items-center gap-4 mt-2">
-              <a href={`/${locale}/auth/register`} className="btn-primary">
+            {/* CTAs — stacked full-width on mobile, inline on md+ */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 mt-2 w-full md:w-auto">
+              <a
+                href={`/${locale}/auth/register`}
+                className="btn-primary text-center"
+                style={{ minHeight: 44 }}
+              >
                 {t("startFreeTrial")}
               </a>
               <a
                 href={`/${locale}/auth/register`}
-                className="btn-outline"
+                className="btn-outline text-center"
+                style={{ minHeight: 44 }}
               >
                 {t("viewDemo")}
               </a>
             </div>
 
             {/* Trusted by */}
-            <p className="text-sm text-charcoal-400 mt-4">
+            <p className="text-sm text-charcoal-400 mt-2">
               {t("trustedBy")}
             </p>
           </div>
 
-          {/* Right — Vehicle Showcase Cards (2×2 grid) */}
-          <div className="grid grid-cols-2 gap-4 lg:gap-5">
+          {/* Right — Vehicle Showcase Cards (hidden on mobile, 2×2 on md+) */}
+          <div className="hidden md:grid grid-cols-2 gap-4 lg:gap-5">
             {HERO_CARDS.map((card) => (
               <HeroCard key={card.id} card={card} t={t} />
             ))}
+          </div>
+
+          {/* Mobile: single hero image instead of 2×2 grid */}
+          <div className="md:hidden w-full">
+            <HeroCard card={HERO_CARDS[0]} t={t} />
           </div>
         </div>
       </div>

@@ -43,7 +43,7 @@ export default async function LocaleLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-white min-h-screen flex flex-col">
+      <body className="bg-white min-h-screen flex flex-col overflow-x-hidden">
         <NextIntlClientProvider messages={messages}>
           <AuthProviderWrapper>
             {children}

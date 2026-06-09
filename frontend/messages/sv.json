@@ -22,7 +22,10 @@
       "dashboard": "Instrumentpanel",
       "studios": "Studior",
       "pricing": "Priser",
-      "about": "Om oss"
+      "about": "Om oss",
+      "menu": "Meny",
+      "close": "Stäng",
+      "startFreeTrial": "Prova Gratis"
     },
     "hero": {
       "eyebrow": "Professionell fordonsfotografering",
@@ -546,6 +549,50 @@
           "subtitle": "Obegränsade foton, prioritet & HD",
           "button": "Uppgradera nu"
         }
+      }
+    },
+    "mobile": {
+      "bottomNav": {
+        "projects": "Projekt",
+        "capture": "Fota",
+        "account": "Konto"
+      },
+      "workflow": {
+        "stepOf": "Steg {current} av {total}"
+      },
+      "step1": {
+        "confirmStudio": "Bekräfta Studio"
+      },
+      "step2": {
+        "continue": "Förstått, Fortsätt"
+      },
+      "step3": {
+        "readyToCapture": "Redo att Fota",
+        "tip1": "Dagsljus eller öppen skugga för bästa resultat",
+        "tip2": "Hela bilen i bild, 3/4-vinkel",
+        "tip3": "Rent exteriör, inga personer eller hinder"
+      },
+      "step4": {
+        "takePhotos": "Ta Foton (Guidad)",
+        "uploadGallery": "Ladda upp från Galleri",
+        "useThis": "Använd det här fotot",
+        "orLabel": "eller"
+      },
+      "step5": {
+        "processAI": "Bearbeta med AI",
+        "startNew": "Starta Nytt",
+        "processing": "Bearbetar…"
+      },
+      "results": {
+        "download": "Ladda ner",
+        "share": "Dela",
+        "viewOriginal": "Visa Original",
+        "newPhoto": "Nytt Foto",
+        "linkCopied": "Länk kopierad!"
+      },
+      "projects": {
+        "empty": "Inga projekt ännu — fota ditt första fordon",
+        "emptyHint": "Tryck på kameraknappen nedan för att börja"
       }
     }
   },
