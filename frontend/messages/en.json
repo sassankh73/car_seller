@@ -985,7 +985,20 @@
       "notesTitle": "Notes",
       "addNote": "Add Note",
       "notePlaceholder": "Write a note...",
-      "postNote": "Post Note"
+      "postNote": "Post Note",
+      "claim": "Claim Project",
+      "claimConfirm": "Take responsibility for this project?",
+      "alreadyClaimed": "Already claimed by another editor",
+      "availableTab": "Available",
+      "myOpenTab": "My Open",
+      "projectAssets": "Project Assets",
+      "downloadOriginalPhoto": "Download Original Photo",
+      "downloadAiResult": "Download AI Result",
+      "downloadOwnerLogo": "Download Owner Logo",
+      "noLogo": "Owner has no logo",
+      "rating": "Your Rating",
+      "ratingCount": "{count} ratings",
+      "noRating": "Not yet rated"
     },
     "admin": {
       "dashboardTitle": "Editor Portal",
@@ -1006,7 +1019,14 @@
       "saveChanges": "Save Changes",
       "downloadResult": "Download Result",
       "assignEditor": "Assign Editor",
-      "noEditors": "No editors available"
+      "noEditors": "No editors available",
+      "rateEditor": "Rate Editor",
+      "ratingLabel": "Quality Rating",
+      "ratingNote": "Rating note (optional)",
+      "submitRating": "Submit Rating",
+      "ratingUpdated": "Rating updated",
+      "completedTickets": "Completed",
+      "avgRating": "Avg Rating"
     },
     "profile": {
       "title": "My Profile",

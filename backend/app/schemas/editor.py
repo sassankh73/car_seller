@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class TicketCreate(BaseModel):
@@ -73,6 +73,23 @@ class TicketNoteResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RateEditorRequest(BaseModel):
+    stars: int = Field(..., ge=1, le=5)
+    note: Optional[str] = None
+
+
+class EditorRatingResponse(BaseModel):
+    id: int
+    editor_id: int
+    ticket_id: int
+    rated_by_id: Optional[int]
+    stars: int
+    note: Optional[str]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class TicketResponse(BaseModel):
     id: int
     project_id: int
@@ -86,12 +103,15 @@ class TicketResponse(BaseModel):
     description: Optional[str]
     editor_note: Optional[str]
     original_image_url: Optional[str]
+    ai_result_url: Optional[str] = None
     result_image_url: Optional[str]
+    owner_logo_url: Optional[str] = None
     due_date: Optional[datetime]
     completed_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
     notes: List[TicketNoteResponse] = []
+    rating: Optional[EditorRatingResponse] = None
 
     model_config = {"from_attributes": True}
 
@@ -110,6 +130,9 @@ class EditorUserResponse(BaseModel):
     name: Optional[str]
     is_active: bool
     open_ticket_count: int
+    rating_avg: float = 0.0
+    rating_count: int = 0
+    completed_ticket_count: int = 0
 
     model_config = {"from_attributes": True}
 
@@ -118,3 +141,4 @@ class TicketBadgeResponse(BaseModel):
     open_count: int
     in_progress_count: int
     review_count: int
+    available_count: int = 0

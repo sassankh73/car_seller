@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { addNote, getTicket, submitTicket, uploadTicketResult } from "@/lib/api/editor";
+import { addNote, getOwnerLogo, getTicket, submitTicket, uploadTicketResult } from "@/lib/api/editor";
 import type { Ticket } from "@/types/editor";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -19,6 +19,14 @@ const PRIORITY_COLOR: Record<string, string> = {
   normal: "bg-blue-100 text-blue-700",
   low: "bg-gray-100 text-gray-600",
 };
+
+function StarDisplay({ stars }: { stars: number }) {
+  return (
+    <span className="text-yellow-500 text-lg">
+      {"★".repeat(stars)}{"☆".repeat(5 - stars)}
+    </span>
+  );
+}
 
 export default function EditorTicketDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -37,7 +45,10 @@ export default function EditorTicketDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    getTicket(Number(id)).then((t) => { setTicket(t); setEditorNote(t.editor_note || ""); }).catch(console.error).finally(() => setLoading(false));
+    getTicket(Number(id))
+      .then((t) => { setTicket(t); setEditorNote(t.editor_note || ""); })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [id]);
 
   const handleFile = async (file: File) => {
@@ -80,6 +91,17 @@ export default function EditorTicketDetailPage() {
     finally { setPostingNote(false); }
   };
 
+  const handleDownloadLogo = async () => {
+    if (!ticket) return;
+    try {
+      const blob = await getOwnerLogo(ticket.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `owner_logo_${ticket.id}.png`; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) { alert(e.message); }
+  };
+
   if (loading) return <div className="p-8 flex justify-center"><div className="w-6 h-6 border-2 border-[#CC2020] border-t-transparent rounded-full animate-spin" /></div>;
   if (!ticket) return <div className="p-8 text-[#999]">Ticket not found.</div>;
 
@@ -97,6 +119,13 @@ export default function EditorTicketDetailPage() {
         <h1 className="text-xl font-bold text-[#1a1a1a]">{ticket.title}</h1>
         {ticket.project_name && <p className="text-sm text-[#888] mt-1">{ticket.project_name}</p>}
         {ticket.due_date && <p className={`text-xs mt-1 ${isOverdue ? "text-red-500 font-medium" : "text-[#aaa]"}`}>{t("dueDate")}: {new Date(ticket.due_date).toLocaleDateString()}</p>}
+        {ticket.rating && (
+          <div className="mt-3 pt-3 border-t border-[#f0f0f0]">
+            <p className="text-xs text-[#888] mb-1">{t("rating")}</p>
+            <StarDisplay stars={ticket.rating.stars} />
+            {ticket.rating.note && <p className="text-xs text-[#666] mt-1 italic">{ticket.rating.note}</p>}
+          </div>
+        )}
       </div>
 
       {/* Admin instructions */}
@@ -105,17 +134,47 @@ export default function EditorTicketDetailPage() {
         <p className="text-sm text-[#555] whitespace-pre-wrap">{ticket.description || t("noInstructions")}</p>
       </div>
 
-      {/* Original image */}
-      {ticket.original_image_url && (
-        <div className="bg-white rounded-xl border border-[#e8e8e8] p-5">
-          <h2 className="font-semibold text-sm text-[#1a1a1a] mb-3">{t("originalImage")}</h2>
-          <img src={ticket.original_image_url} alt="original" className="w-full max-h-64 object-contain rounded-lg border border-[#f0f0f0] bg-[#f5f5f7]" />
-          <a href={ticket.original_image_url} download className="mt-3 inline-flex items-center gap-2 text-sm text-[#CC2020] font-medium hover:underline">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            {t("downloadOriginal")}
-          </a>
+      {/* Project Assets */}
+      <div className="bg-white rounded-xl border border-[#e8e8e8] p-5">
+        <h2 className="font-semibold text-sm text-[#1a1a1a] mb-4">{t("projectAssets")}</h2>
+        <div className="space-y-3">
+          {ticket.original_image_url ? (
+            <div>
+              <p className="text-xs text-[#888] mb-2">{t("originalImage")}</p>
+              <img src={ticket.original_image_url} alt="original" className="w-full max-h-48 object-contain rounded-lg border border-[#f0f0f0] bg-[#f5f5f7]" />
+              <a href={ticket.original_image_url} download className="mt-2 inline-flex items-center gap-2 text-sm text-[#CC2020] font-medium hover:underline">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                {t("downloadOriginalPhoto")}
+              </a>
+            </div>
+          ) : null}
+
+          {ticket.ai_result_url ? (
+            <div className="pt-3 border-t border-[#f5f5f7]">
+              <p className="text-xs text-[#888] mb-2">AI Result</p>
+              <img src={ticket.ai_result_url} alt="AI result" className="w-full max-h-48 object-contain rounded-lg border border-[#f0f0f0] bg-[#f5f5f7]" />
+              <a href={ticket.ai_result_url} download className="mt-2 inline-flex items-center gap-2 text-sm text-[#CC2020] font-medium hover:underline">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                {t("downloadAiResult")}
+              </a>
+            </div>
+          ) : null}
+
+          {ticket.owner_logo_url ? (
+            <div className="pt-3 border-t border-[#f5f5f7]">
+              <p className="text-xs text-[#888] mb-2">Owner Logo</p>
+              <button onClick={handleDownloadLogo} className="inline-flex items-center gap-2 text-sm text-[#CC2020] font-medium hover:underline">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                {t("downloadOwnerLogo")}
+              </button>
+            </div>
+          ) : null}
+
+          {!ticket.original_image_url && !ticket.ai_result_url && !ticket.owner_logo_url && (
+            <p className="text-sm text-[#aaa]">—</p>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Upload result */}
       <div className="bg-white rounded-xl border border-[#e8e8e8] p-5">

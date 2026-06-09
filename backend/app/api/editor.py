@@ -8,25 +8,26 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
-from sqlalchemy import func
-from sqlalchemy.orm import Session
+from fastapi.responses import Response
+from sqlalchemy import func, or_, text
+from sqlalchemy.orm import Session, joinedload
 
 from app.middleware.auth import get_current_editor, get_db_session
 from app.models import Role, Ticket, TicketNote, User
 from app.schemas.editor import (
+    EditorRatingResponse,
+    EditorUserResponse,
     TicketBadgeResponse,
     TicketEditorSubmit,
     TicketListResponse,
     TicketNoteCreate,
     TicketNoteResponse,
     TicketResponse,
-    EditorUserResponse,
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Results saved alongside studio results
 EDITOR_RESULTS_DIR = Path(__file__).parent.parent / "static" / "editor_results"
 EDITOR_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -52,6 +53,23 @@ def _build_ticket_response(ticket: Ticket, hide_internal: bool = False) -> Ticke
         for n in ticket.notes
         if not (hide_internal and n.is_internal)
     ]
+
+    rating_resp = None
+    if ticket.rating:
+        rating_resp = EditorRatingResponse(
+            id=ticket.rating.id,
+            editor_id=ticket.rating.editor_id,
+            ticket_id=ticket.rating.ticket_id,
+            rated_by_id=ticket.rating.rated_by_id,
+            stars=ticket.rating.stars,
+            note=ticket.rating.note,
+            created_at=ticket.rating.created_at,
+        )
+
+    owner_logo_url = None
+    if ticket.project and ticket.project.owner and ticket.project.owner.logo_data:
+        owner_logo_url = f"/api/editor/tickets/{ticket.id}/owner-logo"
+
     return TicketResponse(
         id=ticket.id,
         project_id=ticket.project_id,
@@ -65,17 +83,30 @@ def _build_ticket_response(ticket: Ticket, hide_internal: bool = False) -> Ticke
         description=ticket.description,
         editor_note=ticket.editor_note,
         original_image_url=ticket.original_image_url,
+        ai_result_url=ticket.ai_result_url,
         result_image_url=ticket.result_image_url,
+        owner_logo_url=owner_logo_url,
         due_date=ticket.due_date,
         completed_at=ticket.completed_at,
         created_at=ticket.created_at,
         updated_at=ticket.updated_at,
         notes=notes,
+        rating=rating_resp,
     )
 
 
 def _require_ticket(db: Session, ticket_id: int, current_user: User) -> Ticket:
-    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    ticket = (
+        db.query(Ticket)
+        .options(
+            joinedload(Ticket.project).joinedload("owner"),
+            joinedload(Ticket.notes).joinedload("author"),
+            joinedload(Ticket.assigned_to),
+            joinedload(Ticket.rating),
+        )
+        .filter(Ticket.id == ticket_id)
+        .first()
+    )
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     if current_user.role == Role.EDITOR and ticket.assigned_to_id != current_user.id:
@@ -87,7 +118,6 @@ def _validate_image_upload(file: UploadFile, data: bytes) -> None:
     ct = (file.content_type or "").lower()
     if ct not in _ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=400, detail="File type not allowed. Upload JPEG or PNG.")
-    # Magic bytes check
     if data[:3] == b"\xff\xd8\xff":
         return  # JPEG
     if data[:4] == b"\x89PNG":
@@ -107,9 +137,27 @@ async def list_tickets(
     current_user: User = Depends(get_current_editor),
     db: Session = Depends(get_db_session),
 ):
-    q = db.query(Ticket)
+    q = db.query(Ticket).options(
+        joinedload(Ticket.project).joinedload("owner"),
+        joinedload(Ticket.notes).joinedload("author"),
+        joinedload(Ticket.assigned_to),
+        joinedload(Ticket.rating),
+    )
     if current_user.role == Role.EDITOR:
-        q = q.filter(Ticket.assigned_to_id == current_user.id)
+        # Show editor's own tickets AND unassigned claimable tickets
+        q = q.filter(
+            or_(
+                Ticket.assigned_to_id == current_user.id,
+                Ticket.assigned_to_id.is_(None),
+            )
+        )
+        # Exclude done/rejected unassigned tickets
+        q = q.filter(
+            or_(
+                Ticket.assigned_to_id == current_user.id,
+                Ticket.status.notin_(["done", "rejected"]),
+            )
+        )
     if status_filter:
         q = q.filter(Ticket.status == status_filter)
     if priority:
@@ -117,7 +165,6 @@ async def list_tickets(
 
     total = q.count()
     tickets = q.order_by(Ticket.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
-    # Sort by priority desc then created_at desc in Python (SQLAlchemy enum order tricky)
     tickets.sort(key=lambda t: (PRIORITY_ORDER.get(t.priority, 0), t.created_at.timestamp()), reverse=True)
 
     hide = current_user.role == Role.EDITOR
@@ -139,6 +186,48 @@ async def get_ticket(
 ):
     ticket = _require_ticket(db, ticket_id, current_user)
     return _build_ticket_response(ticket, hide_internal=(current_user.role == Role.EDITOR))
+
+
+@router.post("/editor/tickets/{ticket_id}/claim", response_model=TicketResponse)
+async def claim_ticket(
+    ticket_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_editor),
+    db: Session = Depends(get_db_session),
+):
+    # Atomic claim: UPDATE only succeeds if ticket is still unassigned
+    result = db.execute(
+        text(
+            "UPDATE tickets SET assigned_to_id=:uid, status=:st, updated_at=NOW()"
+            " WHERE id=:tid AND assigned_to_id IS NULL RETURNING id"
+        ),
+        {"uid": current_user.id, "st": "in_progress", "tid": ticket_id},
+    )
+    row = result.fetchone()
+    if row is None:
+        ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=409, detail="Ticket already claimed by another editor")
+    db.commit()
+
+    ticket = _require_ticket(db, ticket_id, current_user)
+
+    try:
+        from app.services.email import send_ticket_assignment_email
+        send_ticket_assignment_email(
+            editor_email=current_user.email,
+            editor_name=current_user.name or current_user.email,
+            ticket_id=ticket.id,
+            ticket_title=ticket.title,
+            project_name=ticket.project.name if ticket.project else "",
+            due_date=ticket.due_date,
+            admin_instructions=ticket.description,
+        )
+    except Exception:
+        logger.exception("Failed to send claim email (non-fatal)")
+
+    return _build_ticket_response(ticket, hide_internal=True)
 
 
 @router.post("/editor/tickets/{ticket_id}/upload-result", response_model=TicketResponse)
@@ -168,7 +257,6 @@ async def upload_result(
     db.commit()
     db.refresh(ticket)
 
-    # Notify admin — non-blocking
     try:
         from app.services.email import send_ticket_result_notification
         from app.models import User as UserModel
@@ -237,6 +325,26 @@ async def add_note(
     )
 
 
+@router.get("/editor/tickets/{ticket_id}/owner-logo")
+async def get_owner_logo(
+    ticket_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_editor),
+    db: Session = Depends(get_db_session),
+):
+    ticket = _require_ticket(db, ticket_id, current_user)
+    if not ticket.project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    owner = db.query(User).filter(User.id == ticket.project.user_id).first()
+    if not owner or not owner.logo_data:
+        raise HTTPException(status_code=404, detail="Owner has no logo")
+    return Response(
+        content=owner.logo_data,
+        media_type=owner.logo_mime_type or "image/png",
+        headers={"Content-Disposition": f'attachment; filename="owner_logo_{ticket_id}.png"'},
+    )
+
+
 @router.get("/editor/badge", response_model=TicketBadgeResponse)
 async def get_badge(
     request: Request,
@@ -244,10 +352,15 @@ async def get_badge(
     db: Session = Depends(get_db_session),
 ):
     base = db.query(Ticket).filter(Ticket.assigned_to_id == current_user.id)
+    available_count = db.query(Ticket).filter(
+        Ticket.assigned_to_id.is_(None),
+        Ticket.status == "open",
+    ).count()
     return TicketBadgeResponse(
         open_count=base.filter(Ticket.status == "open").count(),
         in_progress_count=base.filter(Ticket.status == "in_progress").count(),
         review_count=base.filter(Ticket.status == "review").count(),
+        available_count=available_count,
     )
 
 
@@ -261,10 +374,17 @@ async def get_me(
         Ticket.assigned_to_id == current_user.id,
         Ticket.status.in_(["open", "in_progress"]),
     ).count()
+    completed_count = db.query(Ticket).filter(
+        Ticket.assigned_to_id == current_user.id,
+        Ticket.status == "done",
+    ).count()
     return EditorUserResponse(
         id=current_user.id,
         email=current_user.email,
         name=current_user.name,
         is_active=current_user.is_active,
         open_ticket_count=open_count,
+        rating_avg=current_user.rating_avg or 0.0,
+        rating_count=current_user.rating_count or 0,
+        completed_ticket_count=completed_count,
     )

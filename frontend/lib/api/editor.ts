@@ -4,6 +4,7 @@
  */
 import { authFetch } from "@/context/AuthContext";
 import type {
+  EditorRating,
   EditorUser,
   Ticket,
   TicketBadge,
@@ -157,4 +158,24 @@ export async function adminPromoteToEditor(userId: number): Promise<EditorUser> 
 export async function adminDemoteEditor(userId: number): Promise<{ demoted: boolean; tickets_unassigned: number }> {
   const res = await authFetch(`/api/admin/editor/editors/${userId}`, { method: "DELETE" });
   return handleResponse(res);
+}
+
+export async function claimTicket(ticketId: number): Promise<Ticket> {
+  const res = await authFetch(`/api/editor/tickets/${ticketId}/claim`, { method: "POST" });
+  return handleResponse<Ticket>(res);
+}
+
+export async function getOwnerLogo(ticketId: number): Promise<Blob> {
+  const res = await authFetch(`/api/editor/tickets/${ticketId}/owner-logo`);
+  if (!res.ok) throw new Error(`Failed to fetch logo: ${res.status}`);
+  return res.blob();
+}
+
+export async function adminRateTicket(ticketId: number, stars: number, note?: string): Promise<EditorRating> {
+  const res = await authFetch(`/api/admin/editor/tickets/${ticketId}/rate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ stars, note: note ?? null }),
+  });
+  return handleResponse<EditorRating>(res);
 }

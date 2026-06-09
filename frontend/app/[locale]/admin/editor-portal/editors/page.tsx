@@ -5,6 +5,16 @@ import { useTranslations } from "next-intl";
 import { adminDemoteEditor, adminGetEditors, adminPromoteToEditor } from "@/lib/api/editor";
 import type { EditorUser } from "@/types/editor";
 
+function StarAvg({ avg, count }: { avg: number; count: number }) {
+  if (count === 0) return <span className="text-xs text-[#aaa]">—</span>;
+  return (
+    <span className="text-sm">
+      <span className="text-yellow-500">★</span> {avg.toFixed(1)}
+      <span className="text-xs text-[#aaa] ml-1">({count})</span>
+    </span>
+  );
+}
+
 export default function AdminEditorsPage() {
   const t = useTranslations("editor.admin");
   const [editors, setEditors] = useState<EditorUser[]>([]);
@@ -13,7 +23,15 @@ export default function AdminEditorsPage() {
   const [promoting, setPromoting] = useState(false);
   const [working, setWorking] = useState<number | null>(null);
 
-  const fetchEditors = () => adminGetEditors().then(setEditors).catch(console.error).finally(() => setLoading(false));
+  const fetchEditors = () =>
+    adminGetEditors()
+      .then((data) => {
+        // Sort by rating_avg desc
+        setEditors([...data].sort((a, b) => (b.rating_avg ?? 0) - (a.rating_avg ?? 0)));
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+
   useEffect(() => { fetchEditors(); }, []);
 
   const handlePromote = async (e: React.FormEvent) => {
@@ -70,18 +88,22 @@ export default function AdminEditorsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#f0f0f0] text-xs text-[#888] font-semibold">
-                {["ID", "Email", "Name", "Open Tickets", "Active", ""].map((h) => (
+                {["ID", "Email", "Name", "Open", t("completedTickets"), t("avgRating"), "Active", ""].map((h) => (
                   <th key={h} className="px-4 py-3 text-left">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {editors.map((editor) => (
-                <tr key={editor.id} className="border-b border-[#f9f9f9]">
+                <tr key={editor.id} className="border-b border-[#f9f9f9] hover:bg-[#fafafa]">
                   <td className="px-4 py-3 text-[#888]">{editor.id}</td>
                   <td className="px-4 py-3">{editor.email}</td>
                   <td className="px-4 py-3">{editor.name || "—"}</td>
                   <td className="px-4 py-3">{editor.open_ticket_count}</td>
+                  <td className="px-4 py-3">{editor.completed_ticket_count ?? 0}</td>
+                  <td className="px-4 py-3">
+                    <StarAvg avg={editor.rating_avg ?? 0} count={editor.rating_count ?? 0} />
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${editor.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                       {editor.is_active ? "Active" : "Inactive"}

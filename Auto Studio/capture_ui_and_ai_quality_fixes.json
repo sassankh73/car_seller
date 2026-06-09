@@ -1,0 +1,187 @@
+{
+  "title": "AutoStudio — Capture UI Layout + AI Background Quality Fixes",
+  "description": "Fixes 6 specific bugs confirmed by screenshots: (1) camera selector overlaps step title, (2) loading detection toast is too prominent, (3) 45° hint overlaps action buttons, (4) background edges still jaggy / mirrors cut, (5) windows show original background not studio, (6) confirm rembg Docker container is running.",
+  "scope": "frontend/components/GuidedCapture.tsx, frontend/components/GuidedCaptureOverlay.tsx, backend/app/services/rembg_service.py, docker-compose.yml",
+  "do_not_touch": [
+    "Desktop dashboard layout",
+    "backend/app/api/ routes",
+    "Any authentication or billing code",
+    "frontend/app/ page files (routing)",
+    "Any file not listed in scope"
+  ],
+
+  "tasks": [
+
+    {
+      "id": "UI-1",
+      "title": "Fix: Camera selector overlaps step title text",
+      "file": "frontend/components/GuidedCapture.tsx",
+      "priority": "HIGH",
+      "symptom": "Screenshot shows 'Rear Wide ↓' button sitting directly on top of 'Front Left 45°' and 'Step 1 of 6' text — both render at absolute top-4 left-4.",
+      "root_cause": "Camera selector div is at `absolute top-4 left-4 z-30`. GuidedCaptureOverlay renders its title bar at `absolute top-0 left-0 right-0 p-4 z-20` — two rows of text (step counter + step name) that occupy top 0–76px. Camera selector lands exactly on that text.",
+      "fix": {
+        "locate": "Line ~350 in GuidedCapture.tsx — the camera selector outer div: `<div className=\"absolute top-4 left-4 z-30\">`",
+        "change": "Replace `top-4` with `top-[88px]` so the camera button starts below the two-row title block. The title occupies approximately p-4(16px) + subtitle line(28px) + gap(4px) + title line(32px) = 80px. 88px clears it with an 8px gap.",
+        "before": "<div className=\"absolute top-4 left-4 z-30\">",
+        "after":  "<div className=\"absolute top-[88px] left-4 z-30\">"
+      },
+      "verification": "Open capture on mobile at 375px. The 'Rear Wide' button must not overlap any text in the top bar. The step title and counter must be fully readable."
+    },
+
+    {
+      "id": "UI-2",
+      "title": "Fix: 'Loading detection model…' toast is too large and confusing",
+      "file": "frontend/components/GuidedCapture.tsx",
+      "priority": "HIGH",
+      "symptom": "An amber pill 'Loading detection model…' dominates the center of the viewfinder. Users do not know if they can still take a photo (they can — capture is unblocked during loading).",
+      "root_cause": "liveFeedback() (line ~217) returns a 'model-loading' medium-priority FeedbackMessage while the model is loading. GuidedCaptureOverlay renders this as a large amber pill at `bottom-32`. Capture is unblocked (captureReadyFromDetection returns true during loading) but the UI makes it look broken.",
+      "fix": {
+        "step_1": {
+          "action": "Remove the model-loading case from liveFeedback so it does not produce an amber center toast.",
+          "locate": "Lines ~219-222 in liveFeedback callback:",
+          "before": "if (detection.modelLoading) {\n  return { type: 'model-loading', message: t('smartPhotoGuide.feedback.modelLoading'), priority: 'medium' };\n}",
+          "after":  "// model-loading: do not block UI — capture is allowed; show subtle indicator below (step_2)"
+        },
+        "step_2": {
+          "action": "Add a small non-intrusive loading indicator in the top area ONLY visible while model loads. Place it in GuidedCapture.tsx alongside the camera selector, so it is outside the overlay.",
+          "locate": "Just below the camera selector block (still inside `{state.isStreaming && cameras.length > 1 && (...)}`) — add a SEPARATE conditional block:",
+          "code": "/* Small model-loading indicator — non-blocking */\n{state.isStreaming && detection.modelLoading && (\n  <div className=\"absolute top-[88px] right-4 z-30 flex items-center gap-1.5 bg-black/50 backdrop-blur text-white/70 text-[11px] px-2.5 py-1.5 rounded-lg\">\n    <svg className=\"w-3 h-3 animate-spin\" viewBox=\"0 0 24 24\" fill=\"none\">\n      <circle className=\"opacity-25\" cx=\"12\" cy=\"12\" r=\"10\" stroke=\"currentColor\" strokeWidth=\"4\"/>\n      <path className=\"opacity-75\" fill=\"currentColor\" d=\"M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z\"/>\n    </svg>\n    <span>AI ready soon…</span>\n  </div>\n)}"
+        }
+      },
+      "verification": "Open capture on mobile. No amber pill appears in the viewfinder center. Instead, a small spinner appears top-right while the model loads, then disappears. Capture Photo button is always active."
+    },
+
+    {
+      "id": "UI-3",
+      "title": "Fix: 45° angle label overlaps Retake/Capture buttons",
+      "file": "frontend/components/GuidedCaptureOverlay.tsx",
+      "priority": "MEDIUM",
+      "symptom": "The '45°' SVG label is drawn at the bottom edge of the guide frame (y = guide.y + guide.h - 8) which falls into the control bar area on smaller screens, overlapping the buttons.",
+      "root_cause": "In VehicleGuideFrame (line ~177-186): `y={y + h - 8}` places the text at the very bottom of the guide rectangle. The bottom control bar (`absolute bottom-0`) overlaps the lower portion of the SVG.",
+      "fix": {
+        "locate": "Inside the `{is45 && (...)}` block in VehicleGuideFrame, the <text> SVG element:",
+        "before": "y={y + h - 8}",
+        "after":  "y={y + 20}",
+        "explanation": "Moving the label to 20px BELOW the top of the guide box places it inside the guide area, away from the action buttons. It remains visually associated with the guide frame."
+      },
+      "verification": "On mobile capture, the '45°' text appears inside the top area of the guide frame and does not overlap Retake or Capture Photo buttons on any screen size."
+    },
+
+    {
+      "id": "BE-1",
+      "title": "Fix: Confirm rembg Docker service is running and ENABLE_REMBG is active",
+      "file": "docker-compose.yml + backend/.env",
+      "priority": "HIGH",
+      "symptom": "Background removal quality is poor (jagged edges, mock-looking cutouts). Even though ENABLE_REMBG=true in .env, if the rembg container is not running the code silently falls back to MockRemover, which applies only a radial gradient alpha mask — not real segmentation.",
+      "root_cause": "rembg_service.py line 29: default is ENABLE_REMBG=false. Even with .env set to true, if docker-compose does not include the rembg service, the health check at startup fails and MockRemover is used silently.",
+      "fix": {
+        "step_1": {
+          "action": "Verify rembg service is declared in docker-compose.yml",
+          "check": "docker-compose.yml must have a service named 'rembg' (or matching REMBG_SERVICE_URL) that runs the rembg HTTP API container. The standard image is: `danielgatis/rembg:latest` with command `s` (server mode) on port 7000.",
+          "if_missing_add": "  rembg:\n    image: danielgatis/rembg:latest\n    command: s\n    ports:\n      - '7000:7000'\n    restart: unless-stopped"
+        },
+        "step_2": {
+          "action": "Add depends_on to the backend service",
+          "in_backend_service": "depends_on:\n  - rembg"
+        },
+        "step_3": {
+          "action": "Confirm VPS .env file (not just local) has ENABLE_REMBG=true",
+          "verify_command": "ssh <vps> 'grep ENABLE_REMBG /path/to/backend/.env'"
+        },
+        "step_4": {
+          "action": "After deploy, verify rembg is active in logs",
+          "verify_command": "docker compose logs backend | grep -E 'rembg|MockRemover|ENABLE_REMBG'"
+        }
+      },
+      "verification": "Logs show 'Using RembgRemover' NOT 'using MockRemover'. Processed photos have clean segmentation edges."
+    },
+
+    {
+      "id": "BE-2",
+      "title": "Fix: Improve edge quality — tune AlphaMatteRefiner parameters",
+      "file": "backend/app/services/rembg_service.py",
+      "priority": "HIGH",
+      "symptom": "Processed car photos show jagged/zigzag edges and gray halos even when rembg IS running. The AlphaMatteRefiner exists but uses conservative default parameters.",
+      "root_cause": "AlphaMatteRefiner is instantiated with defaults: close_radius=2, noise_threshold=100, feather_radius=1.5, decontamination_width=3. For automotive images (large solid objects, complex wheel spoke geometry, and high-contrast exterior paint), these values produce visible artifacts.",
+      "fix": {
+        "locate": "RembgRemover.__init__ in rembg_service.py (line ~551):",
+        "before": "self._refiner = AlphaMatteRefiner()",
+        "after":  "self._refiner = AlphaMatteRefiner(\n    close_radius=3,              # Larger kernel: better bridge for mirror stalks, antennas, door handles\n    noise_threshold=150,         # Remove more small disconnected noise fragments\n    feather_radius=2.0,          # Softer edge transition for modern vehicle panel curves\n    decontamination_width=5,     # Wider sampling for color decontamination at body edges\n)",
+        "explanation": {
+          "close_radius_3": "Larger morphological kernel recovers more thin details (side mirrors, roof rails, spoiler edges, wheel spokes). Previous value of 2 was too conservative for automotive shapes.",
+          "noise_threshold_150": "Removes small isolated pixel clusters that rembg incorrectly keeps (reflections on glass surfaces, shadow fragments). Car bodies are large continuous shapes; small components are noise.",
+          "feather_radius_2.0": "Softer alpha edge blur creates a more natural composite. Automotive paint is glossy and has specular highlights at edges that need gentle feathering to blend with the studio floor.",
+          "decontamination_width_5": "Wider window for sampling interior vehicle color when decontaminating edge pixels, which prevents white/gray halos from the original background contaminating the vehicle edges."
+        }
+      },
+      "verification": "Process the same car image before and after. Edges should be smooth with no visible stair-stepping at vehicle contours. No white halo around the vehicle when placed on a dark studio background."
+    },
+
+    {
+      "id": "BE-3",
+      "title": "Fix: Car windows show original background instead of studio background",
+      "file": "backend/app/services/image_processing.py",
+      "priority": "HIGH",
+      "symptom": "In processed results, the car windows/windscreen show the original outdoor scene visible through the glass, rather than the new studio background. This is because U²Net marks windows as opaque foreground (correct — the glass IS part of the car), but the glass is semi-transparent in real life, and the original background color contaminating window pixels makes it obvious.",
+      "root_cause": "U²Net correctly segments the full car silhouette including windows as foreground. After compositing onto the studio background, the window pixels retain their original colors (outdoor sky, trees, etc.) rather than blending with the studio. No window-transparency pass exists in the current pipeline.",
+      "fix": {
+        "locate": "In image_processing.py, inside the VehicleCompositor class — find the compositing method (likely process() or composite_vehicle()) where the rembg RGBA image is pasted onto the studio background. Add a post-compositing window transparency pass AFTER the vehicle is placed on the studio.",
+        "add_method": {
+          "name": "_apply_window_transparency",
+          "description": "Detects likely window regions in the vehicle crop and blends studio background color through them to simulate glass transparency.",
+          "code": "def _apply_window_transparency(\n    self,\n    vehicle_rgba: Image.Image,\n    studio_background: Image.Image,\n    vehicle_bbox: tuple,\n    transparency_strength: float = 0.35,\n) -> Image.Image:\n    \"\"\"\n    Blend studio background through car window regions to simulate glass transparency.\n\n    Window detection heuristic:\n    - Within the vehicle bounding box\n    - Pixels with high luminance (>180) AND low saturation (<60) in HSV\n      tend to be glass/window (reflecting sky, light)\n    - Only process pixels that are opaque in the alpha mask (alpha > 200)\n      to avoid processing already-transparent edge areas\n\n    Args:\n        vehicle_rgba: RGBA vehicle image with transparent background\n        studio_background: The studio background RGB image\n        vehicle_bbox: (x, y, w, h) position of vehicle on canvas\n        transparency_strength: How much to blend studio through windows (0.0-1.0)\n\n    Returns:\n        Modified RGBA vehicle image with semi-transparent windows\n    \"\"\"\n    import colorsys\n\n    vehicle_arr = np.array(vehicle_rgba, dtype=np.float32)\n    rgb = vehicle_arr[:, :, :3]\n    alpha = vehicle_arr[:, :, 3]\n\n    # Convert to HSV to detect window pixels\n    # Window pixels: high value (bright), low saturation (gray/white like glass reflection)\n    r, g, b = rgb[:, :, 0] / 255.0, rgb[:, :, 1] / 255.0, rgb[:, :, 2] / 255.0\n    max_c = np.maximum(np.maximum(r, g), b)\n    min_c = np.minimum(np.minimum(r, g), b)\n    v = max_c  # Value (brightness)\n    s = np.where(max_c > 0, (max_c - min_c) / max_c, 0)  # Saturation\n\n    # Window mask: bright (value > 0.55) AND desaturated (saturation < 0.40)\n    # AND opaque in alpha (alpha > 200) — inside car silhouette\n    window_mask = (v > 0.55) & (s < 0.40) & (alpha > 200)\n\n    if not window_mask.any():\n        return vehicle_rgba  # No window-like regions found\n\n    # Get corresponding studio background pixels at the vehicle's position\n    x_offset, y_offset = vehicle_bbox[0], vehicle_bbox[1]\n    vh, vw = vehicle_arr.shape[:2]\n\n    # Crop studio background to vehicle area\n    studio_arr = np.array(studio_background.convert('RGB'), dtype=np.float32)\n    studio_crop = studio_arr[\n        max(0, y_offset):min(studio_arr.shape[0], y_offset + vh),\n        max(0, x_offset):min(studio_arr.shape[1], x_offset + vw),\n        :\n    ]\n\n    # Handle size mismatch (vehicle near canvas edges)\n    if studio_crop.shape[:2] != (vh, vw):\n        return vehicle_rgba  # Skip if sizes don't align cleanly\n\n    # Blend window pixels toward studio background color\n    for c in range(3):\n        vehicle_arr[:, :, c] = np.where(\n            window_mask,\n            rgb[:, :, c] * (1 - transparency_strength) + studio_crop[:, :, c] * transparency_strength,\n            rgb[:, :, c]\n        )\n\n    return Image.fromarray(np.clip(vehicle_arr, 0, 255).astype(np.uint8), mode='RGBA')"
+        },
+        "call_site": {
+          "description": "Call _apply_window_transparency() AFTER the vehicle RGBA is finalized by rembg/AlphaMatteRefiner, and BEFORE it is pasted onto the studio canvas. Pass the studio background and the vehicle's intended paste position (x_offset, y_offset).",
+          "note": "transparency_strength=0.35 means 35% studio bleeds through windows. This simulates glass without making the windows look cut out. Adjust between 0.25 and 0.50 based on visual results."
+        }
+      },
+      "verification": "Process a car with clearly visible windows (e.g., the Mitsubishi Outlander from the screenshot). Windows should show a soft blend of the studio wall/floor color rather than the outdoor scene that was visible in the original photo."
+    },
+
+    {
+      "id": "BE-4",
+      "title": "Fix: Side mirrors cut off + shadow retained incorrectly",
+      "file": "backend/app/services/rembg_service.py",
+      "priority": "MEDIUM",
+      "symptom": "In the front-view photo of the Mitsubishi, the side mirror was clipped from the segmentation mask. Simultaneously, the car shadow on the ground was retained as part of the foreground. This is a mask boundary issue: rembg draws the boundary too tightly for protruding features.",
+      "root_cause": "The horizontal morphological closing kernel in AlphaMatteRefiner.preserve_thin_details() uses `h_kernel_size=5` which bridges 5-pixel gaps horizontally. Side mirrors on real cars can be 15–25px wide at typical photo resolution, so a 5-pixel kernel is insufficient to recover a clipped mirror. The shadow issue is separate: U²Net treats dark contact shadows as part of the foreground; the AlphaMatteRefiner does not distinguish shadow pixels from body pixels.",
+      "fix": {
+        "step_1": {
+          "description": "Increase horizontal closing kernel size to recover wider thin structures like side mirrors.",
+          "locate": "AlphaMatteRefiner.preserve_thin_details() in rembg_service.py — line `h_kernel_size = 5`",
+          "before": "h_kernel_size = 5",
+          "after":  "h_kernel_size = 8",
+          "explanation": "8-pixel horizontal kernel bridges gaps up to 16px wide, sufficient to recover typical side mirror stalks and door handle protrusions at common photo resolutions (1920px wide)."
+        },
+        "step_2": {
+          "description": "Add a shadow suppression pass to remove ground shadows from the bottom of the alpha mask.",
+          "locate": "Add a new method to AlphaMatteRefiner called _suppress_ground_shadow(), and call it as Step 0 (before refine_alpha) in the refine() method.",
+          "code": "def _suppress_ground_shadow(self, image: Image.Image) -> Image.Image:\n    \"\"\"\n    Step 0 (pre-process): Remove ground contact shadows from the bottom of the mask.\n\n    Ground shadows are typically:\n    - Located in the bottom 15-25% of the vehicle bounding box\n    - Low saturation (gray/dark) compared to vehicle body paint\n    - Have lower alpha than the main vehicle body\n\n    Strategy:\n    - In the bottom 20% of the image, erode the alpha mask to remove\n      low-confidence semi-transparent pixels that are likely shadow.\n    - This does NOT affect the tire contact points (bottom of tires)\n      because tires are fully opaque (alpha=255) while shadows are semi-transparent.\n    \"\"\"\n    if image.mode != 'RGBA':\n        image = image.convert('RGBA')\n\n    img_array = np.array(image)\n    alpha = img_array[:, :, 3].copy()\n    h, w = alpha.shape\n\n    # Focus on bottom 20% of image where ground shadows occur\n    shadow_zone_top = int(h * 0.80)\n    shadow_zone = alpha[shadow_zone_top:, :]\n\n    # In shadow zone: remove pixels with alpha between 30 and 180\n    # (semi-transparent = shadow), keep alpha > 200 (tires, bumpers)\n    shadow_zone = np.where(\n        (shadow_zone > 30) & (shadow_zone < 180),\n        0,\n        shadow_zone\n    )\n    alpha[shadow_zone_top:, :] = shadow_zone\n\n    img_array[:, :, 3] = alpha\n    return Image.fromarray(img_array, mode='RGBA')",
+          "integrate": "In AlphaMatteRefiner.refine(), add as the very first call before refine_alpha:\n  result = self._suppress_ground_shadow(image)\n  result = self.refine_alpha(result)\n  ..."
+        }
+      },
+      "verification": "Process the front-view Mitsubishi photo. Both side mirrors must be present in the cutout. The ground shadow under the car must NOT appear in the final composite (the studio's own shadow generator adds a clean synthetic shadow)."
+    }
+
+  ],
+
+  "implementation_order": [
+    "UI-1 (camera overlap — 2 min change)",
+    "UI-2 (loading toast — 5 min change)",
+    "UI-3 (45° label — 1 min change)",
+    "BE-1 (confirm rembg running — check logs first)",
+    "BE-2 (tune AlphaMatteRefiner params — 2 min change)",
+    "BE-4 (mirror + shadow — 15 min)",
+    "BE-3 (window transparency — 30 min new method)"
+  ],
+
+  "rebuild_after_backend_changes": "docker compose down && docker compose build --no-cache backend && docker compose up -d",
+  "rebuild_after_frontend_changes": "docker compose down && docker compose build --no-cache frontend && docker compose up -d",
+
+  "test_images": {
+    "side_view": "Use the Mitsubishi Outlander side photo — verify clean edges, mirrors present, no shadow bleed",
+    "front_view": "Use the Mitsubishi Outlander front photo — verify both mirrors present, windows show studio tint not outdoor scene",
+    "capture_ui": "Open /dashboard on mobile at 375px — verify camera selector below step title, no amber toast in center"
+  }
+}

@@ -985,7 +985,20 @@
       "notesTitle": "Anteckningar",
       "addNote": "Lägg till anteckning",
       "notePlaceholder": "Skriv en anteckning...",
-      "postNote": "Posta anteckning"
+      "postNote": "Posta anteckning",
+      "claim": "Ta projekt",
+      "claimConfirm": "Ta ansvar för detta projekt?",
+      "alreadyClaimed": "Redan taget av en annan redaktör",
+      "availableTab": "Tillgängliga",
+      "myOpenTab": "Mina öppna",
+      "projectAssets": "Projektfiler",
+      "downloadOriginalPhoto": "Ladda ner originalfoto",
+      "downloadAiResult": "Ladda ner AI-resultat",
+      "downloadOwnerLogo": "Ladda ner ägarens logotyp",
+      "noLogo": "Ägaren har ingen logotyp",
+      "rating": "Ditt betyg",
+      "ratingCount": "{count} betyg",
+      "noRating": "Inte betygsatt ännu"
     },
     "admin": {
       "dashboardTitle": "Redigeringsportal",
@@ -1006,7 +1019,14 @@
       "saveChanges": "Spara ändringar",
       "downloadResult": "Ladda ner resultat",
       "assignEditor": "Tilldela redaktör",
-      "noEditors": "Inga redaktörer tillgängliga"
+      "noEditors": "Inga redaktörer tillgängliga",
+      "rateEditor": "Betygsätt redaktör",
+      "ratingLabel": "Kvalitetsbetyg",
+      "ratingNote": "Betygsnot (valfritt)",
+      "submitRating": "Skicka betyg",
+      "ratingUpdated": "Betyg uppdaterat",
+      "completedTickets": "Klara",
+      "avgRating": "Snittbetyg"
     },
     "profile": {
       "title": "Min profil",

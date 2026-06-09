@@ -31,6 +31,7 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
   }
 
   const badgeCount = badge ? badge.open_count + badge.in_progress_count + badge.review_count : 0;
+  const availableCount = badge?.available_count ?? 0;
   const isActive = (path: string) => pathname.includes(path);
 
   return (
@@ -60,6 +61,11 @@ export default function EditorLayout({ children }: { children: React.ReactNode }
             {badgeCount > 0 && (
               <span className="bg-[#CC2020] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                 {badgeCount > 99 ? "99+" : badgeCount}
+              </span>
+            )}
+            {availableCount > 0 && (
+              <span className="bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center" title="Available to claim">
+                +{availableCount > 99 ? "99" : availableCount}
               </span>
             )}
           </Link>

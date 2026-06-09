@@ -25,7 +25,9 @@ from app.models import Project, Subscription, Ticket, TicketNote, User, get_db, 
 from app.middleware.auth import get_current_admin, get_db_session
 from app.services.auth import hash_password
 from app.schemas.editor import (
+    EditorRatingResponse,
     EditorUserResponse,
+    RateEditorRequest,
     TicketCreate,
     TicketListResponse,
     TicketNoteCreate,
@@ -33,6 +35,7 @@ from app.schemas.editor import (
     TicketResponse,
     TicketUpdate,
 )
+from app.models import EditorRating
 from app.api.editor import (
     PRIORITY_ORDER,
     _build_ticket_response,
@@ -824,6 +827,62 @@ async def admin_add_note(
     )
 
 
+@router.post("/admin/editor/tickets/{ticket_id}/rate", response_model=EditorRatingResponse)
+async def rate_ticket(
+    ticket_id: int,
+    body: RateEditorRequest,
+    request: Request,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db_session),
+):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    if not ticket.assigned_to_id:
+        raise HTTPException(status_code=400, detail="Cannot rate an unassigned ticket")
+
+    existing = db.query(EditorRating).filter(EditorRating.ticket_id == ticket_id).first()
+    if existing:
+        existing.stars = body.stars
+        existing.note = body.note
+        existing.rated_by_id = current_user.id
+        db.commit()
+        db.refresh(existing)
+        rating = existing
+    else:
+        rating = EditorRating(
+            editor_id=ticket.assigned_to_id,
+            ticket_id=ticket_id,
+            rated_by_id=current_user.id,
+            stars=body.stars,
+            note=body.note,
+        )
+        db.add(rating)
+        db.commit()
+        db.refresh(rating)
+
+    # Recompute denormalized avg on the editor User record
+    agg = db.query(
+        func.avg(EditorRating.stars).label("avg"),
+        func.count(EditorRating.id).label("cnt"),
+    ).filter(EditorRating.editor_id == ticket.assigned_to_id).one()
+    editor = db.query(User).filter(User.id == ticket.assigned_to_id).first()
+    if editor:
+        editor.rating_avg = round(float(agg.avg or 0), 2)
+        editor.rating_count = agg.cnt or 0
+        db.commit()
+
+    return EditorRatingResponse(
+        id=rating.id,
+        editor_id=rating.editor_id,
+        ticket_id=rating.ticket_id,
+        rated_by_id=rating.rated_by_id,
+        stars=rating.stars,
+        note=rating.note,
+        created_at=rating.created_at,
+    )
+
+
 @router.get("/admin/editor/editors", response_model=List[EditorUserResponse])
 async def admin_list_editors(
     request: Request,
@@ -837,9 +896,16 @@ async def admin_list_editors(
             Ticket.assigned_to_id == e.id,
             Ticket.status.in_(["open", "in_progress"]),
         ).count()
+        completed_count = db.query(Ticket).filter(
+            Ticket.assigned_to_id == e.id,
+            Ticket.status == "done",
+        ).count()
         result.append(EditorUserResponse(
             id=e.id, email=e.email, name=e.name,
             is_active=e.is_active, open_ticket_count=open_count,
+            rating_avg=e.rating_avg or 0.0,
+            rating_count=e.rating_count or 0,
+            completed_ticket_count=completed_count,
         ))
     return result
 
@@ -868,6 +934,9 @@ async def admin_promote_editor(
     return EditorUserResponse(
         id=user.id, email=user.email, name=user.name,
         is_active=user.is_active, open_ticket_count=open_count,
+        rating_avg=user.rating_avg or 0.0,
+        rating_count=user.rating_count or 0,
+        completed_ticket_count=0,
     )
 
 

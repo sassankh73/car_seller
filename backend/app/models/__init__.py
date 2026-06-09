@@ -10,6 +10,7 @@ from typing import Optional
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Column,
     DateTime,
     Enum as SQLEnum,
@@ -19,6 +20,7 @@ from sqlalchemy import (
     LargeBinary,
     String,
     Text,
+    UniqueConstraint,
     create_engine,
 )
 from sqlalchemy.ext.declarative import declarative_base
@@ -97,11 +99,16 @@ class User(Base):
     logo_placement = Column(String(20), default="bottom_right")
     logo_scale = Column(Float, default=0.12)
 
+    # Rating fields (denormalized for performance)
+    rating_avg = Column(Float, default=0.0)
+    rating_count = Column(Integer, default=0)
+
     # Relationships
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
     subscription = relationship("Subscription", back_populates="user", uselist=False, cascade="all, delete-orphan")
     usage = relationship("Usage", back_populates="user", uselist=False, cascade="all, delete-orphan")
     assigned_tickets = relationship("Ticket", foreign_keys="Ticket.assigned_to_id", back_populates="assigned_to")
+    ratings_received = relationship("EditorRating", foreign_keys="EditorRating.editor_id", back_populates="editor")
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email='{self.email}', role='{self.role.value}')>"
@@ -191,6 +198,7 @@ class Ticket(Base):
     description = Column(Text, nullable=True)
     editor_note = Column(Text, nullable=True)
     original_image_url = Column(Text, nullable=True)
+    ai_result_url = Column(Text, nullable=True)
     result_image_url = Column(Text, nullable=True)
     due_date = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
@@ -202,6 +210,7 @@ class Ticket(Base):
     assigned_to = relationship("User", foreign_keys=[assigned_to_id], back_populates="assigned_tickets")
     created_by = relationship("User", foreign_keys=[created_by_id])
     notes = relationship("TicketNote", back_populates="ticket", cascade="all, delete-orphan", order_by="TicketNote.created_at")
+    rating = relationship("EditorRating", back_populates="ticket", uselist=False)
 
     def __repr__(self) -> str:
         return f"<Ticket(id={self.id}, title='{self.title}', status='{self.status}')>"
@@ -225,6 +234,31 @@ class TicketNote(Base):
 
     def __repr__(self) -> str:
         return f"<TicketNote(id={self.id}, ticket_id={self.ticket_id}, internal={self.is_internal})>"
+
+
+class EditorRating(Base):
+    """Per-ticket quality rating given by Admin to the assigned Editor."""
+
+    __tablename__ = "editor_ratings"
+    __table_args__ = (
+        UniqueConstraint("ticket_id", name="uq_editor_ratings_ticket_id"),
+        CheckConstraint("stars >= 1 AND stars <= 5", name="ck_editor_ratings_stars"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    editor_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    ticket_id = Column(Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False)
+    rated_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    stars = Column(Integer, nullable=False)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    editor = relationship("User", foreign_keys=[editor_id], back_populates="ratings_received")
+    ticket = relationship("Ticket", back_populates="rating")
+
+    def __repr__(self) -> str:
+        return f"<EditorRating(id={self.id}, ticket_id={self.ticket_id}, stars={self.stars})>"
 
 
 def get_db():
@@ -351,20 +385,33 @@ def init_db():
         _add_col_if_missing(conn, "projects", "original_image_url", "TEXT", proj_cols)
         _add_col_if_missing(conn, "projects", "editor_result_url", "TEXT", proj_cols)
 
+        # tickets table — v2 columns
+        ticket_cols = [c["name"] for c in inspector.get_columns("tickets")]
+        _add_col_if_missing(conn, "tickets", "ai_result_url", "TEXT", ticket_cols)
 
-_ALLOWED_TABLES = {"users", "subscriptions", "usages", "projects", "tickets", "ticket_notes"}
+        # users table — editor rating columns
+        user_cols2 = [c["name"] for c in inspector.get_columns("users")]
+        _add_col_if_missing(conn, "users", "rating_avg", "FLOAT DEFAULT 0.0", user_cols2)
+        _add_col_if_missing(conn, "users", "rating_count", "INTEGER DEFAULT 0", user_cols2)
+
+
+_ALLOWED_TABLES = {"users", "subscriptions", "usages", "projects", "tickets", "ticket_notes", "editor_ratings"}
 _ALLOWED_COLS = {
     "last_login", "password_changed_at", "is_disabled", "force_password_reset",
     "logo_data", "logo_mime_type", "logo_placement", "logo_scale",
     "watermark_applied", "original_format", "password_reset_token_hash",
+    # users — editor rating
+    "rating_avg", "rating_count",
     # projects — editor workflow
     "original_image_url", "editor_result_url",
     # tickets
     "id", "project_id", "assigned_to_id", "created_by_id", "status", "priority",
-    "title", "description", "editor_note", "result_image_url", "due_date",
-    "completed_at", "created_at", "updated_at",
+    "title", "description", "editor_note", "result_image_url", "ai_result_url",
+    "due_date", "completed_at", "created_at", "updated_at",
     # ticket_notes
     "ticket_id", "author_id", "body", "is_internal",
+    # editor_ratings
+    "editor_id", "rated_by_id", "stars", "note",
 }
 
 

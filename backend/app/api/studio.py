@@ -24,6 +24,10 @@ STORAGE_DIR = Path(__file__).parent.parent / "storage"
 RESULTS_DIR = Path(__file__).parent.parent / "static" / "results"
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
+# Static originals directory (raw pre-AI photos for editors)
+ORIGINALS_DIR = Path(__file__).parent.parent / "static" / "originals"
+ORIGINALS_DIR.mkdir(parents=True, exist_ok=True)
+
 # Static studios directory
 STUDIOS_DIR = Path(__file__).parent.parent / "static" / "studios"
 
@@ -381,6 +385,7 @@ async def process_image(
         )
 
     # Preserve original uploaded image to filesystem
+    original_static_url: Optional[str] = None
     try:
         gen_dir = STORAGE_DIR / generation_id
         gen_dir.mkdir(parents=True, exist_ok=True)
@@ -388,6 +393,15 @@ async def process_image(
         logger.info("Saved original image to %s", gen_dir / "original.png")
     except Exception as e:
         logger.warning("Failed to save original image: %s (non-fatal, continuing)", e)
+
+    # Also save original to static/originals/ so editors can access it via HTTP
+    try:
+        orig_filename = f"orig_{generation_id}.png"
+        original_image.save(ORIGINALS_DIR / orig_filename, format="PNG")
+        original_static_url = f"/static/originals/{orig_filename}"
+        logger.info("Saved original to static: %s", original_static_url)
+    except Exception as e:
+        logger.warning("Failed to save original to static (non-fatal): %s", e)
 
     # Get studio config
     studio_config = studios[studio_key]
@@ -473,6 +487,32 @@ async def process_image(
             db.commit()
             db.refresh(proj)
             project_id = proj.id
+
+            # Auto-create editor ticket for this project
+            try:
+                from app.models import Ticket as TicketModel
+                auto_ticket = TicketModel(
+                    project_id=proj.id,
+                    assigned_to_id=None,
+                    created_by_id=None,
+                    status="open",
+                    priority="normal",
+                    title=f"{proj.name} — Studio {studio_key}",
+                    description=None,
+                    original_image_url=original_static_url,
+                    ai_result_url=result_url,
+                    result_image_url=None,
+                )
+                db.add(auto_ticket)
+                db.commit()
+                logger.info("Auto-created ticket %s for project %s", auto_ticket.id, proj.id)
+            except Exception as e:
+                logger.warning("Failed to auto-create ticket (non-fatal): %s", e)
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+
         except Exception as e:
             logger.warning("Failed to save project record: %s (non-fatal)", e)
             try:

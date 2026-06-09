@@ -11,6 +11,16 @@ export interface TicketNote {
   created_at: string;
 }
 
+export interface EditorRating {
+  id: number;
+  editor_id: number;
+  ticket_id: number;
+  rated_by_id: number | null;
+  stars: number;
+  note: string | null;
+  created_at: string;
+}
+
 export interface Ticket {
   id: number;
   project_id: number;
@@ -24,12 +34,15 @@ export interface Ticket {
   description: string | null;
   editor_note: string | null;
   original_image_url: string | null;
+  ai_result_url?: string | null;
   result_image_url: string | null;
+  owner_logo_url?: string | null;
   due_date: string | null;
   completed_at: string | null;
   created_at: string;
   updated_at: string;
   notes: TicketNote[];
+  rating?: EditorRating | null;
 }
 
 export interface TicketListResponse {
@@ -44,6 +57,7 @@ export interface TicketBadge {
   open_count: number;
   in_progress_count: number;
   review_count: number;
+  available_count: number;
 }
 
 export interface EditorUser {
@@ -52,6 +66,9 @@ export interface EditorUser {
   name: string | null;
   is_active: boolean;
   open_ticket_count: number;
+  rating_avg: number;
+  rating_count: number;
+  completed_ticket_count: number;
 }
 
 export interface TicketCreate {

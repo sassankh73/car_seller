@@ -1,0 +1,806 @@
+{
+  "task": "Build Editor Portal and Ticketing System for AutoStudio AI",
+  "version": "1.0",
+  "author": "Auto Studio project owner",
+  "description": "Full implementation plan for an internal Editor Portal where Admin can assign photo-editing tickets to Editor-role users. Editors log in, see their assigned tickets, download original car photos, upload retouched results, and mark tickets done. Admin can track status, add notes, and manage the queue. This document is ground-truth spec — implement exactly as written, ask before deviating.",
+
+  "ground_rules": [
+    "Do NOT modify any existing API endpoint behaviour or response shape — only ADD new endpoints",
+    "Do NOT change existing Role enum values ADMIN, USER, PREMIUM, FREE — only ADD EDITOR",
+    "Do NOT redesign existing frontend pages (dashboard, capture, billing) — only ADD new pages under /editor/ and /admin/editor-portal/",
+    "All DB migrations use the existing _add_col_if_missing() pattern in backend/app/models/__init__.py",
+    "All new string literals go into frontend/messages/en.json and frontend/messages/sv.json — no hardcoded UI strings",
+    "Editor portal is desktop-only — do NOT add mobile layouts for /editor/* routes",
+    "Ask before installing any new Python or npm package not already in requirements.txt / package.json"
+  ],
+
+  "codebase_context": {
+    "backend_root": "backend/app/",
+    "frontend_root": "frontend/",
+    "models_file": "backend/app/models/__init__.py",
+    "auth_middleware": "backend/app/middleware/auth.py",
+    "main_file": "backend/app/main.py",
+    "existing_api_files": [
+      "backend/app/api/auth.py",
+      "backend/app/api/admin.py",
+      "backend/app/api/projects.py",
+      "backend/app/api/studio.py"
+    ],
+    "email_service": "backend/app/services/email.py",
+    "existing_role_enum": ["ADMIN", "USER", "PREMIUM", "FREE"],
+    "role_pg_type_name": "role",
+    "init_db_migration_pattern": "_add_col_if_missing(conn, table, col_name, col_definition, existing_cols_list)",
+    "get_current_user_location": "backend/app/middleware/auth.py — dependency function get_current_user(request: Request)",
+    "get_current_admin_location": "backend/app/middleware/auth.py — dependency function get_current_admin(request: Request)",
+    "frontend_i18n_files": [
+      "frontend/messages/en.json",
+      "frontend/messages/sv.json"
+    ],
+    "frontend_locale_route": "frontend/app/[locale]/",
+    "allowed_tables_list": "backend/app/models/__init__.py — _ALLOWED_TABLES set",
+    "allowed_cols_list": "backend/app/models/__init__.py — _ALLOWED_COLS dict"
+  },
+
+  "phase_1_database": {
+    "title": "Phase 1 — Database Models and Migrations",
+    "description": "Add EDITOR role, two new tables (tickets, ticket_notes), two new columns on projects, and register them in _ALLOWED_TABLES/_ALLOWED_COLS.",
+
+    "step_1_1_add_editor_role": {
+      "file": "backend/app/models/__init__.py",
+      "what": "Add EDITOR value to the Role enum AND to the PostgreSQL native type",
+      "python_enum_change": {
+        "before": "ADMIN = 'ADMIN'\n    USER = 'USER'\n    PREMIUM = 'PREMIUM'\n    FREE = 'FREE'",
+        "after": "ADMIN = 'ADMIN'\n    USER = 'USER'\n    EDITOR = 'EDITOR'\n    PREMIUM = 'PREMIUM'\n    FREE = 'FREE'"
+      },
+      "migration_in_init_db": {
+        "location": "Inside the `with engine.connect() as conn:` block in init_db(), before the _add_col_if_missing calls",
+        "sql": "ALTER TYPE role ADD VALUE IF NOT EXISTS 'EDITOR'",
+        "wrap_in_try_except": true,
+        "commit_after": true,
+        "note": "PostgreSQL does not allow ALTER TYPE inside a transaction block — execute this with conn.execute(text('COMMIT')) first, then ALTER TYPE, then do NOT call conn.rollback() on success."
+      }
+    },
+
+    "step_1_2_ticket_model": {
+      "file": "backend/app/models/__init__.py",
+      "what": "Add Ticket SQLAlchemy model",
+      "table_name": "tickets",
+      "columns": {
+        "id": "Integer, primary_key, index",
+        "project_id": "Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False, index",
+        "assigned_to_id": "Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index — the Editor user",
+        "created_by_id": "Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True — the Admin who created it",
+        "status": "String(30), default='open' — allowed values: open | in_progress | review | done | rejected",
+        "priority": "String(20), default='normal' — allowed values: low | normal | high | urgent",
+        "title": "String(255), nullable=False",
+        "description": "Text, nullable=True — Admin instructions to Editor",
+        "editor_note": "Text, nullable=True — Editor's reply note when submitting result",
+        "original_image_url": "Text, nullable=True — S3/local URL of original car photo for editing",
+        "result_image_url": "Text, nullable=True — S3/local URL of Editor's finished result",
+        "due_date": "DateTime, nullable=True",
+        "completed_at": "DateTime, nullable=True",
+        "created_at": "DateTime, default=datetime.utcnow",
+        "updated_at": "DateTime, default=datetime.utcnow, onupdate=datetime.utcnow"
+      },
+      "relationships": {
+        "project": "relationship('Project', back_populates='tickets')",
+        "assigned_to": "relationship('User', foreign_keys=[assigned_to_id], back_populates='assigned_tickets')",
+        "created_by": "relationship('User', foreign_keys=[created_by_id])",
+        "notes": "relationship('TicketNote', back_populates='ticket', cascade='all, delete-orphan', order_by='TicketNote.created_at')"
+      }
+    },
+
+    "step_1_3_ticket_note_model": {
+      "file": "backend/app/models/__init__.py",
+      "what": "Add TicketNote SQLAlchemy model",
+      "table_name": "ticket_notes",
+      "columns": {
+        "id": "Integer, primary_key, index",
+        "ticket_id": "Integer, ForeignKey('tickets.id', ondelete='CASCADE'), nullable=False, index",
+        "author_id": "Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True",
+        "body": "Text, nullable=False",
+        "is_internal": "Boolean, default=False — if True, visible to Admin only; if False, visible to Editor too",
+        "created_at": "DateTime, default=datetime.utcnow"
+      },
+      "relationships": {
+        "ticket": "relationship('Ticket', back_populates='notes')",
+        "author": "relationship('User', foreign_keys=[author_id])"
+      }
+    },
+
+    "step_1_4_project_new_columns": {
+      "file": "backend/app/models/__init__.py",
+      "what": "Add two columns to Project model for editor workflow",
+      "add_to_Project_class": {
+        "original_image_url": "Column(Text, nullable=True) — copy of image_url at time of ticket creation, preserved even if image_url changes",
+        "editor_result_url": "Column(Text, nullable=True) — URL of the editor-uploaded finished image"
+      },
+      "add_to_init_db_migration": {
+        "table": "projects",
+        "calls": [
+          "_add_col_if_missing(conn, 'projects', 'original_image_url', 'TEXT', project_cols)",
+          "_add_col_if_missing(conn, 'projects', 'editor_result_url', 'TEXT', project_cols)"
+        ],
+        "note": "project_cols = [c['name'] for c in inspector.get_columns('projects')] — add this line before the calls"
+      }
+    },
+
+    "step_1_5_user_relationship": {
+      "file": "backend/app/models/__init__.py",
+      "what": "Add assigned_tickets relationship to User model",
+      "add_to_User_class": {
+        "assigned_tickets": "relationship('Ticket', foreign_keys='Ticket.assigned_to_id', back_populates='assigned_to')"
+      }
+    },
+
+    "step_1_6_project_relationship": {
+      "file": "backend/app/models/__init__.py",
+      "what": "Add tickets relationship to Project model",
+      "add_to_Project_class": {
+        "tickets": "relationship('Ticket', back_populates='project', cascade='all, delete-orphan')"
+      }
+    },
+
+    "step_1_7_allowed_lists": {
+      "file": "backend/app/models/__init__.py",
+      "what": "Add new tables and columns to _ALLOWED_TABLES and _ALLOWED_COLS allowlists",
+      "add_to_ALLOWED_TABLES": ["tickets", "ticket_notes"],
+      "add_to_ALLOWED_COLS": {
+        "tickets": ["id", "project_id", "assigned_to_id", "created_by_id", "status", "priority", "title", "description", "editor_note", "original_image_url", "result_image_url", "due_date", "completed_at", "created_at", "updated_at"],
+        "ticket_notes": ["id", "ticket_id", "author_id", "body", "is_internal", "created_at"],
+        "projects": ["original_image_url", "editor_result_url"]
+      }
+    },
+
+    "step_1_8_init_db_create_new_tables": {
+      "note": "Because Ticket and TicketNote are declared as SQLAlchemy models that inherit Base, calling Base.metadata.create_all(bind=engine) at the top of init_db() will CREATE both tables automatically on first run. No extra SQL needed."
+    }
+  },
+
+  "phase_2_auth_middleware": {
+    "title": "Phase 2 — Editor Auth Dependency",
+    "file": "backend/app/middleware/auth.py",
+    "what": "Add get_current_editor dependency, mirroring the existing get_current_admin pattern exactly",
+    "implementation": {
+      "function_name": "get_current_editor",
+      "signature": "def get_current_editor(request: Request) -> User:",
+      "logic": [
+        "Call get_current_user(request) to get the authenticated user",
+        "If user.role not in (Role.EDITOR, Role.ADMIN): raise HTTPException(status_code=403, detail='Editor access required')",
+        "Return user",
+        "Note: ADMIN can access all editor endpoints — this mirrors how get_current_admin works"
+      ],
+      "also_add": "get_db_session dependency that yields request.state.db — check if it already exists, add only if missing"
+    }
+  },
+
+  "phase_3_pydantic_schemas": {
+    "title": "Phase 3 — Pydantic Schemas",
+    "file": "backend/app/schemas/editor.py",
+    "what": "Create new schemas file — do NOT add to existing schemas files",
+    "schemas": {
+      "TicketCreate": {
+        "fields": {
+          "project_id": "int",
+          "assigned_to_id": "Optional[int] = None",
+          "title": "str — max_length=255",
+          "description": "Optional[str] = None",
+          "priority": "str = 'normal' — validator: must be one of low|normal|high|urgent",
+          "due_date": "Optional[datetime] = None"
+        }
+      },
+      "TicketUpdate": {
+        "fields": {
+          "assigned_to_id": "Optional[int] = None",
+          "title": "Optional[str] = None",
+          "description": "Optional[str] = None",
+          "priority": "Optional[str] = None",
+          "due_date": "Optional[datetime] = None",
+          "status": "Optional[str] = None — Admin only; validator: must be one of open|in_progress|review|done|rejected"
+        }
+      },
+      "TicketEditorSubmit": {
+        "description": "Used by Editor when submitting completed work",
+        "fields": {
+          "editor_note": "Optional[str] = None"
+        },
+        "note": "result_image_url is set via the separate file-upload endpoint, not this body"
+      },
+      "TicketNoteCreate": {
+        "fields": {
+          "body": "str",
+          "is_internal": "bool = False"
+        }
+      },
+      "TicketNoteResponse": {
+        "fields": {
+          "id": "int",
+          "ticket_id": "int",
+          "author_id": "Optional[int]",
+          "author_name": "Optional[str]",
+          "body": "str",
+          "is_internal": "bool",
+          "created_at": "datetime"
+        },
+        "config": "from_attributes = True"
+      },
+      "TicketResponse": {
+        "fields": {
+          "id": "int",
+          "project_id": "int",
+          "project_name": "Optional[str]",
+          "assigned_to_id": "Optional[int]",
+          "assigned_to_name": "Optional[str]",
+          "created_by_id": "Optional[int]",
+          "status": "str",
+          "priority": "str",
+          "title": "str",
+          "description": "Optional[str]",
+          "editor_note": "Optional[str]",
+          "original_image_url": "Optional[str]",
+          "result_image_url": "Optional[str]",
+          "due_date": "Optional[datetime]",
+          "completed_at": "Optional[datetime]",
+          "created_at": "datetime",
+          "updated_at": "datetime",
+          "notes": "List[TicketNoteResponse] = []"
+        },
+        "config": "from_attributes = True"
+      },
+      "TicketListResponse": {
+        "fields": {
+          "items": "List[TicketResponse]",
+          "total": "int",
+          "page": "int",
+          "page_size": "int",
+          "pages": "int"
+        }
+      },
+      "EditorUserResponse": {
+        "fields": {
+          "id": "int",
+          "email": "str",
+          "name": "Optional[str]",
+          "is_active": "bool",
+          "open_ticket_count": "int"
+        },
+        "config": "from_attributes = True"
+      },
+      "TicketBadgeResponse": {
+        "description": "Lightweight response for polling — returns unread/pending count only",
+        "fields": {
+          "open_count": "int",
+          "in_progress_count": "int",
+          "review_count": "int"
+        }
+      }
+    }
+  },
+
+  "phase_4_api_editor": {
+    "title": "Phase 4 — Editor API Router (/api/editor/)",
+    "file": "backend/app/api/editor.py",
+    "what": "Create new API file. All endpoints require get_current_editor (EDITOR or ADMIN). Editors see only tickets assigned to them; Admins see all.",
+    "router_prefix": "/api/editor",
+    "router_tags": ["editor"],
+
+    "endpoints": {
+      "GET /tickets": {
+        "description": "List tickets. Editor sees only their own; Admin sees all.",
+        "query_params": {
+          "status": "Optional[str] = None — filter by status",
+          "priority": "Optional[str] = None",
+          "page": "int = 1",
+          "page_size": "int = 20 — max 100"
+        },
+        "returns": "TicketListResponse",
+        "implementation_note": "If current_user.role == Role.EDITOR: filter by assigned_to_id == current_user.id. If Role.ADMIN: no filter (sees all). Order by priority DESC (urgent first), then created_at DESC."
+      },
+      "GET /tickets/{ticket_id}": {
+        "description": "Get single ticket with notes. Editor: only if assigned_to_id matches. Admin: any ticket.",
+        "returns": "TicketResponse — include notes, but if current_user.role == Role.EDITOR: filter out notes where is_internal=True"
+      },
+      "POST /tickets/{ticket_id}/upload-result": {
+        "description": "Editor uploads the finished edited image. Saves file to same directory as original images.",
+        "accepts": "multipart/form-data with file field 'file'",
+        "implementation": [
+          "Validate file is image (check content-type: image/jpeg or image/png)",
+          "Save to UPLOAD_DIR (same env var used by studio.py) with filename: result_{ticket_id}_{original_filename}",
+          "Set ticket.result_image_url to the saved path (use same URL format as image_url in projects)",
+          "Set ticket.status = 'review' automatically",
+          "Trigger send_ticket_result_notification() email to admin (see Phase 6)",
+          "Return updated TicketResponse"
+        ]
+      },
+      "POST /tickets/{ticket_id}/submit": {
+        "description": "Editor marks ticket as submitted for review, optionally with a note.",
+        "body": "TicketEditorSubmit",
+        "implementation": [
+          "Only allowed if ticket.assigned_to_id == current_user.id",
+          "Set ticket.editor_note = body.editor_note",
+          "Set ticket.status = 'review'",
+          "Set ticket.updated_at = datetime.utcnow()",
+          "Return updated TicketResponse"
+        ]
+      },
+      "POST /tickets/{ticket_id}/notes": {
+        "description": "Add a note to a ticket. Editors cannot set is_internal=True.",
+        "body": "TicketNoteCreate",
+        "implementation": [
+          "If current_user.role == Role.EDITOR: force is_internal=False regardless of body value",
+          "Create TicketNote record",
+          "Return TicketNoteResponse"
+        ]
+      },
+      "GET /badge": {
+        "description": "Returns count of Editor's open/in_progress/review tickets. Used for 30-second polling to update navigation badge.",
+        "returns": "TicketBadgeResponse",
+        "implementation_note": "Filter by assigned_to_id == current_user.id. This endpoint is called every 30s by the frontend — keep it lightweight, no joins needed."
+      },
+      "GET /me": {
+        "description": "Returns current editor's profile — name, email, open ticket count.",
+        "returns": "EditorUserResponse"
+      }
+    }
+  },
+
+  "phase_5_api_admin_editor": {
+    "title": "Phase 5 — Admin Editor-Management Endpoints (additions to admin router)",
+    "file": "backend/app/api/admin.py",
+    "what": "Add new endpoints to the existing admin router. All existing endpoints remain untouched. All new endpoints require get_current_admin.",
+
+    "new_endpoints": {
+      "GET /admin/editor/tickets": {
+        "description": "Full ticket list with all statuses. Admin view.",
+        "query_params": {
+          "status": "Optional[str] = None",
+          "priority": "Optional[str] = None",
+          "assigned_to_id": "Optional[int] = None",
+          "page": "int = 1",
+          "page_size": "int = 20"
+        },
+        "returns": "TicketListResponse"
+      },
+      "POST /admin/editor/tickets": {
+        "description": "Create a new ticket (Admin only).",
+        "body": "TicketCreate",
+        "implementation": [
+          "Set ticket.created_by_id = current_user.id",
+          "Set ticket.original_image_url = project.image_url at creation time",
+          "If assigned_to_id is provided: verify target user exists and has role EDITOR",
+          "If assigned_to_id is set: send send_ticket_assignment_email() notification (see Phase 6)",
+          "Return TicketResponse"
+        ]
+      },
+      "PATCH /admin/editor/tickets/{ticket_id}": {
+        "description": "Update ticket metadata (Admin only). Can change assignment, priority, status, due_date.",
+        "body": "TicketUpdate",
+        "implementation": [
+          "Partial update — only set fields that are not None in body",
+          "If assigned_to_id changes: verify new user has EDITOR role, send assignment email",
+          "If status changes to 'done': set ticket.completed_at = datetime.utcnow()",
+          "Return TicketResponse"
+        ]
+      },
+      "DELETE /admin/editor/tickets/{ticket_id}": {
+        "description": "Delete a ticket (Admin only). Cascades to delete notes.",
+        "returns": "{ 'deleted': true }"
+      },
+      "POST /admin/editor/tickets/{ticket_id}/notes": {
+        "description": "Admin adds a note to a ticket. Can set is_internal=True (hidden from Editor).",
+        "body": "TicketNoteCreate",
+        "returns": "TicketNoteResponse"
+      },
+      "GET /admin/editor/editors": {
+        "description": "List all users with role EDITOR. Used for assignment dropdown.",
+        "returns": "List[EditorUserResponse] — include open ticket count per editor"
+      },
+      "POST /admin/editor/editors": {
+        "description": "Promote an existing USER to EDITOR role (Admin only).",
+        "body": "{ 'user_id': int }",
+        "implementation": [
+          "Verify user exists",
+          "Set user.role = Role.EDITOR",
+          "Return EditorUserResponse"
+        ]
+      },
+      "DELETE /admin/editor/editors/{user_id}": {
+        "description": "Demote EDITOR back to USER. Reassign open tickets: set assigned_to_id=NULL and status back to 'open'.",
+        "returns": "{ 'demoted': true, 'tickets_unassigned': int }"
+      }
+    }
+  },
+
+  "phase_6_email_notifications": {
+    "title": "Phase 6 — Email Notifications",
+    "file": "backend/app/services/email.py",
+    "what": "Add three new email functions to the existing email service. Follow the exact same function signature pattern already in the file.",
+
+    "function_1": {
+      "name": "send_ticket_assignment_email",
+      "params": "editor_email: str, editor_name: str, ticket_id: int, ticket_title: str, project_name: str, due_date: Optional[datetime], admin_instructions: Optional[str]",
+      "subject": "f'New editing assignment: {ticket_title}'",
+      "body_html": "Professional HTML email with: ticket ID, project name, title, priority, due date (if set), admin instructions (if set), link to editor portal: {FRONTEND_URL}/editor/tickets/{ticket_id}",
+      "env_var_for_url": "FRONTEND_URL — read from os.getenv('FRONTEND_URL', 'http://localhost:3000')"
+    },
+    "function_2": {
+      "name": "send_ticket_result_notification",
+      "params": "admin_email: str, ticket_id: int, ticket_title: str, editor_name: str, editor_note: Optional[str]",
+      "subject": "f'Editor result ready for review: {ticket_title}'",
+      "body_html": "Ticket ID, editor name, editor note (if any), link to admin portal: {FRONTEND_URL}/admin/editor-portal/tickets/{ticket_id}"
+    },
+    "function_3": {
+      "name": "send_ticket_status_update_email",
+      "params": "editor_email: str, ticket_id: int, ticket_title: str, new_status: str, admin_note: Optional[str]",
+      "subject": "f'Ticket update: {ticket_title} is now {new_status}'",
+      "body_html": "Ticket ID, new status, admin note if any, link back to ticket in editor portal"
+    },
+    "note": "If email sending fails, log the error but do NOT raise an exception — email failure must never break the API response."
+  },
+
+  "phase_7_register_router": {
+    "title": "Phase 7 — Register Editor Router in main.py",
+    "file": "backend/app/main.py",
+    "what": "Import and register the new editor router. Do NOT change any existing imports or router registrations.",
+    "changes": [
+      "Add import: from .api.editor import router as editor_router",
+      "Add: app.include_router(editor_router) — place after the existing admin_router include line",
+      "Add '/api/editor/' to public_prefixes in authenticate_middleware? NO — editor endpoints require auth, they must NOT be public. Verify authenticate_middleware already handles them correctly (it does — anything not in public_exact or public_prefixes goes through auth)."
+    ]
+  },
+
+  "phase_8_frontend_editor_portal": {
+    "title": "Phase 8 — Frontend: Editor Portal Pages",
+    "description": "Desktop-only pages under /[locale]/editor/. Do NOT add any mobile breakpoint styles. Use the same shadcn/ui components and Tailwind patterns already in the project.",
+
+    "pages": {
+      "frontend/app/[locale]/editor/page.tsx": {
+        "description": "Editor home — redirects to /editor/tickets",
+        "implementation": "export default function EditorPage() { redirect('/editor/tickets') }"
+      },
+      "frontend/app/[locale]/editor/layout.tsx": {
+        "description": "Editor portal layout wrapper — sidebar + main content area",
+        "structure": [
+          "Server component — check session, if role not EDITOR or ADMIN, redirect to /(dashboard)/",
+          "Left sidebar: Auto Studio logo, nav links (My Tickets, My Profile), badge on My Tickets showing open+in_progress count",
+          "Main content: {children}",
+          "Footer: Auto Studio branding"
+        ],
+        "badge_polling": "Client component inside layout: poll GET /api/editor/badge every 30 seconds using setInterval. Update a Zustand store or context. Badge shows red dot with count if count > 0."
+      },
+      "frontend/app/[locale]/editor/tickets/page.tsx": {
+        "description": "Editor's ticket list",
+        "features": [
+          "Fetch GET /api/editor/tickets on mount",
+          "Filter tabs: All | Open | In Progress | Review | Done",
+          "Each ticket card: title, project name, priority badge (color-coded: urgent=red, high=orange, normal=blue, low=gray), status badge, due date (red if overdue), assigned date",
+          "Click ticket card navigates to /editor/tickets/{id}",
+          "Empty state: 'No tickets assigned yet' illustration"
+        ]
+      },
+      "frontend/app/[locale]/editor/tickets/[id]/page.tsx": {
+        "description": "Single ticket detail page for Editor",
+        "sections": [
+          "Header: ticket title, status badge, priority badge, due date",
+          "Original image: download button (downloads original_image_url), preview thumbnail",
+          "Admin instructions: read-only display of ticket.description",
+          "Upload Result section: drag-and-drop or file picker for image upload. POST to /api/editor/tickets/{id}/upload-result. Show upload progress. After upload: show preview of result_image_url.",
+          "Editor note: textarea for editor_note, POST to /api/editor/tickets/{id}/submit",
+          "Notes thread: chronological list of non-internal notes (is_internal=False). Input to add new note.",
+          "Submit button: disabled until result_image_url is set on ticket"
+        ]
+      },
+      "frontend/app/[locale]/editor/profile/page.tsx": {
+        "description": "Editor profile — name, email, change password form",
+        "note": "Reuse existing auth API endpoints for password change — do not create new ones"
+      }
+    }
+  },
+
+  "phase_9_frontend_admin_portal": {
+    "title": "Phase 9 — Frontend: Admin Editor Portal Pages",
+    "description": "Admin pages under /[locale]/admin/editor-portal/. Accessible only to ADMIN role. Desktop-only.",
+
+    "pages": {
+      "frontend/app/[locale]/admin/editor-portal/page.tsx": {
+        "description": "Admin ticket management dashboard",
+        "features": [
+          "Summary cards: total open tickets, in-progress, awaiting review, completed this week",
+          "Full ticket table with columns: ID, Project, Title, Priority, Status, Assigned To, Due Date, Created",
+          "Filters: status, priority, assigned editor, date range",
+          "Pagination: 20 per page",
+          "Create Ticket button — opens modal",
+          "Row click navigates to /admin/editor-portal/tickets/{id}"
+        ]
+      },
+      "frontend/app/[locale]/admin/editor-portal/tickets/[id]/page.tsx": {
+        "description": "Admin single ticket view — full control",
+        "sections": [
+          "Ticket header: editable title, priority selector, status selector, due date picker, assigned editor dropdown (populated from GET /admin/editor/editors)",
+          "Original image preview and URL display",
+          "Result image preview (if uploaded by editor) + Download result button",
+          "Editor note display (read-only)",
+          "Notes thread: shows ALL notes including is_internal=True (marked as 'Internal — not visible to editor'). Add note form with is_internal checkbox.",
+          "Action buttons: Save Changes (PATCH), Mark Done, Reject (sets status=rejected), Delete Ticket"
+        ]
+      },
+      "frontend/app/[locale]/admin/editor-portal/editors/page.tsx": {
+        "description": "Manage editor accounts",
+        "features": [
+          "Table of all EDITOR-role users: name, email, open tickets, in-progress tickets, joined date",
+          "Promote User button: search existing users by email, set role to EDITOR",
+          "Demote button per row: confirms and demotes back to USER"
+        ]
+      }
+    },
+
+    "navigation_integration": {
+      "file": "frontend/components/dashboard/Sidebar.tsx OR AdminSidebar.tsx — check which one exists",
+      "what": "Add 'Editor Portal' link to admin navigation sidebar. Only render if current user role is ADMIN."
+    }
+  },
+
+  "phase_10_i18n": {
+    "title": "Phase 10 — i18n Strings",
+    "files": ["frontend/messages/en.json", "frontend/messages/sv.json"],
+    "what": "Add all new strings under a top-level 'editor' key. All UI strings for editor portal MUST use t() — no hardcoded English.",
+
+    "en_json_additions": {
+      "editor": {
+        "nav": {
+          "myTickets": "My Tickets",
+          "myProfile": "My Profile",
+          "editorPortal": "Editor Portal"
+        },
+        "tickets": {
+          "title": "My Tickets",
+          "empty": "No tickets assigned yet",
+          "filterAll": "All",
+          "filterOpen": "Open",
+          "filterInProgress": "In Progress",
+          "filterReview": "In Review",
+          "filterDone": "Done",
+          "priority": {
+            "low": "Low",
+            "normal": "Normal",
+            "high": "High",
+            "urgent": "Urgent"
+          },
+          "status": {
+            "open": "Open",
+            "in_progress": "In Progress",
+            "review": "In Review",
+            "done": "Done",
+            "rejected": "Rejected"
+          },
+          "overdue": "Overdue",
+          "dueDate": "Due",
+          "createdAt": "Created",
+          "assignedTo": "Assigned To",
+          "instructions": "Admin Instructions",
+          "noInstructions": "No instructions provided",
+          "originalImage": "Original Image",
+          "downloadOriginal": "Download Original",
+          "uploadResult": "Upload Result",
+          "uploadResultHint": "Drag and drop or click to upload your edited image (JPEG or PNG)",
+          "resultPreview": "Result Preview",
+          "editorNote": "Your Note (optional)",
+          "editorNotePlaceholder": "Add a note for the admin...",
+          "submitResult": "Submit for Review",
+          "submitResultDisabled": "Upload your result first",
+          "notesTitle": "Notes",
+          "addNote": "Add Note",
+          "notePlaceholder": "Write a note...",
+          "postNote": "Post Note"
+        },
+        "admin": {
+          "dashboardTitle": "Editor Portal",
+          "totalOpen": "Open",
+          "totalInProgress": "In Progress",
+          "awaitingReview": "Awaiting Review",
+          "completedThisWeek": "Completed This Week",
+          "createTicket": "Create Ticket",
+          "editorsTitle": "Manage Editors",
+          "promoteUser": "Promote to Editor",
+          "demoteEditor": "Demote to User",
+          "demoteConfirm": "This will unassign all open tickets. Continue?",
+          "internalNote": "Internal — not visible to editor",
+          "markDone": "Mark as Done",
+          "reject": "Reject",
+          "deleteTicket": "Delete Ticket",
+          "deleteConfirm": "Delete this ticket and all its notes permanently?",
+          "saveChanges": "Save Changes",
+          "downloadResult": "Download Result",
+          "assignEditor": "Assign Editor",
+          "noEditors": "No editors available"
+        },
+        "profile": {
+          "title": "My Profile",
+          "changePassword": "Change Password"
+        }
+      }
+    },
+
+    "sv_json_additions": {
+      "editor": {
+        "nav": {
+          "myTickets": "Mina ärenden",
+          "myProfile": "Min profil",
+          "editorPortal": "Redigeringsportal"
+        },
+        "tickets": {
+          "title": "Mina ärenden",
+          "empty": "Inga tilldelade ärenden ännu",
+          "filterAll": "Alla",
+          "filterOpen": "Öppna",
+          "filterInProgress": "Pågående",
+          "filterReview": "Granskning",
+          "filterDone": "Klara",
+          "priority": {
+            "low": "Låg",
+            "normal": "Normal",
+            "high": "Hög",
+            "urgent": "Brådskande"
+          },
+          "status": {
+            "open": "Öppen",
+            "in_progress": "Pågående",
+            "review": "Granskning",
+            "done": "Klar",
+            "rejected": "Avvisad"
+          },
+          "overdue": "Försenad",
+          "dueDate": "Förfaller",
+          "createdAt": "Skapad",
+          "assignedTo": "Tilldelad",
+          "instructions": "Admins instruktioner",
+          "noInstructions": "Inga instruktioner angivna",
+          "originalImage": "Originalbild",
+          "downloadOriginal": "Ladda ner original",
+          "uploadResult": "Ladda upp resultat",
+          "uploadResultHint": "Dra och släpp eller klicka för att ladda upp din redigerade bild (JPEG eller PNG)",
+          "resultPreview": "Förhandsgranskning av resultat",
+          "editorNote": "Din anteckning (valfritt)",
+          "editorNotePlaceholder": "Lägg till en anteckning för admin...",
+          "submitResult": "Skicka för granskning",
+          "submitResultDisabled": "Ladda upp ditt resultat först",
+          "notesTitle": "Anteckningar",
+          "addNote": "Lägg till anteckning",
+          "notePlaceholder": "Skriv en anteckning...",
+          "postNote": "Posta anteckning"
+        },
+        "admin": {
+          "dashboardTitle": "Redigeringsportal",
+          "totalOpen": "Öppna",
+          "totalInProgress": "Pågående",
+          "awaitingReview": "Väntar på granskning",
+          "completedThisWeek": "Klara denna vecka",
+          "createTicket": "Skapa ärende",
+          "editorsTitle": "Hantera redaktörer",
+          "promoteUser": "Uppgradera till redaktör",
+          "demoteEditor": "Nedgradera till användare",
+          "demoteConfirm": "Detta avtilldelar alla öppna ärenden. Fortsätt?",
+          "internalNote": "Intern — inte synlig för redaktören",
+          "markDone": "Markera som klar",
+          "reject": "Avvisa",
+          "deleteTicket": "Radera ärende",
+          "deleteConfirm": "Radera detta ärende och alla anteckningar permanent?",
+          "saveChanges": "Spara ändringar",
+          "downloadResult": "Ladda ner resultat",
+          "assignEditor": "Tilldela redaktör",
+          "noEditors": "Inga redaktörer tillgängliga"
+        },
+        "profile": {
+          "title": "Min profil",
+          "changePassword": "Byt lösenord"
+        }
+      }
+    }
+  },
+
+  "phase_11_security": {
+    "title": "Phase 11 — Security Requirements",
+    "rules": [
+      "Editor can ONLY access their own tickets — all editor endpoints filter by assigned_to_id == current_user.id at DB query level, not just in application logic",
+      "Editor cannot see is_internal=True notes — filter at query level when building TicketResponse for EDITOR role",
+      "Editor cannot change ticket status directly — only via /submit endpoint which sets status='review'. No free-form status field for EDITOR.",
+      "File upload validation: check content-type AND read first 8 bytes to verify JPEG (FF D8 FF) or PNG (89 50 4E 47) magic bytes. Reject if mismatch.",
+      "File upload size limit: 20 MB max. Return 413 with clear error message if exceeded.",
+      "Saved uploaded filenames must be sanitized: use uuid4() prefix + original extension only. Never use original filename directly in filesystem path.",
+      "PATCH /admin/editor/tickets/{id}: verify assigned_to_id target user actually has EDITOR role. Reject with 400 if assigning to a non-editor.",
+      "All delete operations: verify resource belongs to the system before deleting (Ticket exists, TicketNote belongs to that Ticket)"
+    ]
+  },
+
+  "phase_12_error_handling": {
+    "title": "Phase 12 — Error Handling Conventions",
+    "follow_existing_pattern": "Match the error response format used in backend/app/api/admin.py and projects.py exactly",
+    "standard_responses": {
+      "404": "{'detail': 'Ticket not found'} or 'Editor not found' or 'Note not found'",
+      "403": "{'detail': 'Not authorized to access this ticket'}",
+      "400": "{'detail': 'Assigned user is not an editor'} or 'Invalid status transition' or 'File type not allowed'",
+      "413": "{'detail': 'File too large. Maximum size is 20 MB.'}"
+    }
+  },
+
+  "phase_13_frontend_api_client": {
+    "title": "Phase 13 — Frontend API Client Functions",
+    "file": "frontend/lib/api/editor.ts",
+    "what": "Create typed API client functions for all editor endpoints. Follow the same pattern used in frontend/lib/api/projects.ts or similar existing file.",
+    "functions": [
+      "getTickets(params?: { status?: string; priority?: string; page?: number }): Promise<TicketListResponse>",
+      "getTicket(ticketId: number): Promise<TicketResponse>",
+      "uploadTicketResult(ticketId: number, file: File, onProgress?: (pct: number) => void): Promise<TicketResponse>",
+      "submitTicket(ticketId: number, note?: string): Promise<TicketResponse>",
+      "addNote(ticketId: number, body: string): Promise<TicketNoteResponse>",
+      "getBadge(): Promise<TicketBadgeResponse>",
+      "adminGetTickets(params?: object): Promise<TicketListResponse>",
+      "adminCreateTicket(data: TicketCreate): Promise<TicketResponse>",
+      "adminUpdateTicket(ticketId: number, data: Partial<TicketUpdate>): Promise<TicketResponse>",
+      "adminDeleteTicket(ticketId: number): Promise<void>",
+      "adminAddNote(ticketId: number, body: string, isInternal: boolean): Promise<TicketNoteResponse>",
+      "adminGetEditors(): Promise<EditorUserResponse[]>",
+      "adminPromoteToEditor(userId: number): Promise<EditorUserResponse>",
+      "adminDemoteEditor(userId: number): Promise<{ demoted: boolean; tickets_unassigned: number }>"
+    ]
+  },
+
+  "phase_14_typescript_types": {
+    "title": "Phase 14 — TypeScript Type Definitions",
+    "file": "frontend/types/editor.ts",
+    "what": "Create TypeScript interfaces matching the Pydantic schemas exactly",
+    "types": [
+      "TicketStatus = 'open' | 'in_progress' | 'review' | 'done' | 'rejected'",
+      "TicketPriority = 'low' | 'normal' | 'high' | 'urgent'",
+      "interface TicketNote { id, ticket_id, author_id, author_name, body, is_internal, created_at }",
+      "interface Ticket { id, project_id, project_name, assigned_to_id, assigned_to_name, created_by_id, status: TicketStatus, priority: TicketPriority, title, description, editor_note, original_image_url, result_image_url, due_date, completed_at, created_at, updated_at, notes: TicketNote[] }",
+      "interface TicketListResponse { items: Ticket[], total, page, page_size, pages }",
+      "interface TicketBadge { open_count, in_progress_count, review_count }",
+      "interface EditorUser { id, email, name, is_active, open_ticket_count }"
+    ]
+  },
+
+  "phase_15_deployment": {
+    "title": "Phase 15 — Deployment and Verification",
+    "rebuild_commands": [
+      "docker compose down",
+      "docker compose build --no-cache backend frontend",
+      "docker compose up -d"
+    ],
+    "post_deploy_verification": [
+      "Check backend logs: docker compose logs backend --tail=50 — verify no import errors and init_db() ran without exception",
+      "Verify DB migration: docker compose exec db psql -U postgres -d autostudio -c \"SELECT unnest(enum_range(NULL::role));\" — should include EDITOR",
+      "Verify tables: docker compose exec db psql -U postgres -d autostudio -c \"\\dt\" — should show tickets and ticket_notes",
+      "Test auth: POST /api/auth/login with ADMIN credentials, then GET /admin/editor/editors — expect 200 with empty list",
+      "Create test editor: POST /admin/editor/editors with an existing USER's id — verify role changes to EDITOR in DB",
+      "Login as editor: POST /api/auth/login with editor credentials, then GET /api/editor/tickets — expect 200 with empty list",
+      "Create test ticket: POST /admin/editor/tickets — verify created in DB and assignment email sent",
+      "Editor badge poll: GET /api/editor/badge — expect { open_count: 1, in_progress_count: 0, review_count: 0 }",
+      "Check frontend: navigate to /editor/tickets as editor — should render ticket list",
+      "Check admin frontend: navigate to /admin/editor-portal — should render dashboard"
+    ]
+  },
+
+  "implementation_order": [
+    "Phase 1 (DB models + migrations) — run docker compose exec backend python -c 'from app.models import init_db; init_db()' to test migration before proceeding",
+    "Phase 2 (auth middleware)",
+    "Phase 3 (Pydantic schemas)",
+    "Phase 4 (editor API router)",
+    "Phase 5 (admin API additions)",
+    "Phase 6 (email functions)",
+    "Phase 7 (register router in main.py)",
+    "Phase 14 (TypeScript types) — do this before frontend components",
+    "Phase 13 (frontend API client)",
+    "Phase 10 (i18n strings)",
+    "Phase 8 (editor portal frontend pages)",
+    "Phase 9 (admin portal frontend pages)",
+    "Phase 15 (deployment and verification)"
+  ],
+
+  "questions_to_ask_before_starting": [
+    "Where are uploaded project images currently stored? Check UPLOAD_DIR in backend/.env and the save logic in backend/app/api/studio.py — editor result images should go to the same directory.",
+    "Is there an existing frontend/lib/api/ directory with typed API client functions, or does the project use a different pattern (SWR, React Query, raw fetch in components)?",
+    "Is there an existing admin sidebar component or does admin navigation live somewhere else? Check frontend/app/[locale]/admin/ for a layout.tsx.",
+    "Does the project have a Zustand store already? If not, use React Context for badge count — do not add Zustand as a new dependency without asking."
+  ]
+}

@@ -1,0 +1,651 @@
+{
+  "task": "Editor Portal v2 — Auto-tickets, First-Claim Locking, Star Ratings, Asset Access",
+  "version": "2.0",
+  "description": "These are ADDITIONS and CHANGES on top of the already-working editor portal (v1). Do not re-implement what is already there. Read each file before editing. The existing system is healthy — make surgical changes only.",
+
+  "context_of_what_already_works": [
+    "GET /api/editor/tickets — lists tickets assigned to current editor",
+    "GET /api/editor/tickets/{id} — single ticket detail",
+    "POST /api/editor/tickets/{id}/upload-result — editor uploads result image",
+    "POST /api/editor/tickets/{id}/submit — editor submits for review",
+    "POST /api/editor/tickets/{id}/notes — add note",
+    "GET /api/editor/badge — open/in_progress/review counts for current editor",
+    "GET /api/editor/me — editor profile",
+    "GET /api/admin/editor/tickets — admin full ticket list",
+    "POST /api/admin/editor/tickets — admin creates ticket manually",
+    "PATCH /api/admin/editor/tickets/{id} — admin updates ticket",
+    "DELETE /api/admin/editor/tickets/{id} — admin deletes ticket",
+    "POST /api/admin/editor/tickets/{id}/notes — admin adds note",
+    "GET /api/admin/editor/editors — list EDITOR-role users",
+    "POST /api/admin/editor/editors — promote user to EDITOR",
+    "DELETE /api/admin/editor/editors/{user_id} — demote EDITOR to USER",
+    "Ticket, TicketNote models exist in backend/app/models/__init__.py",
+    "Role.EDITOR exists in PostgreSQL enum",
+    "get_current_editor middleware exists in backend/app/middleware/auth.py",
+    "All Pydantic schemas in backend/app/schemas/editor.py"
+  ],
+
+  "what_changes_in_v2": [
+    "1. Auto-ticket creation: when a project is processed in studio.py, create a Ticket automatically (no manual Admin step needed)",
+    "2. Claim system: tickets start unassigned. Any editor sees the pool. First editor to call /claim gets exclusive ownership. Others cannot access it after.",
+    "3. Editor list view: show BOTH unassigned (claimable) tickets AND editor's own claimed tickets in separate tabs",
+    "4. Star rating: Admin rates each editor per completed ticket (1–5 stars). Ratings are stored and averaged.",
+    "5. Editor access to owner assets: ticket response exposes the original photo URL and the owner's logo endpoint",
+    "6. Badge update: add available_count (unassigned tickets waiting for any editor)"
+  ],
+
+  "phase_A_auto_ticket_on_processing": {
+    "title": "Phase A — Auto-create Ticket after Image Processing",
+    "description": "When studio.py finishes processing an image and saves a Project record, immediately create a Ticket for it. No Admin action required.",
+
+    "step_A1_save_original_to_static": {
+      "file": "backend/app/api/studio.py",
+      "where": "After line `original_image.save(gen_dir / 'original.png', format='PNG')` (around line 387), ADD a second save:",
+      "code_to_add": [
+        "# Also save original to static/originals/ so editors can access it via HTTP",
+        "ORIGINALS_DIR = Path(__file__).parent.parent / 'static' / 'originals'",
+        "ORIGINALS_DIR.mkdir(parents=True, exist_ok=True)",
+        "original_static_url: Optional[str] = None",
+        "try:",
+        "    orig_filename = f'orig_{generation_id}.png'",
+        "    original_image.save(ORIGINALS_DIR / orig_filename, format='PNG')",
+        "    original_static_url = f'/static/originals/{orig_filename}'",
+        "    logger.info('Saved original to static: %s', original_static_url)",
+        "except Exception as e:",
+        "    logger.warning('Failed to save original to static (non-fatal): %s', e)"
+      ],
+      "note": "Define ORIGINALS_DIR at module level alongside RESULTS_DIR (around line 24). Move `original_static_url` to module-scope variable so it's accessible later in the function."
+    },
+
+    "step_A2_auto_create_ticket": {
+      "file": "backend/app/api/studio.py",
+      "where": "Inside the `if current_user and db and result_url:` block, AFTER `project_id = proj.id` (around line 476), add:",
+      "code_to_add": [
+        "# Auto-create editor ticket for this project",
+        "try:",
+        "    from app.models import Ticket as TicketModel",
+        "    auto_ticket = TicketModel(",
+        "        project_id=proj.id,",
+        "        assigned_to_id=None,  # Unassigned — first editor to claim gets it",
+        "        created_by_id=None,   # System-generated, not admin-created",
+        "        status='open',",
+        "        priority='normal',",
+        "        title=f'{proj.name} — Studio {studio_key}',",
+        "        description=None,",
+        "        original_image_url=original_static_url,  # Raw photo before AI processing",
+        "        result_image_url=None,",
+        "    )",
+        "    db.add(auto_ticket)",
+        "    db.commit()",
+        "    logger.info('Auto-created ticket %s for project %s', auto_ticket.id, proj.id)",
+        "except Exception as e:",
+        "    logger.warning('Failed to auto-create ticket (non-fatal): %s', e)",
+        "    try:",
+        "        db.rollback()",
+        "    except Exception:",
+        "        pass"
+      ],
+      "important": "The auto-ticket has assigned_to_id=NULL. This is the signal that it is claimable by any editor. Do NOT set created_by_id — leave NULL to distinguish auto-created tickets from admin-created ones."
+    },
+
+    "step_A3_add_project_image_url_to_ticket": {
+      "what": "We need the AI-processed result URL accessible in the ticket so editors can see what the AI produced alongside the raw original.",
+      "file": "backend/app/models/__init__.py",
+      "change": "Add column `ai_result_url = Column(Text, nullable=True)` to the Ticket model. This stores the studio.py result URL (the composited image).",
+      "migration": "Add to init_db(): `_add_col_if_missing(conn, 'tickets', 'ai_result_url', 'TEXT', ticket_cols)` where ticket_cols = [c['name'] for c in inspector.get_columns('tickets')]",
+      "also_add_to_ALLOWED_COLS": "Add 'ai_result_url' to the tickets entry in _ALLOWED_COLS",
+      "set_in_studio_py": "In the auto_ticket creation block, also set: `auto_ticket.ai_result_url = result_url`"
+    }
+  },
+
+  "phase_B_claim_system": {
+    "title": "Phase B — First-Come-First-Served Claim System",
+    "description": "Any EDITOR can see unassigned tickets. The first one to call /claim gets exclusive ownership. After claiming, no other editor can see or access that ticket.",
+
+    "step_B1_update_list_endpoint": {
+      "file": "backend/app/api/editor.py",
+      "endpoint": "GET /editor/tickets",
+      "current_behavior": "Shows only tickets where assigned_to_id == current_user.id",
+      "new_behavior": "Shows: (1) tickets assigned to current_user, AND (2) unassigned tickets (assigned_to_id IS NULL) that are not yet done/rejected. Admins still see all.",
+      "code_change": {
+        "replace_this": "if current_user.role == Role.EDITOR:\n        q = q.filter(Ticket.assigned_to_id == current_user.id)",
+        "with_this": [
+          "if current_user.role == Role.EDITOR:",
+          "    from sqlalchemy import or_",
+          "    q = q.filter(",
+          "        or_(",
+          "            Ticket.assigned_to_id == current_user.id,",
+          "            Ticket.assigned_to_id.is_(None)  # Claimable by any editor",
+          "        )",
+          "    )",
+          "    # Exclude tickets that are done or rejected and unassigned (cleanup)",
+          "    q = q.filter(",
+          "        or_(",
+          "            Ticket.assigned_to_id == current_user.id,",
+          "            Ticket.status.notin_(['done', 'rejected'])",
+          "        )",
+          "    )"
+        ]
+      }
+    },
+
+    "step_B2_add_claim_endpoint": {
+      "file": "backend/app/api/editor.py",
+      "new_endpoint": "POST /editor/tickets/{ticket_id}/claim",
+      "description": "Atomically claim an unassigned ticket. Uses a SQL-level lock to prevent two editors claiming simultaneously.",
+      "implementation": [
+        "@router.post('/editor/tickets/{ticket_id}/claim', response_model=TicketResponse)",
+        "async def claim_ticket(",
+        "    ticket_id: int,",
+        "    request: Request,",
+        "    current_user: User = Depends(get_current_editor),",
+        "    db: Session = Depends(get_db_session),",
+        "):",
+        "    # Atomic claim: UPDATE tickets SET assigned_to_id=X WHERE id=Y AND assigned_to_id IS NULL",
+        "    # rowcount == 0 means someone else claimed it first",
+        "    from sqlalchemy import text",
+        "    result = db.execute(",
+        "        text(",
+        "            'UPDATE tickets SET assigned_to_id=:uid, status=:status, updated_at=NOW()'",
+        "            ' WHERE id=:tid AND assigned_to_id IS NULL RETURNING id'",
+        "        ),",
+        "        {'uid': current_user.id, 'status': 'in_progress', 'tid': ticket_id},",
+        "    )",
+        "    row = result.fetchone()",
+        "    if row is None:",
+        "        # Check if ticket exists at all",
+        "        ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()",
+        "        if not ticket:",
+        "            raise HTTPException(status_code=404, detail='Ticket not found')",
+        "        # Ticket exists but is already claimed by someone else",
+        "        raise HTTPException(status_code=409, detail='Ticket already claimed by another editor')",
+        "    db.commit()",
+        "    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()",
+        "    # Send assignment email to the editor (non-blocking)",
+        "    try:",
+        "        from app.services.email import send_ticket_assignment_email",
+        "        send_ticket_assignment_email(",
+        "            editor_email=current_user.email,",
+        "            editor_name=current_user.name or current_user.email,",
+        "            ticket_id=ticket.id,",
+        "            ticket_title=ticket.title,",
+        "            project_name=ticket.project.name if ticket.project else '',",
+        "            due_date=ticket.due_date,",
+        "            admin_instructions=ticket.description,",
+        "        )",
+        "    except Exception:",
+        "        logger.exception('Failed to send claim email (non-fatal)')",
+        "    return _build_ticket_response(ticket, hide_internal=True)"
+      ],
+      "note": "The RETURNING clause works on PostgreSQL. The atomic UPDATE ensures race-condition safety — two editors cannot claim the same ticket even under concurrent requests."
+    },
+
+    "step_B3_update_require_ticket_helper": {
+      "file": "backend/app/api/editor.py",
+      "function": "_require_ticket",
+      "current_behavior": "Blocks editor if assigned_to_id != current_user.id",
+      "keep_as_is": true,
+      "note": "The current helper is correct — it already blocks editors from accessing other editors' claimed tickets. No change needed here."
+    },
+
+    "step_B4_update_badge_endpoint": {
+      "file": "backend/app/api/editor.py",
+      "endpoint": "GET /editor/badge",
+      "change": "Add available_count (unassigned, claimable tickets) to the response",
+      "schema_change": {
+        "file": "backend/app/schemas/editor.py",
+        "model": "TicketBadgeResponse",
+        "add_field": "available_count: int = 0  — count of unassigned open tickets any editor can claim"
+      },
+      "implementation_change": [
+        "available_count = db.query(Ticket).filter(",
+        "    Ticket.assigned_to_id.is_(None),",
+        "    Ticket.status == 'open'",
+        ").count()",
+        "return TicketBadgeResponse(",
+        "    open_count=base.filter(Ticket.status == 'open').count(),",
+        "    in_progress_count=base.filter(Ticket.status == 'in_progress').count(),",
+        "    review_count=base.filter(Ticket.status == 'review').count(),",
+        "    available_count=available_count,",
+        ")"
+      ]
+    }
+  },
+
+  "phase_C_star_ratings": {
+    "title": "Phase C — Editor Star Rating System (1–5)",
+    "description": "Admin rates each editor after a ticket is marked Done. Ratings are stored per-ticket and averaged on the editor's profile. All editors can see their own average. Admins see averages in the editors list.",
+
+    "step_C1_editor_rating_model": {
+      "file": "backend/app/models/__init__.py",
+      "what": "Add EditorRating SQLAlchemy model",
+      "table_name": "editor_ratings",
+      "columns": {
+        "id": "Integer, primary_key, index",
+        "editor_id": "Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index",
+        "ticket_id": "Integer, ForeignKey('tickets.id', ondelete='CASCADE'), nullable=False, unique=True — one rating per ticket",
+        "rated_by_id": "Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True",
+        "stars": "Integer, nullable=False — CHECK: 1 <= stars <= 5",
+        "note": "Text, nullable=True — optional comment from Admin",
+        "created_at": "DateTime, default=datetime.utcnow"
+      },
+      "relationships": {
+        "editor": "relationship('User', foreign_keys=[editor_id], back_populates='ratings_received')",
+        "ticket": "relationship('Ticket', back_populates='rating')"
+      },
+      "add_to_User": {
+        "ratings_received": "relationship('EditorRating', foreign_keys='EditorRating.editor_id', back_populates='editor')",
+        "rating_avg": "Column(Float, default=0.0) — denormalized average, updated on each new rating",
+        "rating_count": "Column(Integer, default=0) — total number of ratings received"
+      },
+      "add_to_Ticket": {
+        "rating": "relationship('EditorRating', back_populates='ticket', uselist=False)"
+      },
+      "migration_in_init_db": [
+        "# EditorRating table is created automatically by Base.metadata.create_all()",
+        "# Add new columns to users:",
+        "_add_col_if_missing(conn, 'users', 'rating_avg', 'FLOAT DEFAULT 0.0', user_cols)",
+        "_add_col_if_missing(conn, 'users', 'rating_count', 'INTEGER DEFAULT 0', user_cols)",
+        "# Add to _ALLOWED_COLS users: 'rating_avg', 'rating_count'",
+        "# Add to _ALLOWED_TABLES: 'editor_ratings'",
+        "# Add to _ALLOWED_COLS editor_ratings: ['id', 'editor_id', 'ticket_id', 'rated_by_id', 'stars', 'note', 'created_at']"
+      ]
+    },
+
+    "step_C2_rating_pydantic_schemas": {
+      "file": "backend/app/schemas/editor.py",
+      "add_schemas": {
+        "RateEditorRequest": {
+          "fields": {
+            "stars": "int — Field(..., ge=1, le=5)",
+            "note": "Optional[str] = None"
+          }
+        },
+        "EditorRatingResponse": {
+          "fields": {
+            "id": "int",
+            "editor_id": "int",
+            "ticket_id": "int",
+            "rated_by_id": "Optional[int]",
+            "stars": "int",
+            "note": "Optional[str]",
+            "created_at": "datetime"
+          },
+          "config": "from_attributes = True"
+        }
+      },
+      "update_EditorUserResponse": {
+        "add_fields": {
+          "rating_avg": "float = 0.0",
+          "rating_count": "int = 0",
+          "completed_ticket_count": "int = 0"
+        }
+      },
+      "update_TicketResponse": {
+        "add_fields": {
+          "rating": "Optional[EditorRatingResponse] = None",
+          "owner_logo_url": "Optional[str] = None — URL to fetch the project owner's logo (editor can download it)",
+          "ai_result_url": "Optional[str] = None — the AI-composited result from studio processing"
+        }
+      }
+    },
+
+    "step_C3_rate_endpoint": {
+      "file": "backend/app/api/admin.py",
+      "new_endpoint": "POST /admin/editor/tickets/{ticket_id}/rate",
+      "description": "Admin rates a completed ticket. One rating per ticket — calling again updates the existing rating.",
+      "requires": "get_current_admin dependency (already in admin.py)",
+      "imports_to_add": [
+        "from app.models import EditorRating",
+        "from app.schemas.editor import RateEditorRequest, EditorRatingResponse"
+      ],
+      "implementation": [
+        "@router.post('/editor/tickets/{ticket_id}/rate', response_model=EditorRatingResponse)",
+        "async def rate_ticket(",
+        "    ticket_id: int,",
+        "    body: RateEditorRequest,",
+        "    request: Request,",
+        "    current_user: User = Depends(get_current_admin),",
+        "    db: Session = Depends(get_db_session),",
+        "):",
+        "    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()",
+        "    if not ticket:",
+        "        raise HTTPException(status_code=404, detail='Ticket not found')",
+        "    if not ticket.assigned_to_id:",
+        "        raise HTTPException(status_code=400, detail='Cannot rate an unassigned ticket')",
+        "    # Upsert: one rating per ticket",
+        "    existing = db.query(EditorRating).filter(EditorRating.ticket_id == ticket_id).first()",
+        "    if existing:",
+        "        existing.stars = body.stars",
+        "        existing.note = body.note",
+        "        existing.rated_by_id = current_user.id",
+        "        db.commit()",
+        "        db.refresh(existing)",
+        "        rating = existing",
+        "    else:",
+        "        rating = EditorRating(",
+        "            editor_id=ticket.assigned_to_id,",
+        "            ticket_id=ticket_id,",
+        "            rated_by_id=current_user.id,",
+        "            stars=body.stars,",
+        "            note=body.note,",
+        "        )",
+        "        db.add(rating)",
+        "        db.commit()",
+        "        db.refresh(rating)",
+        "    # Recompute denormalized avg on the editor User record",
+        "    from sqlalchemy import func as sqlfunc",
+        "    agg = db.query(",
+        "        sqlfunc.avg(EditorRating.stars).label('avg'),",
+        "        sqlfunc.count(EditorRating.id).label('cnt'),",
+        "    ).filter(EditorRating.editor_id == ticket.assigned_to_id).one()",
+        "    editor = db.query(User).filter(User.id == ticket.assigned_to_id).first()",
+        "    if editor:",
+        "        editor.rating_avg = round(float(agg.avg or 0), 2)",
+        "        editor.rating_count = agg.cnt or 0",
+        "        db.commit()",
+        "    return EditorRatingResponse(",
+        "        id=rating.id,",
+        "        editor_id=rating.editor_id,",
+        "        ticket_id=rating.ticket_id,",
+        "        rated_by_id=rating.rated_by_id,",
+        "        stars=rating.stars,",
+        "        note=rating.note,",
+        "        created_at=rating.created_at,",
+        "    )"
+      ]
+    },
+
+    "step_C4_expose_rating_in_editor_response": {
+      "file": "backend/app/api/editor.py",
+      "function": "_build_ticket_response",
+      "change": "After building the TicketResponse, populate the rating field if ticket.rating exists",
+      "code": [
+        "from app.schemas.editor import EditorRatingResponse",
+        "rating_resp = None",
+        "if ticket.rating:",
+        "    rating_resp = EditorRatingResponse(",
+        "        id=ticket.rating.id,",
+        "        editor_id=ticket.rating.editor_id,",
+        "        ticket_id=ticket.rating.ticket_id,",
+        "        rated_by_id=ticket.rating.rated_by_id,",
+        "        stars=ticket.rating.stars,",
+        "        note=ticket.rating.note,",
+        "        created_at=ticket.rating.created_at,",
+        "    )",
+        "# Add to TicketResponse constructor: rating=rating_resp"
+      ]
+    },
+
+    "step_C5_update_editors_list": {
+      "file": "backend/app/api/admin.py",
+      "endpoint": "GET /admin/editor/editors",
+      "change": "Populate rating_avg, rating_count, and completed_ticket_count in EditorUserResponse",
+      "code": [
+        "from app.models import Ticket as TicketModel",
+        "# For each editor user:",
+        "completed_count = db.query(TicketModel).filter(",
+        "    TicketModel.assigned_to_id == editor.id,",
+        "    TicketModel.status == 'done'",
+        ").count()",
+        "EditorUserResponse(",
+        "    id=editor.id,",
+        "    email=editor.email,",
+        "    name=editor.name,",
+        "    is_active=editor.is_active,",
+        "    open_ticket_count=open_count,",
+        "    rating_avg=editor.rating_avg or 0.0,",
+        "    rating_count=editor.rating_count or 0,",
+        "    completed_ticket_count=completed_count,",
+        ")"
+      ]
+    }
+  },
+
+  "phase_D_editor_asset_access": {
+    "title": "Phase D — Editor Access to Owner Assets (Logo + Original Photos)",
+    "description": "When an editor claims a ticket, they need the original car photo AND the project owner's logo (if any) to do quality retouching. These are provided via secure endpoints that only the assigned editor can access.",
+
+    "step_D1_logo_endpoint": {
+      "file": "backend/app/api/editor.py",
+      "new_endpoint": "GET /editor/tickets/{ticket_id}/owner-logo",
+      "description": "Returns the project owner's logo image as a file download. Only the assigned editor (or Admin) can call this.",
+      "implementation": [
+        "@router.get('/editor/tickets/{ticket_id}/owner-logo')",
+        "async def get_owner_logo(",
+        "    ticket_id: int,",
+        "    request: Request,",
+        "    current_user: User = Depends(get_current_editor),",
+        "    db: Session = Depends(get_db_session),",
+        "):",
+        "    ticket = _require_ticket(db, ticket_id, current_user)  # enforces ownership check",
+        "    if not ticket.project:",
+        "        raise HTTPException(status_code=404, detail='Project not found')",
+        "    owner = db.query(User).filter(User.id == ticket.project.user_id).first()",
+        "    if not owner or not owner.logo_data:",
+        "        raise HTTPException(status_code=404, detail='Owner has no logo')",
+        "    from fastapi.responses import Response",
+        "    return Response(",
+        "        content=owner.logo_data,",
+        "        media_type=owner.logo_mime_type or 'image/png',",
+        "        headers={'Content-Disposition': f'attachment; filename=\"owner_logo_{ticket_id}.png\"'},",
+        "    )"
+      ]
+    },
+
+    "step_D2_ticket_response_owner_logo_url": {
+      "file": "backend/app/api/editor.py",
+      "function": "_build_ticket_response",
+      "change": "Populate owner_logo_url and ai_result_url in TicketResponse",
+      "code": [
+        "# Determine if owner has a logo",
+        "owner_logo_url = None",
+        "if ticket.project and ticket.project.owner and ticket.project.owner.logo_data:",
+        "    owner_logo_url = f'/api/editor/tickets/{ticket.id}/owner-logo'",
+        "",
+        "# ai_result_url comes from ticket.ai_result_url (set during auto-ticket creation)",
+        "# Also populate in TicketResponse constructor:",
+        "# owner_logo_url=owner_logo_url,",
+        "# ai_result_url=ticket.ai_result_url,"
+      ],
+      "note": "This tells the editor 'there is a logo available at this URL' — they can download it to use as reference or reapply it in their retouching."
+    },
+
+    "step_D3_ensure_owner_eager_loaded": {
+      "file": "backend/app/api/editor.py",
+      "function": "_require_ticket and list_tickets",
+      "change": "Add joinedload for project.owner to avoid N+1 queries",
+      "code": [
+        "from sqlalchemy.orm import joinedload",
+        "# In _require_ticket:",
+        "ticket = db.query(Ticket).options(",
+        "    joinedload(Ticket.project).joinedload('owner'),",
+        "    joinedload(Ticket.notes).joinedload('author'),",
+        "    joinedload(Ticket.assigned_to),",
+        "    joinedload(Ticket.rating),",
+        ").filter(Ticket.id == ticket_id).first()",
+        "",
+        "# In list_tickets, add the same .options() chain to the query `q`"
+      ]
+    }
+  },
+
+  "phase_E_frontend_changes": {
+    "title": "Phase E — Frontend UI Changes for v2",
+    "description": "Update the editor portal frontend to reflect: claim button on unassigned tickets, star rating display, two-tab list view.",
+
+    "step_E1_ticket_list_tabs": {
+      "file": "frontend/app/[locale]/editor/tickets/page.tsx",
+      "change": "Change filter tabs to: Available (unassigned, status=open) | My Open | In Progress | In Review | Done",
+      "available_tab_query": "Pass ?claimed=false to GET /api/editor/tickets or filter client-side: items where assigned_to_id is null",
+      "note": "The backend already returns both unassigned and editor's own tickets. Client-side: check if item.assigned_to_id is null to determine if it's claimable."
+    },
+
+    "step_E2_claim_button": {
+      "file": "frontend/app/[locale]/editor/tickets/page.tsx",
+      "change": "On ticket cards where assigned_to_id is null: show a 'Claim' button instead of a detail link. Clicking calls POST /api/editor/tickets/{id}/claim. On success: navigate to /editor/tickets/{id}. On 409: show toast 'Already claimed by another editor'.",
+      "button_appearance": "Primary button with a padlock-open icon. Label: t('editor.tickets.claim')"
+    },
+
+    "step_E3_ticket_detail_asset_section": {
+      "file": "frontend/app/[locale]/editor/tickets/[id]/page.tsx",
+      "change": "Add a 'Project Assets' section showing: (1) Original Photo download button (ticket.original_image_url), (2) AI Result preview (ticket.ai_result_url), (3) Owner Logo download button (only show if ticket.owner_logo_url is not null)",
+      "note": "All three are download links — the editor downloads them, retouches in their tool of choice, then uploads the result."
+    },
+
+    "step_E4_rating_display_on_editor_me_page": {
+      "file": "frontend/app/[locale]/editor/profile/page.tsx",
+      "change": "Show star rating: display rating_avg as filled stars (1–5) + rating_count below. Example: '★★★★☆ (12 ratings)'. Use the GET /api/editor/me endpoint which now includes rating_avg and rating_count."
+    },
+
+    "step_E5_admin_rate_button": {
+      "file": "frontend/app/[locale]/admin/editor-portal/tickets/[id]/page.tsx",
+      "change": "When ticket.status == 'done' and ticket.assigned_to_id is not null: show a 'Rate Editor' section with 5 star buttons (1–5) and an optional note textarea. Submit calls POST /admin/editor/tickets/{id}/rate. Show current rating if ticket.rating exists."
+    },
+
+    "step_E6_editors_list_ratings": {
+      "file": "frontend/app/[locale]/admin/editor-portal/editors/page.tsx",
+      "change": "Add Rating column to the editors table: show star average (e.g. '4.2 ★') and count in parens, and completed ticket count. Sort by rating descending by default."
+    },
+
+    "step_E7_badge_available_dot": {
+      "file": "frontend/app/[locale]/editor/layout.tsx",
+      "change": "Update badge polling to use the new available_count field from GET /api/editor/badge. Show two badges on the nav: (1) red dot with count for editor's own pending tickets (open + in_progress + review), (2) a separate green dot or number for available_count (claimable tickets waiting). This tells editors at a glance 'there are 3 projects available to claim'."
+    }
+  },
+
+  "phase_F_i18n_additions": {
+    "title": "Phase F — New i18n Strings for v2",
+    "files": ["frontend/messages/en.json", "frontend/messages/sv.json"],
+    "what": "Add these keys inside the existing 'editor' object — do NOT duplicate or remove existing keys",
+
+    "add_under_editor_tickets_en": {
+      "claim": "Claim Project",
+      "claimConfirm": "Take responsibility for this project?",
+      "alreadyClaimed": "Already claimed by another editor",
+      "availableTab": "Available",
+      "myOpenTab": "My Open",
+      "projectAssets": "Project Assets",
+      "downloadOriginal": "Download Original Photo",
+      "downloadAiResult": "Download AI Result",
+      "downloadOwnerLogo": "Download Owner Logo",
+      "noLogo": "Owner has no logo",
+      "rating": "Your Rating",
+      "ratingCount": "{count} ratings",
+      "noRating": "Not yet rated"
+    },
+    "add_under_editor_admin_en": {
+      "rateEditor": "Rate Editor",
+      "ratingLabel": "Quality Rating",
+      "ratingNote": "Rating note (optional)",
+      "submitRating": "Submit Rating",
+      "ratingUpdated": "Rating updated",
+      "completedTickets": "Completed",
+      "avgRating": "Avg Rating"
+    },
+
+    "add_under_editor_tickets_sv": {
+      "claim": "Ta projekt",
+      "claimConfirm": "Ta ansvar för detta projekt?",
+      "alreadyClaimed": "Redan taget av en annan redaktör",
+      "availableTab": "Tillgängliga",
+      "myOpenTab": "Mina öppna",
+      "projectAssets": "Projektfiler",
+      "downloadOriginal": "Ladda ner originalfoto",
+      "downloadAiResult": "Ladda ner AI-resultat",
+      "downloadOwnerLogo": "Ladda ner ägarens logotyp",
+      "noLogo": "Ägaren har ingen logotyp",
+      "rating": "Ditt betyg",
+      "ratingCount": "{count} betyg",
+      "noRating": "Inte betygsatt ännu"
+    },
+    "add_under_editor_admin_sv": {
+      "rateEditor": "Betygsätt redaktör",
+      "ratingLabel": "Kvalitetsbetyg",
+      "ratingNote": "Betygsnot (valfritt)",
+      "submitRating": "Skicka betyg",
+      "ratingUpdated": "Betyg uppdaterat",
+      "completedTickets": "Klara",
+      "avgRating": "Snittbetyg"
+    }
+  },
+
+  "phase_G_typescript_types_update": {
+    "title": "Phase G — Update TypeScript Types",
+    "file": "frontend/types/editor.ts",
+    "changes": {
+      "update_Ticket_interface": {
+        "add_fields": [
+          "ai_result_url?: string | null",
+          "owner_logo_url?: string | null",
+          "rating?: EditorRating | null"
+        ]
+      },
+      "add_interface_EditorRating": {
+        "fields": [
+          "id: number",
+          "editor_id: number",
+          "ticket_id: number",
+          "rated_by_id: number | null",
+          "stars: number",
+          "note: string | null",
+          "created_at: string"
+        ]
+      },
+      "update_EditorUser_interface": {
+        "add_fields": [
+          "rating_avg: number",
+          "rating_count: number",
+          "completed_ticket_count: number"
+        ]
+      },
+      "update_TicketBadge_interface": {
+        "add_field": "available_count: number"
+      }
+    }
+  },
+
+  "phase_H_api_client_additions": {
+    "title": "Phase H — New API Client Functions",
+    "file": "frontend/lib/api/editor.ts",
+    "add_functions": [
+      "claimTicket(ticketId: number): Promise<Ticket>  → POST /api/editor/tickets/{id}/claim",
+      "getOwnerLogo(ticketId: number): Promise<Blob>  → GET /api/editor/tickets/{id}/owner-logo",
+      "adminRateTicket(ticketId: number, stars: number, note?: string): Promise<EditorRating>  → POST /admin/editor/tickets/{id}/rate"
+    ]
+  },
+
+  "implementation_order": [
+    "Phase A (auto-ticket) — test by processing one image and checking tickets table in DB",
+    "Phase C steps C1 (model + migration) — restart backend, verify editor_ratings table created",
+    "Phase C steps C2–C5 (schemas + rate endpoint + list update)",
+    "Phase B steps B1–B4 (claim system) — test with two concurrent requests to verify atomicity",
+    "Phase D (asset access endpoints)",
+    "Phase G (TypeScript types)",
+    "Phase H (API client functions)",
+    "Phase F (i18n strings)",
+    "Phase E (frontend UI changes)",
+    "Rebuild: docker compose down && docker compose build --no-cache backend frontend && docker compose up -d"
+  ],
+
+  "verification_steps": [
+    "Process one image via the app → check DB: SELECT * FROM tickets ORDER BY id DESC LIMIT 1; — should have assigned_to_id=NULL, status='open', original_image_url set",
+    "Login as editor → GET /api/editor/tickets → should include the unassigned ticket in response",
+    "POST /api/editor/tickets/{id}/claim → should set assigned_to_id, status='in_progress'",
+    "POST /api/editor/tickets/{id}/claim again (same ticket, different editor session) → should return 409",
+    "Login as second editor → GET /api/editor/tickets → claimed ticket should NOT appear",
+    "Mark ticket done → POST /admin/editor/tickets/{id}/rate with stars=4 → verify editor_ratings row inserted, user.rating_avg updated",
+    "GET /api/admin/editor/editors → should show updated rating_avg and completed_ticket_count",
+    "GET /api/editor/tickets/{id}/owner-logo for ticket with owner who has logo → returns image bytes",
+    "GET /api/editor/badge → response includes available_count field"
+  ],
+
+  "critical_notes": [
+    "The RETURNING clause in the claim UPDATE (Phase B2) requires PostgreSQL — already confirmed as the DB engine.",
+    "Do NOT change the existing POST /api/admin/editor/tickets endpoint — Admin can still create tickets manually for edge cases. Auto-tickets and manual tickets coexist.",
+    "original_image_url on the ticket = the raw photo before AI. ai_result_url = the AI-composited image. These are different files and both are useful to the editor.",
+    "The original_static_url variable in studio.py must be initialized to None BEFORE the try/except block that sets it, and referenced AFTER — verify scope is correct.",
+    "EditorRating uses unique=True on ticket_id — only one rating per ticket is enforced at DB level. The upsert logic in the rate endpoint handles the case where Admin updates their rating.",
+    "Logo data (user.logo_data) is stored as BYTEA — never return it in JSON. Always serve through the /owner-logo streaming endpoint."
+  ]
+}

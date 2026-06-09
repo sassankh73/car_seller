@@ -3,11 +3,28 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
-import { adminAddNote, adminDeleteTicket, adminGetEditors, adminUpdateTicket, getTicket } from "@/lib/api/editor";
+import { adminAddNote, adminDeleteTicket, adminGetEditors, adminRateTicket, adminUpdateTicket, getTicket } from "@/lib/api/editor";
 import type { EditorUser, Ticket, TicketPriority, TicketStatus } from "@/types/editor";
 
 const STATUS_OPTIONS: TicketStatus[] = ["open", "in_progress", "review", "done", "rejected"];
 const PRIORITY_OPTIONS: TicketPriority[] = ["low", "normal", "high", "urgent"];
+
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => onChange(n)}
+          className={`text-2xl transition-colors ${n <= value ? "text-yellow-500" : "text-[#ddd] hover:text-yellow-300"}`}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function AdminTicketDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,14 +47,21 @@ export default function AdminTicketDetailPage() {
   const [assignedTo, setAssignedTo] = useState<number | "">("");
   const [dueDate, setDueDate] = useState("");
 
+  // Rating
+  const [ratingStars, setRatingStars] = useState(0);
+  const [ratingNote, setRatingNote] = useState("");
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [ratingMsg, setRatingMsg] = useState("");
+
   useEffect(() => {
     if (!id) return;
     Promise.all([getTicket(Number(id)), adminGetEditors()])
-      .then(([t, e]) => {
-        setTicket(t); setEditors(e);
-        setTitle(t.title); setPriority(t.priority); setStatus(t.status);
-        setAssignedTo(t.assigned_to_id ?? "");
-        setDueDate(t.due_date ? t.due_date.split("T")[0] : "");
+      .then(([tk, e]) => {
+        setTicket(tk); setEditors(e);
+        setTitle(tk.title); setPriority(tk.priority); setStatus(tk.status);
+        setAssignedTo(tk.assigned_to_id ?? "");
+        setDueDate(tk.due_date ? tk.due_date.split("T")[0] : "");
+        if (tk.rating) { setRatingStars(tk.rating.stars); setRatingNote(tk.rating.note || ""); }
       }).catch(console.error).finally(() => setLoading(false));
   }, [id]);
 
@@ -72,8 +96,22 @@ export default function AdminTicketDetailPage() {
     finally { setPostingNote(false); }
   };
 
+  const handleRating = async () => {
+    if (!ticket || ratingStars === 0) return;
+    setSubmittingRating(true);
+    setRatingMsg("");
+    try {
+      const rating = await adminRateTicket(ticket.id, ratingStars, ratingNote || undefined);
+      setTicket((prev) => prev ? { ...prev, rating } : prev);
+      setRatingMsg(t("ratingUpdated"));
+    } catch (e: any) { alert(e.message); }
+    finally { setSubmittingRating(false); }
+  };
+
   if (loading) return <div className="p-8 flex justify-center"><div className="w-6 h-6 border-2 border-[#CC2020] border-t-transparent rounded-full animate-spin" /></div>;
   if (!ticket) return <div className="p-8 text-[#999]">Ticket not found.</div>;
+
+  const canRate = ticket.status === "done" && ticket.assigned_to_id !== null;
 
   return (
     <div className="p-8 max-w-3xl mx-auto space-y-6">
@@ -125,7 +163,19 @@ export default function AdminTicketDetailPage() {
         </div>
       )}
 
-      {/* Result image */}
+      {/* AI result image */}
+      {ticket.ai_result_url && (
+        <div className="bg-white rounded-xl border border-[#e8e8e8] p-5">
+          <h2 className="font-semibold text-sm text-[#1a1a1a] mb-3">AI Result</h2>
+          <img src={ticket.ai_result_url} alt="ai result" className="w-full max-h-48 object-contain rounded-lg border border-[#f0f0f0] bg-[#f5f5f7]" />
+          <a href={ticket.ai_result_url} download className="mt-3 inline-flex items-center gap-2 text-sm text-[#CC2020] font-medium hover:underline">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            Download AI Result
+          </a>
+        </div>
+      )}
+
+      {/* Editor result image */}
       {ticket.result_image_url && (
         <div className="bg-white rounded-xl border border-[#e8e8e8] p-5">
           <h2 className="font-semibold text-sm text-[#1a1a1a] mb-3">Editor Result</h2>
@@ -145,7 +195,33 @@ export default function AdminTicketDetailPage() {
         </div>
       )}
 
-      {/* Notes thread (all — including internal) */}
+      {/* Rate Editor section */}
+      {canRate && (
+        <div className="bg-white rounded-xl border border-[#e8e8e8] p-5 space-y-3">
+          <h2 className="font-semibold text-sm text-[#1a1a1a]">{t("rateEditor")}</h2>
+          <div>
+            <label className="block text-xs text-[#888] mb-2">{t("ratingLabel")}</label>
+            <StarPicker value={ratingStars} onChange={setRatingStars} />
+          </div>
+          <textarea
+            value={ratingNote}
+            onChange={(e) => setRatingNote(e.target.value)}
+            placeholder={t("ratingNote")}
+            rows={2}
+            className="w-full border border-[#e8e8e8] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#CC2020] resize-none"
+          />
+          {ratingMsg && <p className="text-sm text-green-600">{ratingMsg}</p>}
+          <button
+            onClick={handleRating}
+            disabled={ratingStars === 0 || submittingRating}
+            className="px-4 py-2 bg-[#CC2020] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-[#991818] transition-colors"
+          >
+            {submittingRating ? "…" : t("submitRating")}
+          </button>
+        </div>
+      )}
+
+      {/* Notes thread */}
       <div className="bg-white rounded-xl border border-[#e8e8e8] p-5 space-y-4">
         <h2 className="font-semibold text-sm text-[#1a1a1a]">Notes</h2>
         {ticket.notes.length === 0 && <p className="text-sm text-[#aaa]">—</p>}
