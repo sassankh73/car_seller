@@ -1319,7 +1319,11 @@ class AICompositingService:
         # 9d: Place tire contact shadow on top of body shadow
         canvas.alpha_composite(tire_shadow, dest=(0, 0))
 
-        # 9e: Place vehicle on top of everything
+        # 9e: Apply window transparency then place vehicle on top of everything
+        if studio_background is not None:
+            vehicle = self._apply_window_transparency(
+                vehicle, studio_background, (car_x, car_y, canvas_size[0], canvas_size[1])
+            )
         canvas.alpha_composite(vehicle, dest=(car_x, car_y))
 
         # 9f: Composite user logo (PRO / ENTERPRISE only — caller gates this)
@@ -1358,6 +1362,56 @@ class AICompositingService:
             )
 
         return canvas
+
+    def _apply_window_transparency(
+        self,
+        vehicle_rgba: Image.Image,
+        studio_background: Image.Image,
+        vehicle_bbox: tuple,
+        transparency_strength: float = 0.35,
+    ) -> Image.Image:
+        """Blend studio background through car window regions to simulate glass transparency.
+
+        Detects window pixels heuristically: bright (value > 0.55) AND desaturated
+        (saturation < 0.40) AND fully opaque in alpha (> 200). Blends 35% of the
+        studio background color through those pixels so windows show the studio
+        instead of the original outdoor scene.
+        """
+        vehicle_arr = np.array(vehicle_rgba, dtype=np.float32)
+        rgb = vehicle_arr[:, :, :3]
+        alpha = vehicle_arr[:, :, 3]
+
+        r = rgb[:, :, 0] / 255.0
+        g = rgb[:, :, 1] / 255.0
+        b = rgb[:, :, 2] / 255.0
+        max_c = np.maximum(np.maximum(r, g), b)
+        min_c = np.minimum(np.minimum(r, g), b)
+        v = max_c
+        s = np.where(max_c > 0, (max_c - min_c) / max_c, 0)
+
+        window_mask = (v > 0.55) & (s < 0.40) & (alpha > 200)
+        if not window_mask.any():
+            return vehicle_rgba
+
+        x_offset, y_offset = vehicle_bbox[0], vehicle_bbox[1]
+        vh, vw = vehicle_arr.shape[:2]
+        studio_arr = np.array(studio_background.convert("RGB"), dtype=np.float32)
+        studio_crop = studio_arr[
+            max(0, y_offset):min(studio_arr.shape[0], y_offset + vh),
+            max(0, x_offset):min(studio_arr.shape[1], x_offset + vw),
+            :,
+        ]
+        if studio_crop.shape[:2] != (vh, vw):
+            return vehicle_rgba
+
+        for c in range(3):
+            vehicle_arr[:, :, c] = np.where(
+                window_mask,
+                rgb[:, :, c] * (1 - transparency_strength) + studio_crop[:, :, c] * transparency_strength,
+                rgb[:, :, c],
+            )
+
+        return Image.fromarray(np.clip(vehicle_arr, 0, 255).astype(np.uint8), mode="RGBA")
 
     def _composite_logo(
         self,

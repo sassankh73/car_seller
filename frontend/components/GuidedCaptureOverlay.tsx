@@ -176,7 +176,7 @@ function VehicleGuideFrame({ positionType }: { positionType: CaptureStep['positi
         {is45 && (
           <text
             x={positionType === 'front-left' ? x + 8 : x + w - 8}
-            y={y + h - 8}
+            y={y + 20}
             fontSize="11"
             fill="rgba(255,255,255,0.5)"
             textAnchor={positionType === 'front-left' ? 'start' : 'end'}

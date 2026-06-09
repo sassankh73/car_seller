@@ -254,7 +254,7 @@ class AlphaMatteRefiner:
 
         # Horizontal closing — reconnects thin horizontal structures
         # (mirror stalks, spoiler bridges, roof rails)
-        h_kernel_size = 5
+        h_kernel_size = 8
         padded = np.pad(binary, ((0, 0), (h_kernel_size, h_kernel_size)), mode='constant')
         h_dilated = np.zeros_like(binary)
         h, w = binary.shape
@@ -489,10 +489,33 @@ class AlphaMatteRefiner:
 
         return Image.fromarray(result_array, mode="RGBA")
 
+    def _suppress_ground_shadow(self, image: Image.Image) -> Image.Image:
+        """Step 0 (pre-process): Remove ground contact shadows from bottom of mask.
+
+        In the bottom 20% of the image, semi-transparent pixels (alpha 30–180) are
+        ground shadows. Fully opaque pixels (alpha > 200) are tires/bumpers — kept.
+        """
+        if image.mode != "RGBA":
+            image = image.convert("RGBA")
+        img_array = np.array(image)
+        alpha = img_array[:, :, 3].copy()
+        h = alpha.shape[0]
+        shadow_zone_top = int(h * 0.80)
+        shadow_zone = alpha[shadow_zone_top:, :]
+        shadow_zone = np.where(
+            (shadow_zone > 30) & (shadow_zone < 180),
+            0,
+            shadow_zone,
+        )
+        alpha[shadow_zone_top:, :] = shadow_zone
+        img_array[:, :, 3] = alpha
+        return Image.fromarray(img_array, mode="RGBA")
+
     def refine(self, image: Image.Image) -> Image.Image:
         """Apply the full refinement pipeline to a rembg output image.
 
         Pipeline order:
+        0. Ground shadow suppression (remove floor contact shadows)
         1. Alpha matte cleanup (fill holes, remove noise)
         2. Thin detail preservation (reconnect broken structures)
         3. Edge feathering (smooth transitions)
@@ -507,8 +530,12 @@ class AlphaMatteRefiner:
         logger.info("AlphaMatteRefiner: Starting refinement pipeline")
         logger.debug("  Input: mode=%s, size=%s", image.mode, image.size)
 
+        # Step 0: Ground shadow suppression
+        result = self._suppress_ground_shadow(image)
+        logger.debug("  After shadow suppression: size=%s", result.size)
+
         # Step 1: Alpha matte cleanup
-        result = self.refine_alpha(image)
+        result = self.refine_alpha(result)
         logger.debug("  After alpha cleanup: size=%s", result.size)
 
         # Step 2: Thin detail preservation
@@ -548,7 +575,12 @@ class RembgRemover(BackgroundRemover):
         self.service_url = service_url.rstrip("/")
         self.timeout = timeout
         self._available = None  # Lazy health check
-        self._refiner = AlphaMatteRefiner()
+        self._refiner = AlphaMatteRefiner(
+            close_radius=3,
+            noise_threshold=150,
+            feather_radius=2.0,
+            decontamination_width=5,
+        )
 
     def _check_availability(self) -> bool:
         """Check if the rembg service is reachable."""
