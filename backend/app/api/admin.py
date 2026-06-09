@@ -914,6 +914,58 @@ class PromoteEditorRequest(BaseModel):
     user_id: int
 
 
+class CreateEditorRequest(BaseModel):
+    email: str
+    name: str
+    password: str  # Admin sets an initial password; editor should change it on first login
+
+
+@router.post("/admin/editor/editors/create", response_model=EditorUserResponse, status_code=201)
+async def admin_create_editor(
+    body: CreateEditorRequest,
+    request: Request,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db_session),
+):
+    """Create a brand-new user account with EDITOR role directly.
+    Admin provides email, name, and initial password.
+    The editor logs in with these credentials and is sent to the editor portal."""
+    existing = db.query(User).filter(User.email == body.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="An account with this email already exists")
+    new_editor = User(
+        email=body.email,
+        name=body.name,
+        hashed_password=hash_password(body.password),
+        role=Role.EDITOR,
+        is_active=True,
+        is_disabled=False,
+        is_superuser=False,
+        force_password_reset=True,  # Editor must change password on first login
+    )
+    db.add(new_editor)
+    db.commit()
+    db.refresh(new_editor)
+    # Bootstrap a free subscription so billing checks don't fail
+    try:
+        from app.models import Subscription
+        sub = Subscription(user_id=new_editor.id, plan_tier="free", status="active")
+        db.add(sub)
+        db.commit()
+    except Exception:
+        pass  # Non-fatal — editor functionality does not depend on subscription
+    return EditorUserResponse(
+        id=new_editor.id,
+        email=new_editor.email,
+        name=new_editor.name,
+        is_active=new_editor.is_active,
+        open_ticket_count=0,
+        rating_avg=0.0,
+        rating_count=0,
+        completed_ticket_count=0,
+    )
+
+
 @router.post("/admin/editor/editors", response_model=EditorUserResponse, status_code=201)
 async def admin_promote_editor(
     body: PromoteEditorRequest,

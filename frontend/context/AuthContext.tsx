@@ -123,7 +123,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (data.force_password_reset) {
             setNeedsPasswordReset(true);
           }
-          router.push(`/${locale}/dashboard`);
+          // Route by role — editors go to editor portal, everyone else to dashboard
+          if (userData.role === "EDITOR") {
+            router.push(`/${locale}/editor/tickets`);
+          } else {
+            router.push(`/${locale}/dashboard`);
+          }
         } else {
           setToken(null);
           setError("Could not load your account. Please try signing in again.");
@@ -282,7 +287,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const currentPath = pathname || "";
       const isAuthPage = /^\/[a-z]{2}\/auth\/(login|register|forgot-password)(\/|$)/.test(currentPath);
       if (isAuthPage) {
-        router.push(`/${locale}/dashboard`);
+        // Editors go to editor portal, everyone else to dashboard
+        if (user.role === "EDITOR") {
+          router.push(`/${locale}/editor/tickets`);
+        } else {
+          router.push(`/${locale}/dashboard`);
+        }
       }
     }
   }, [user, loading, pathname, router, locale]);

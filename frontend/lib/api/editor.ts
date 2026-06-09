@@ -160,6 +160,19 @@ export async function adminDemoteEditor(userId: number): Promise<{ demoted: bool
   return handleResponse(res);
 }
 
+export async function adminCreateEditor(data: {
+  email: string;
+  name: string;
+  password: string;
+}): Promise<EditorUser> {
+  const res = await authFetch("/api/admin/editor/editors/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<EditorUser>(res);
+}
+
 export async function claimTicket(ticketId: number): Promise<Ticket> {
   const res = await authFetch(`/api/editor/tickets/${ticketId}/claim`, { method: "POST" });
   return handleResponse<Ticket>(res);

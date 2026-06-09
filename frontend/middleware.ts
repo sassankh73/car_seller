@@ -7,7 +7,7 @@ const intlMiddleware = createMiddleware({
   localePrefix: "always",
 });
 
-const PROTECTED_PATTERN = /^\/[a-z]{2}\/(dashboard|admin)(\/|$)/;
+const PROTECTED_PATTERN = /^\/[a-z]{2}\/(dashboard|admin|editor)(\/|$)/;
 const AUTH_PAGE_PATTERN = /^\/[a-z]{2}\/auth\/(login|register|forgot-password)(\/|$)/;
 
 export default function middleware(request: NextRequest) {
