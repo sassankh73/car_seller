@@ -18,8 +18,65 @@ interface Project {
   background: string;
   image_url?: string;
   result_image?: string;
+  original_image_url?: string | null;
+  editor_result_url?: string | null;
   created_at?: string;
   watermark_applied?: boolean;
+}
+
+type FileTab = "original" | "ai" | "editor";
+
+function ProjectFileTabs({
+  originalUrl,
+  aiUrl,
+  editorUrl,
+}: {
+  originalUrl: string | null;
+  aiUrl: string | null;
+  editorUrl: string | null;
+}) {
+  const allTabs: { key: FileTab; label: string; url: string | null }[] = [
+    { key: "original", label: "Original", url: originalUrl },
+    { key: "ai", label: "AI Version", url: aiUrl },
+    { key: "editor", label: "Edited Version", url: editorUrl },
+  ];
+  const tabs = allTabs.filter((t) => t.url);
+
+  const [active, setActive] = useState<FileTab>(tabs[0]?.key ?? "original");
+  if (tabs.length === 0) return null;
+  const current = tabs.find((t) => t.key === active) ?? tabs[0];
+
+  return (
+    <div>
+      <div className="flex gap-1 mb-2">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActive(tab.key)}
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+              active === tab.key
+                ? "bg-[#CC2020] text-white"
+                : "bg-[#f5f5f7] text-[#555] hover:bg-[#ebebed]"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      {current?.url && (
+        <div className="relative">
+          <img src={current.url} alt={current.label} className="w-full rounded-xl object-cover max-h-48" />
+          <a
+            href={current.url}
+            download
+            className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-3 py-1 rounded-lg hover:bg-black/80 transition-colors"
+          >
+            Download
+          </a>
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface Studio {

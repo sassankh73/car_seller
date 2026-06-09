@@ -753,6 +753,22 @@ async def admin_update_ticket(
         ticket.status = body.status
         if body.status == "done":
             ticket.completed_at = datetime.utcnow()
+            # Notify the project owner that their job is complete
+            try:
+                from app.services.email import send_job_completed_email
+                from app.models import Project as ProjectModel
+                project = db.query(ProjectModel).filter(ProjectModel.id == ticket.project_id).first()
+                if project:
+                    owner = db.query(User).filter(User.id == project.user_id).first()
+                    if owner:
+                        send_job_completed_email(
+                            user_email=owner.email,
+                            user_name=owner.name or owner.email,
+                            project_name=project.name,
+                            ticket_id=ticket.id,
+                        )
+            except Exception:
+                logger.exception("send_job_completed_email failed (non-fatal)")
     ticket.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(ticket)

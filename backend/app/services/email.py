@@ -208,6 +208,67 @@ def send_ticket_result_notification(
         return False
 
 
+def send_new_ticket_notification(
+    editor_email: str,
+    editor_name: str,
+    ticket_id: int,
+    ticket_title: str,
+    project_name: str,
+) -> bool:
+    """Notify an editor that a new unclaimed ticket is available."""
+    subject = f"New job available: {ticket_title}"
+    ticket_url = f"{_FRONTEND_URL}/editor/tickets"
+    html_body = f"""<!DOCTYPE html>
+<html><body style="font-family:sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;padding:24px">
+<h2 style="color:#CC2020">New Editing Job Available</h2>
+<p>Hi {editor_name},</p>
+<p>A new editing job is available. Be the first to claim it!</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0">
+  <tr><td style="padding:8px;background:#f5f5f7;font-weight:600;width:140px">Ticket #</td><td style="padding:8px">{ticket_id}</td></tr>
+  <tr><td style="padding:8px;background:#f5f5f7;font-weight:600">Title</td><td style="padding:8px">{ticket_title}</td></tr>
+  <tr><td style="padding:8px;background:#f5f5f7;font-weight:600">Project</td><td style="padding:8px">{project_name}</td></tr>
+</table>
+<p style="text-align:center;margin:32px 0">
+  <a href="{ticket_url}" style="background:#CC2020;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;display:inline-block">View Available Jobs</a>
+</p>
+<p style="color:#a8a29e;font-size:12px">AutoStudio AI &middot; autostudio.cc</p>
+</body></html>"""
+    text_body = f"New job available: {ticket_title} (#{ticket_id}) — {ticket_url}"
+    try:
+        return _send(editor_email, subject, html_body, text_body)
+    except Exception:
+        logger.exception("send_new_ticket_notification failed (non-fatal)")
+        return False
+
+
+def send_job_completed_email(
+    user_email: str,
+    user_name: str,
+    project_name: str,
+    ticket_id: int,
+) -> bool:
+    """Notify the project owner that their edited photos are ready."""
+    subject = f"Your edited photos are ready — {project_name}"
+    dashboard_url = f"{_FRONTEND_URL}/dashboard"
+    html_body = f"""<!DOCTYPE html>
+<html><body style="font-family:sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;padding:24px">
+<h2 style="color:#CC2020">Your Edited Photos Are Ready</h2>
+<p>Hi {user_name},</p>
+<p>Your project <strong>{project_name}</strong> has been manually edited and is ready for download.</p>
+<p>Log in to your dashboard to preview and download the final images.</p>
+<p style="text-align:center;margin:32px 0">
+  <a href="{dashboard_url}" style="background:#CC2020;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;display:inline-block">Go to Dashboard</a>
+</p>
+<p style="color:#a8a29e;font-size:12px">AutoStudio AI &middot; autostudio.cc</p>
+</body></html>"""
+    text_body = f"Your edited photos for {project_name} are ready. View them at: {dashboard_url}"
+    try:
+        return _send(user_email, subject, html_body, text_body)
+    except Exception:
+        logger.exception("send_job_completed_email failed (non-fatal)")
+        return False
+
+
 def send_ticket_status_update_email(
     editor_email: str,
     ticket_id: int,

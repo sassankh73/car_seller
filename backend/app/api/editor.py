@@ -1,8 +1,10 @@
 """Editor Portal API — ticket management for EDITOR and ADMIN roles."""
 
+import io
 import logging
 import math
 import uuid
+import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -342,6 +344,52 @@ async def get_owner_logo(
         content=owner.logo_data,
         media_type=owner.logo_mime_type or "image/png",
         headers={"Content-Disposition": f'attachment; filename="owner_logo_{ticket_id}.png"'},
+    )
+
+
+@router.get("/editor/tickets/{ticket_id}/download-zip")
+async def download_ticket_zip(
+    ticket_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_editor),
+    db: Session = Depends(get_db_session),
+):
+    """Stream a ZIP archive containing all files attached to this ticket."""
+    ticket = _require_ticket(db, ticket_id, current_user)
+    if current_user.role == Role.EDITOR and ticket.assigned_to_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    STATIC_ROOT = Path(__file__).parent.parent / "static"
+
+    def url_to_path(url: str | None) -> Path | None:
+        if not url:
+            return None
+        rel = url.lstrip("/").removeprefix("static/")
+        p = STATIC_ROOT / rel
+        return p if p.exists() else None
+
+    files: list[tuple[str, Path]] = []
+    if p := url_to_path(ticket.original_image_url):
+        files.append(("original" + p.suffix, p))
+    if p := url_to_path(ticket.ai_result_url):
+        files.append(("ai_result" + p.suffix, p))
+    if p := url_to_path(ticket.result_image_url):
+        files.append(("editor_result" + p.suffix, p))
+
+    if not files:
+        raise HTTPException(status_code=404, detail="No files available for this ticket")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for arc_name, path in files:
+            zf.write(path, arc_name)
+    buf.seek(0)
+
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="ticket_{ticket_id}_files.zip"'},
     )
 
 

@@ -479,6 +479,7 @@ async def process_image(
                 name=project_name,
                 background=studio_key,
                 image_url=result_url,
+                original_image_url=original_static_url,
                 original_format=original_format,
                 watermark_applied=apply_watermark,
                 user_id=current_user.id,
@@ -506,6 +507,24 @@ async def process_image(
                 db.add(auto_ticket)
                 db.commit()
                 logger.info("Auto-created ticket %s for project %s", auto_ticket.id, proj.id)
+                # Notify all active editors that a new job is available
+                try:
+                    from app.models import Role as RoleEnum
+                    from app.services.email import send_new_ticket_notification
+                    editors = db.query(User).filter(
+                        User.role == RoleEnum.EDITOR,
+                        User.is_disabled == False,
+                    ).all()
+                    for ed in editors:
+                        send_new_ticket_notification(
+                            editor_email=ed.email,
+                            editor_name=ed.name or ed.email,
+                            ticket_id=auto_ticket.id,
+                            ticket_title=auto_ticket.title,
+                            project_name=proj.name,
+                        )
+                except Exception as _email_err:
+                    logger.warning("Editor broadcast email failed (non-fatal): %s", _email_err)
             except Exception as e:
                 logger.warning("Failed to auto-create ticket (non-fatal): %s", e)
                 try:

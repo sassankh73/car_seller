@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { addNote, getOwnerLogo, getTicket, submitTicket, uploadTicketResult } from "@/lib/api/editor";
+import { addNote, downloadTicketZip, getOwnerLogo, getTicket, submitTicket, uploadTicketResult } from "@/lib/api/editor";
 import type { Ticket } from "@/types/editor";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -41,6 +41,7 @@ export default function EditorTicketDetailPage() {
   const [noteBody, setNoteBody] = useState("");
   const [postingNote, setPostingNote] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -89,6 +90,18 @@ export default function EditorTicketDetailPage() {
       setNoteBody("");
     } catch (e: any) { alert(e.message); }
     finally { setPostingNote(false); }
+  };
+
+  const handleDownloadZip = async () => {
+    if (!ticket) return;
+    setDownloading(true);
+    try {
+      await downloadTicketZip(ticket.id);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const handleDownloadLogo = async () => {
@@ -172,6 +185,18 @@ export default function EditorTicketDetailPage() {
 
           {!ticket.original_image_url && !ticket.ai_result_url && !ticket.owner_logo_url && (
             <p className="text-sm text-[#aaa]">—</p>
+          )}
+
+          {(ticket.original_image_url || ticket.ai_result_url || ticket.result_image_url) && (
+            <div className="pt-3 border-t border-[#f5f5f7]">
+              <button
+                onClick={handleDownloadZip}
+                disabled={downloading}
+                className="flex items-center gap-2 px-4 py-2 bg-[#1a1a1a] text-white text-sm font-medium rounded-xl hover:bg-[#333] disabled:opacity-40 transition-colors"
+              >
+                {downloading ? "Preparing ZIP…" : "⬇ Download All Files (ZIP)"}
+              </button>
+            </div>
           )}
         </div>
       </div>

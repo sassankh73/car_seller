@@ -21,6 +21,8 @@ class ProjectOut(BaseModel):
     name: str
     background: str
     image_url: Optional[str] = None
+    original_image_url: Optional[str] = None
+    editor_result_url: Optional[str] = None
     watermark_applied: Optional[bool] = False
     created_at: Optional[datetime] = None
     user_id: int

@@ -2,11 +2,11 @@ FROM node:20
 
 WORKDIR /app
 
-# Copy pre-built output from host.
-# Run `npm run build` in frontend/ on your Mac before building this image.
-# The .next/ build output and node_modules are copied in directly — no npm
-# network access required inside the container.
 COPY . .
+
+# Standalone server needs static assets and public folder alongside it
+RUN cp -r .next/static .next/standalone/.next/static && \
+    cp -r public .next/standalone/public
 
 EXPOSE 3000
 

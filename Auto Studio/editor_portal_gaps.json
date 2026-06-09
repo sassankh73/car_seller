@@ -1,0 +1,405 @@
+{
+  "title": "AutoStudio Editor Portal — Gap Completion",
+  "description": "Implements the 6 missing pieces from the Editor Portal prompt. Do NOT rebuild anything already listed under 'already_built'. Work only on the phases below.",
+  "already_built": [
+    "EDITOR role in PostgreSQL enum",
+    "Ticket, TicketNote, EditorRating models and DB migrations",
+    "All editor API endpoints: GET/POST /api/editor/tickets, /claim, /upload-result, /submit, /notes, /badge, /owner-logo, /me",
+    "All admin editor API endpoints: list/create/update/delete tickets, manage editors, rate",
+    "Auto-ticket creation in studio.py when user processes photos",
+    "Original photo storage in backend/app/static/originals/",
+    "Email service functions: send_ticket_assignment_email, send_ticket_result_notification, send_ticket_status_update_email",
+    "Frontend editor portal: /editor/tickets, /editor/tickets/[id], /editor/profile, /editor/layout",
+    "Frontend admin editor portal: /admin/editor-portal, /admin/editor-portal/editors, /admin/editor-portal/tickets/[id]",
+    "Auth redirect fix in AuthContext.tsx (EDITOR → /editor/tickets)",
+    "Middleware protecting /editor routes",
+    "Admin editor account creation endpoint and UI"
+  ],
+  "constraint": "Do not modify dashboard structure, visual branding, or any file not listed in a phase below. Do not push to GitHub.",
+  "phases": [
+    {
+      "id": "A",
+      "title": "Backend: Add original_image_url and editor_result_url to ProjectOut schema",
+      "why": "ProjectOut currently omits these two fields so the frontend cannot display original or editor-corrected photos per project.",
+      "file": "backend/app/api/projects.py",
+      "change": "In the ProjectOut Pydantic class (starts at line 19), add two new optional fields after 'image_url':",
+      "exact_addition": {
+        "after_line_containing": "image_url: Optional[str] = None",
+        "insert": [
+          "    original_image_url: Optional[str] = None",
+          "    editor_result_url: Optional[str] = None"
+        ]
+      }
+    },
+    {
+      "id": "B",
+      "title": "Backend: ZIP download endpoint for editors",
+      "why": "Editors need to download all project files (original + AI result + edited result) as a single ZIP package. No zip endpoint exists anywhere in the codebase.",
+      "file": "backend/app/api/editor.py",
+      "steps": [
+        {
+          "step": 1,
+          "action": "Add 'import zipfile, io, os' to the top of editor.py if not already present"
+        },
+        {
+          "step": 2,
+          "action": "Add the following endpoint after the existing 'get_owner_logo' endpoint",
+          "code": [
+            "@router.get('/editor/tickets/{ticket_id}/download-zip')",
+            "async def download_ticket_zip(",
+            "    ticket_id: int,",
+            "    request: Request,",
+            "    current_user: User = Depends(get_current_editor),",
+            "    db: Session = Depends(get_db_session),",
+            "):",
+            "    \"\"\"Stream a ZIP archive containing all files attached to this ticket.\"\"\"",
+            "    ticket = _require_ticket(db, ticket_id, current_user)",
+            "    if current_user.role == Role.EDITOR and ticket.assigned_to_id != current_user.id:",
+            "        raise HTTPException(status_code=403, detail='Not authorized')",
+            "",
+            "    # Map static URL paths to filesystem paths.",
+            "    # URLs look like /static/originals/orig_xxx.png",
+            "    # Filesystem root is backend/app/static/",
+            "    STATIC_ROOT = Path(__file__).parent.parent / 'static'",
+            "",
+            "    def url_to_path(url: str | None) -> Path | None:",
+            "        if not url:",
+            "            return None",
+            "        # Strip leading /static/ prefix",
+            "        rel = url.lstrip('/').removeprefix('static/')",
+            "        p = STATIC_ROOT / rel",
+            "        return p if p.exists() else None",
+            "",
+            "    files: list[tuple[str, Path]] = []",
+            "    if p := url_to_path(ticket.original_image_url):",
+            "        files.append(('original' + p.suffix, p))",
+            "    if p := url_to_path(ticket.ai_result_url):",
+            "        files.append(('ai_result' + p.suffix, p))",
+            "    if p := url_to_path(ticket.result_image_url):",
+            "        files.append(('editor_result' + p.suffix, p))",
+            "",
+            "    if not files:",
+            "        raise HTTPException(status_code=404, detail='No files available for this ticket')",
+            "",
+            "    buf = io.BytesIO()",
+            "    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:",
+            "        for arc_name, path in files:",
+            "            zf.write(path, arc_name)",
+            "    buf.seek(0)",
+            "",
+            "    from fastapi.responses import StreamingResponse",
+            "    return StreamingResponse(",
+            "        buf,",
+            "        media_type='application/zip',",
+            "        headers={'Content-Disposition': f'attachment; filename=\"ticket_{ticket_id}_files.zip\"'},",
+            "    )"
+          ],
+          "note": "Ensure 'from pathlib import Path' is imported at the top of editor.py — it likely already is given ORIGINALS_DIR usage in studio.py, but add if missing."
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "title": "Backend: Email all editors when a new auto-ticket is created",
+      "why": "When studio.py auto-creates a ticket, no notification goes to editors. They currently have no way to know a new job is available unless they manually check the dashboard.",
+      "steps": [
+        {
+          "step": 1,
+          "file": "backend/app/services/email.py",
+          "action": "Add the following function at the end of email.py",
+          "code": [
+            "def send_new_ticket_notification(",
+            "    editor_email: str,",
+            "    editor_name: str,",
+            "    ticket_id: int,",
+            "    ticket_title: str,",
+            "    project_name: str,",
+            ") -> bool:",
+            "    \"\"\"Notify an editor that a new unclaimed ticket is available.\"\"\"",
+            "    subject = f'New job available: {ticket_title}'",
+            "    ticket_url = f'{_FRONTEND_URL}/editor/tickets'",
+            "    html_body = f\"\"\"<!DOCTYPE html>",
+            "<html><body style=\"font-family:sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;padding:24px\">",
+            "<h2 style=\"color:#CC2020\">New Editing Job Available</h2>",
+            "<p>Hi {editor_name},</p>",
+            "<p>A new editing job is available. Be the first to claim it!</p>",
+            "<table style=\"width:100%;border-collapse:collapse;margin:16px 0\">",
+            "  <tr><td style=\"padding:8px;background:#f5f5f7;font-weight:600;width:140px\">Ticket #</td><td style=\"padding:8px\">{ticket_id}</td></tr>",
+            "  <tr><td style=\"padding:8px;background:#f5f5f7;font-weight:600\">Title</td><td style=\"padding:8px\">{ticket_title}</td></tr>",
+            "  <tr><td style=\"padding:8px;background:#f5f5f7;font-weight:600\">Project</td><td style=\"padding:8px\">{project_name}</td></tr>",
+            "</table>",
+            "<p style=\"text-align:center;margin:32px 0\">",
+            "  <a href=\"{ticket_url}\" style=\"background:#CC2020;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;display:inline-block\">View Available Jobs</a>",
+            "</p>",
+            "<p style=\"color:#a8a29e;font-size:12px\">AutoStudio AI &middot; autostudio.cc</p>",
+            "</body></html>\"\"\"",
+            "    text_body = f'New job available: {ticket_title} (#{ticket_id}) — {ticket_url}'",
+            "    try:",
+            "        return _send(editor_email, subject, html_body, text_body)",
+            "    except Exception:",
+            "        logger.exception('send_new_ticket_notification failed (non-fatal)')",
+            "        return False"
+          ]
+        },
+        {
+          "step": 2,
+          "file": "backend/app/api/studio.py",
+          "action": "In the auto-ticket block, after 'db.commit()' (the line after 'db.add(auto_ticket)'), add editor broadcast notification. Find the block starting with '# Auto-create editor ticket' and insert after the commit/refresh:",
+          "insert_after_line_containing": "logger.info(\"Auto-created ticket %s for project %s\", auto_ticket.id, proj.id)",
+          "code": [
+            "                # Notify all active editors that a new job is available",
+            "                try:",
+            "                    from app.models import Role as RoleEnum",
+            "                    from app.services.email import send_new_ticket_notification",
+            "                    editors = db.query(User).filter(",
+            "                        User.role == RoleEnum.EDITOR,",
+            "                        User.is_disabled == False,",
+            "                    ).all()",
+            "                    for ed in editors:",
+            "                        send_new_ticket_notification(",
+            "                            editor_email=ed.email,",
+            "                            editor_name=ed.name or ed.email,",
+            "                            ticket_id=auto_ticket.id,",
+            "                            ticket_title=auto_ticket.title,",
+            "                            project_name=proj.name,",
+            "                        )",
+            "                except Exception as _email_err:",
+            "                    logger.warning('Editor broadcast email failed (non-fatal): %s', _email_err)"
+          ],
+          "note": "The User import is already at the top of studio.py. Check that 'is_disabled' column exists on User (it does — added in migration 423cc45866e8)."
+        }
+      ]
+    },
+    {
+      "id": "D",
+      "title": "Backend: Email user when ticket marked done",
+      "why": "When admin marks a ticket 'done', the customer (project owner) must receive an email that their edited photos are ready. Currently no user-facing completion email exists.",
+      "steps": [
+        {
+          "step": 1,
+          "file": "backend/app/services/email.py",
+          "action": "Add the following function at the end of email.py",
+          "code": [
+            "def send_job_completed_email(",
+            "    user_email: str,",
+            "    user_name: str,",
+            "    project_name: str,",
+            "    ticket_id: int,",
+            ") -> bool:",
+            "    \"\"\"Notify the project owner that their edited photos are ready.\"\"\"",
+            "    subject = f'Your edited photos are ready — {project_name}'",
+            "    dashboard_url = f'{_FRONTEND_URL}/dashboard'",
+            "    html_body = f\"\"\"<!DOCTYPE html>",
+            "<html><body style=\"font-family:sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;padding:24px\">",
+            "<h2 style=\"color:#CC2020\">Your Edited Photos Are Ready</h2>",
+            "<p>Hi {user_name},</p>",
+            "<p>Your project <strong>{project_name}</strong> has been manually edited and is ready for download.</p>",
+            "<p>Log in to your dashboard to preview and download the final images.</p>",
+            "<p style=\"text-align:center;margin:32px 0\">",
+            "  <a href=\"{dashboard_url}\" style=\"background:#CC2020;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;display:inline-block\">Go to Dashboard</a>",
+            "</p>",
+            "<p style=\"color:#a8a29e;font-size:12px\">AutoStudio AI &middot; autostudio.cc</p>",
+            "</body></html>\"\"\"",
+            "    text_body = f'Your edited photos for {project_name} are ready. View them at: {dashboard_url}'",
+            "    try:",
+            "        return _send(user_email, subject, html_body, text_body)",
+            "    except Exception:",
+            "        logger.exception('send_job_completed_email failed (non-fatal)')",
+            "        return False"
+          ]
+        },
+        {
+          "step": 2,
+          "file": "backend/app/api/admin.py",
+          "action": "In admin_update_ticket, find the block that sets ticket.completed_at (around line 754-755). After 'ticket.completed_at = datetime.utcnow()' and before 'ticket.updated_at = datetime.utcnow()', insert user notification:",
+          "find_block": "if body.status == 'done':\n            ticket.completed_at = datetime.utcnow()",
+          "insert_after": "ticket.completed_at = datetime.utcnow()",
+          "code": [
+            "            # Notify the project owner that their job is complete",
+            "            try:",
+            "                from app.services.email import send_job_completed_email",
+            "                from app.models import Project as ProjectModel",
+            "                project = db.query(ProjectModel).filter(ProjectModel.id == ticket.project_id).first()",
+            "                if project:",
+            "                    owner = db.query(User).filter(User.id == project.user_id).first()",
+            "                    if owner:",
+            "                        send_job_completed_email(",
+            "                            user_email=owner.email,",
+            "                            user_name=owner.name or owner.email,",
+            "                            project_name=project.name,",
+            "                            ticket_id=ticket.id,",
+            "                        )",
+            "            except Exception:",
+            "                logger.exception('send_job_completed_email failed (non-fatal)')"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "E",
+      "title": "Frontend: User dashboard Project Files section",
+      "why": "The user dashboard shows photos but has no dedicated 'Project Files' section with Original / AI Version / Edited Version tabs as required by the prompt. The ProjectOut schema now returns these fields (Phase A) but the UI doesn't use them.",
+      "steps": [
+        {
+          "step": 1,
+          "file": "frontend/app/[locale]/dashboard/page.tsx",
+          "action": "Find the Project type/interface defined near the top of the file (the local TypeScript type for project data returned by /api/projects). It currently has 'image_url' and 'result_image'. Add the two new fields:",
+          "add_to_project_type": [
+            "original_image_url?: string | null;",
+            "editor_result_url?: string | null;"
+          ],
+          "note": "This type is defined inline in the dashboard page, not in a shared types file."
+        },
+        {
+          "step": 2,
+          "file": "frontend/app/[locale]/dashboard/page.tsx",
+          "action": "Find where each project card renders its photo result (look for result_image being displayed in an <img> or download button). BELOW the existing result image display, add a 'Project Files' collapsible section.",
+          "component_to_add": {
+            "description": "A three-tab section inside the project card: 'Original', 'AI Version', 'Edited Version'. Only render a tab if its URL exists. Each tab shows an <img> preview and a download <a> button.",
+            "code": [
+              "/* Project Files tabs — add inside the project card, below the main result display */",
+              "{(project.original_image_url || project.image_url || project.editor_result_url) && (",
+              "  <div className=\"mt-4 border-t border-[#f0f0f0] pt-4\">",
+              "    <p className=\"text-xs font-semibold text-[#888] uppercase tracking-wide mb-2\">{t('projectFiles') ?? 'Project Files'}</p>",
+              "    <ProjectFileTabs",
+              "      originalUrl={project.original_image_url ?? null}",
+              "      aiUrl={project.image_url ?? null}",
+              "      editorUrl={project.editor_result_url ?? null}",
+              "    />",
+              "  </div>",
+              ")}"
+            ]
+          }
+        },
+        {
+          "step": 3,
+          "file": "frontend/app/[locale]/dashboard/page.tsx",
+          "action": "Add the ProjectFileTabs component as a named function at the top of the file (after all imports, before the main page component). This is a self-contained client component.",
+          "code": [
+            "type FileTab = 'original' | 'ai' | 'editor';",
+            "",
+            "function ProjectFileTabs({",
+            "  originalUrl,",
+            "  aiUrl,",
+            "  editorUrl,",
+            "}: {",
+            "  originalUrl: string | null;",
+            "  aiUrl: string | null;",
+            "  editorUrl: string | null;",
+            "}) {",
+            "  const tabs: { key: FileTab; label: string; url: string | null }[] = [",
+            "    { key: 'original', label: 'Original', url: originalUrl },",
+            "    { key: 'ai', label: 'AI Version', url: aiUrl },",
+            "    { key: 'editor', label: 'Edited Version', url: editorUrl },",
+            "  ].filter((t) => t.url);",
+            "",
+            "  const [active, setActive] = useState<FileTab>(tabs[0]?.key ?? 'original');",
+            "  if (tabs.length === 0) return null;",
+            "  const current = tabs.find((t) => t.key === active) ?? tabs[0];",
+            "",
+            "  return (",
+            "    <div>",
+            "      <div className=\"flex gap-1 mb-2\">",
+            "        {tabs.map((tab) => (",
+            "          <button",
+            "            key={tab.key}",
+            "            onClick={() => setActive(tab.key)}",
+            "            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${ active === tab.key ? 'bg-[#CC2020] text-white' : 'bg-[#f5f5f7] text-[#555] hover:bg-[#ebebed]' }`}",
+            "          >",
+            "            {tab.label}",
+            "          </button>",
+            "        ))}",
+            "      </div>",
+            "      {current?.url && (",
+            "        <div className=\"relative\">",
+            "          <img src={current.url} alt={current.label} className=\"w-full rounded-xl object-cover max-h-48\" />",
+            "          <a",
+            "            href={current.url}",
+            "            download",
+            "            className=\"absolute bottom-2 right-2 bg-black/60 text-white text-xs px-3 py-1 rounded-lg hover:bg-black/80 transition-colors\"",
+            "          >",
+            "            Download",
+            "          </a>",
+            "        </div>",
+            "      )}",
+            "    </div>",
+            "  );",
+            "}"
+          ],
+          "note": "useState is already imported in the dashboard page. No new imports needed."
+        }
+      ]
+    },
+    {
+      "id": "F",
+      "title": "Frontend: Editor ticket detail — ZIP download button",
+      "why": "Editors need a single button to download all files for a ticket as a ZIP. The backend endpoint is added in Phase B but no frontend triggers it.",
+      "steps": [
+        {
+          "step": 1,
+          "file": "frontend/lib/api/editor.ts",
+          "action": "Add the following function at the end of the file",
+          "code": [
+            "export async function downloadTicketZip(ticketId: number): Promise<void> {",
+            "  const res = await authFetch(`/api/editor/tickets/${ticketId}/download-zip`);",
+            "  if (!res.ok) throw new Error(`Download failed: ${res.status}`);",
+            "  const blob = await res.blob();",
+            "  const url = URL.createObjectURL(blob);",
+            "  const a = document.createElement('a');",
+            "  a.href = url;",
+            "  a.download = `ticket_${ticketId}_files.zip`;",
+            "  document.body.appendChild(a);",
+            "  a.click();",
+            "  document.body.removeChild(a);",
+            "  URL.revokeObjectURL(url);",
+            "}"
+          ]
+        },
+        {
+          "step": 2,
+          "file": "frontend/app/[locale]/editor/tickets/[id]/page.tsx",
+          "action": "Import downloadTicketZip at the top of the file (add to the existing import from '@/lib/api/editor'). Then add a 'Download All Files (ZIP)' button in the file/actions section of the ticket detail page. Place it alongside or below the existing file download links.",
+          "import_change": "Add 'downloadTicketZip' to the import from '@/lib/api/editor'",
+          "state_to_add": "const [downloading, setDownloading] = useState(false);",
+          "handler_to_add": [
+            "const handleDownloadZip = async () => {",
+            "  setDownloading(true);",
+            "  try {",
+            "    await downloadTicketZip(ticket.id);",
+            "  } catch (err: any) {",
+            "    alert(err.message);",
+            "  } finally {",
+            "    setDownloading(false);",
+            "  }",
+            "};"
+          ],
+          "button_to_add": [
+            "<button",
+            "  onClick={handleDownloadZip}",
+            "  disabled={downloading}",
+            "  className=\"flex items-center gap-2 px-4 py-2 bg-[#1a1a1a] text-white text-sm font-medium rounded-xl hover:bg-[#333] disabled:opacity-40 transition-colors\"",
+            ">",
+            "  {downloading ? 'Preparing ZIP…' : '⬇ Download All Files (ZIP)'}",
+            "</button>"
+          ],
+          "placement": "Place the button in the file access area of the ticket detail. Look for where 'original_image_url' or 'ai_result_url' are rendered as links/buttons — add the ZIP button in the same section."
+        }
+      ]
+    }
+  ],
+  "after_all_phases": {
+    "rebuild": [
+      "cd /Users/sassankhalebani/Projects/car_seller/frontend",
+      "npm run build",
+      "cd /Users/sassankhalebani/Projects/car_seller",
+      "docker compose build --no-cache frontend && docker compose up -d"
+    ],
+    "verify": [
+      "1. Admin marks a ticket as 'done' → check that project owner receives completion email",
+      "2. User processes a photo → check that all active editors receive new-job notification email",
+      "3. Editor opens ticket detail → 'Download All Files (ZIP)' button appears and downloads a valid zip",
+      "4. User opens dashboard → project cards show Original / AI Version / Edited Version tabs (only for tabs with actual URLs)",
+      "5. ProjectOut API response for /api/projects now includes original_image_url and editor_result_url fields"
+    ]
+  }
+}

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { authFetch } from "@/context/AuthContext";
 
@@ -11,9 +12,67 @@ interface Project {
   background: string;
   image_url?: string;
   result_image?: string;
+  original_image_url?: string | null;
+  editor_result_url?: string | null;
   created_at?: string;
   watermark_applied?: boolean;
   processing?: boolean;
+}
+
+type FileTab = "original" | "ai" | "editor";
+
+function ProjectFileTabs({
+  originalUrl,
+  aiUrl,
+  editorUrl,
+}: {
+  originalUrl: string | null;
+  aiUrl: string | null;
+  editorUrl: string | null;
+}) {
+  const allTabs: { key: FileTab; label: string; url: string | null }[] = [
+    { key: "original", label: "Original", url: originalUrl },
+    { key: "ai", label: "AI Version", url: aiUrl },
+    { key: "editor", label: "Edited", url: editorUrl },
+  ];
+  const tabs = allTabs.filter((t) => t.url);
+
+  const [active, setActive] = useState<FileTab>(tabs[0]?.key ?? "original");
+  if (tabs.length === 0) return null;
+  const current = tabs.find((t) => t.key === active) ?? tabs[0];
+
+  return (
+    <div className="mt-2 pt-2 border-t border-[#f0f0f0]">
+      <div className="flex gap-1 mb-1.5">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={(e) => { e.stopPropagation(); setActive(tab.key); }}
+            className={`px-2 py-0.5 rounded text-[9px] font-medium transition-colors ${
+              active === tab.key
+                ? "bg-[#CC2020] text-white"
+                : "bg-[#f5f5f7] text-[#666] hover:bg-[#ebebed]"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      {current?.url && (
+        <div className="relative">
+          <img src={current.url} alt={current.label} className="w-full rounded-md object-cover max-h-20" />
+          <a
+            href={current.url}
+            download
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-1 right-1 bg-black/60 text-white text-[9px] px-2 py-0.5 rounded hover:bg-black/80 transition-colors"
+          >
+            ↓
+          </a>
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface UsageData {
@@ -84,8 +143,9 @@ export default function RightPanel({ projects, usage, planName, studioLabel, onP
               return (
                 <div
                   key={project.id}
-                  className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-[#f9f9f9] transition-colors group"
+                  className="flex flex-col p-1.5 rounded-lg hover:bg-[#f9f9f9] transition-colors group"
                 >
+                  <div className="flex items-center gap-2.5">
                   {/* Thumbnail */}
                   <div className="w-9 h-9 rounded-md overflow-hidden bg-[#f5f5f7] flex-shrink-0 border border-[#e8e8e8]">
                     {thumb ? (
@@ -146,6 +206,15 @@ export default function RightPanel({ projects, usage, planName, studioLabel, onP
                         </svg>
                       </button>
                     </div>
+                  )}
+                  </div>
+                  {/* Project Files tabs (shown when files beyond AI result exist) */}
+                  {isDone && (project.original_image_url || project.editor_result_url) && (
+                    <ProjectFileTabs
+                      originalUrl={project.original_image_url ?? null}
+                      aiUrl={project.image_url ?? null}
+                      editorUrl={project.editor_result_url ?? null}
+                    />
                   )}
                 </div>
               );

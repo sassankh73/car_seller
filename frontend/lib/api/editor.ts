@@ -184,6 +184,20 @@ export async function getOwnerLogo(ticketId: number): Promise<Blob> {
   return res.blob();
 }
 
+export async function downloadTicketZip(ticketId: number): Promise<void> {
+  const res = await authFetch(`/api/editor/tickets/${ticketId}/download-zip`);
+  if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ticket_${ticketId}_files.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export async function adminRateTicket(ticketId: number, stars: number, note?: string): Promise<EditorRating> {
   const res = await authFetch(`/api/admin/editor/tickets/${ticketId}/rate`, {
     method: "POST",
