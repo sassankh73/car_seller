@@ -587,12 +587,20 @@
         "download": "Ladda ner",
         "share": "Dela",
         "viewOriginal": "Visa Original",
+        "showResult": "Visa Resultat",
         "newPhoto": "Nytt Foto",
-        "linkCopied": "Länk kopierad!"
+        "linkCopied": "Länk kopierad!",
+        "imageCopied": "Bild kopierad!",
+        "shareNotSupported": "Delning stöds inte på den här enheten"
       },
       "projects": {
         "empty": "Inga projekt ännu — fota ditt första fordon",
-        "emptyHint": "Tryck på kameraknappen nedan för att börja"
+        "emptyHint": "Tryck på kameraknappen nedan för att börja",
+        "delete": "Radera",
+        "deleteConfirmTitle": "Radera det här fotot?",
+        "deleteConfirmBody": "Det här tar permanent bort fotot och dess resultat.",
+        "deleteConfirm": "Radera",
+        "cancel": "Avbryt"
       }
     }
   },

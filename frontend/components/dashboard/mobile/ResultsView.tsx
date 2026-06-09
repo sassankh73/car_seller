@@ -25,17 +25,59 @@ export default function ResultsView({
   const [toast, setToast] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
 
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
+
   const handleShare = async () => {
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({ title: "AutoStudio Result", url: resultImage });
-      } catch { /* user dismissed */ }
-    } else {
-      try {
-        await navigator.clipboard.writeText(resultImage);
-        setToast(t("linkCopied"));
-        setTimeout(() => setToast(null), 2500);
-      } catch { /* ignore */ }
+    try {
+      // resultImage is a blob URL — fetch it back as a Blob.
+      // Passing a blob URL directly to navigator.share({ url }) is rejected
+      // by iOS Safari. The correct approach is to share the file itself.
+      const blob = await fetch(resultImage).then((r) => r.blob());
+      const file = new File([blob], "autostudio-result.jpg", {
+        type: blob.type || "image/jpeg",
+      });
+
+      // Try file share (iOS 15+ Safari, Android Chrome)
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare({ files: [file] })
+      ) {
+        await navigator.share({
+          title: "AutoStudio — Vehicle Photo",
+          text: "Processed with AutoStudio AI",
+          files: [file],
+        });
+        return;
+      }
+
+      // Fallback: share without file attachment (older browsers)
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: "AutoStudio — Vehicle Photo",
+          text: "Processed with AutoStudio AI",
+        });
+        return;
+      }
+
+      // Fallback: copy image blob to clipboard
+      if (typeof ClipboardItem !== "undefined") {
+        await navigator.clipboard.write([
+          new ClipboardItem({ [blob.type || "image/png"]: blob }),
+        ]);
+        showToast(t("imageCopied"));
+      } else {
+        showToast(t("shareNotSupported"));
+      }
+    } catch (err: any) {
+      // AbortError = user dismissed the share sheet — not an error
+      if (err?.name !== "AbortError") {
+        showToast(t("shareNotSupported"));
+      }
     }
   };
 
@@ -64,8 +106,12 @@ export default function ResultsView({
         )}
       </div>
 
-      {/* Action row */}
-      <div className="bg-white border-t border-[#e8e8e8] p-4 grid grid-cols-2 gap-3" style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}>
+      {/* Action buttons */}
+      <div
+        className="bg-white border-t border-[#e8e8e8] p-4 grid grid-cols-2 gap-3"
+        style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}
+      >
+        {/* Download */}
         <button
           onClick={onDownload}
           className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#CC2020] text-white text-sm font-bold min-h-[44px]"
@@ -76,6 +122,7 @@ export default function ResultsView({
           {t("download")}
         </button>
 
+        {/* Share */}
         <button
           onClick={handleShare}
           className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#f5f5f7] text-[#111111] text-sm font-bold border border-[#e8e8e8] min-h-[44px]"
@@ -86,6 +133,7 @@ export default function ResultsView({
           {t("share")}
         </button>
 
+        {/* Toggle original */}
         {originalPreview && (
           <button
             onClick={() => setShowOriginal((v) => !v)}
@@ -95,10 +143,11 @@ export default function ResultsView({
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            {showOriginal ? "Show Result" : t("viewOriginal")}
+            {showOriginal ? t("showResult") : t("viewOriginal")}
           </button>
         )}
 
+        {/* New photo */}
         <button
           onClick={onNewPhoto}
           className={`flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#f5f5f7] text-[#111111] text-sm font-semibold border border-[#e8e8e8] min-h-[44px] ${originalPreview ? "" : "col-span-2"}`}
@@ -110,9 +159,9 @@ export default function ResultsView({
         </button>
       </div>
 
-      {/* Toast */}
+      {/* Toast notification */}
       {toast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#111] text-white text-sm px-4 py-2 rounded-full shadow-lg z-[70]">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#111] text-white text-xs px-4 py-2.5 rounded-full shadow-lg z-[70] whitespace-nowrap">
           {toast}
         </div>
       )}

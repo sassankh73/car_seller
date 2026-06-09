@@ -62,6 +62,7 @@ interface MobileDashboardProps {
   handleGenerateAll: (images: { blob: Blob; stepIndex: number }[]) => Promise<void>;
   handleDownload: () => void;
   onNewGeneration: () => void;
+  onProjectDeleted?: (id: number | string) => void;
 }
 
 type MobileView = "workflow" | "projects";
@@ -94,6 +95,7 @@ export default function MobileDashboard({
   handleGenerateAll,
   handleDownload,
   onNewGeneration,
+  onProjectDeleted,
 }: MobileDashboardProps) {
   const t = useTranslations("dashboard.mobile");
   const rt = useTranslations("dashboard.redesign");
@@ -176,7 +178,7 @@ export default function MobileDashboard({
 
       {/* Main scrollable content */}
       <div
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto min-h-0 pt-0"
         style={{ paddingBottom: "calc(60px + env(safe-area-inset-bottom, 0px))" }}
       >
         {mobileView === "projects" ? (
@@ -185,7 +187,11 @@ export default function MobileDashboard({
             <div className="px-4 py-3 border-b border-[#f0f0f0]">
               <h2 className="text-base font-bold text-[#111111]">Projects</h2>
             </div>
-            <ProjectsList projects={projects} studioLabel={studioLabel} />
+            <ProjectsList
+              projects={projects}
+              studioLabel={studioLabel}
+              onProjectDeleted={onProjectDeleted}
+            />
           </div>
         ) : (
           /* ── Workflow tab ── */

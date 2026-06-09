@@ -587,12 +587,20 @@
         "download": "Download",
         "share": "Share",
         "viewOriginal": "View Original",
+        "showResult": "Show Result",
         "newPhoto": "New Photo",
-        "linkCopied": "Link copied!"
+        "linkCopied": "Link copied!",
+        "imageCopied": "Image copied!",
+        "shareNotSupported": "Sharing not supported on this device"
       },
       "projects": {
         "empty": "No projects yet — capture your first vehicle",
-        "emptyHint": "Tap the camera button below to start"
+        "emptyHint": "Tap the camera button below to start",
+        "delete": "Delete",
+        "deleteConfirmTitle": "Delete this photo?",
+        "deleteConfirmBody": "This will permanently remove the photo and its result.",
+        "deleteConfirm": "Delete",
+        "cancel": "Cancel"
       }
     }
   },

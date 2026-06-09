@@ -16,8 +16,7 @@ export default function WorkflowProgress({
 
   return (
     <div
-      className="sticky bg-white border-b border-[#e8e8e8] px-4 py-2.5 z-[9]"
-      style={{ top: 48 }}
+      className="sticky top-0 bg-white border-b border-[#e8e8e8] px-4 py-2.5 z-[9]"
     >
       <p className="text-xs font-semibold text-[#111111] text-center mb-1.5">
         {t("stepOf", { current: currentStep, total: totalSteps })}

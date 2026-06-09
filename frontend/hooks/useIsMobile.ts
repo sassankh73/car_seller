@@ -3,32 +3,25 @@
 import { useState, useEffect } from 'react';
 
 /**
- * Detects whether the current device is a phone (not a tablet or desktop).
+ * Returns true when the viewport width is < 768px.
  *
- * Uses Math.min(screen.width, screen.height) — the short physical side of the
- * screen — which is orientation-invariant. Phones top out at ~430px short-side
- * (iPhone 15 Plus, Pixel 9 XL). iPads start at 768px. A 500px threshold
- * cleanly separates every shipping phone from every tablet.
+ * Uses window.innerWidth — the CSS viewport width — which is what
+ * Chrome/Safari DevTools device emulation, real phones, and window resizing
+ * all change correctly.
  *
- * This is intentionally separate from viewport width so that rotating an
- * iPhone into landscape (which pushes viewport width to 844–932px, above the
- * sm: 640px Tailwind breakpoint) does NOT flip to the tablet layout.
+ * BUG FIXED: the previous version used window.screen.width (physical monitor
+ * resolution) which never changes in DevTools device emulation — so the mobile
+ * layout was completely invisible in DevTools even at 375px width.
+ *
+ * Threshold 768px: phones (375–430px) → true. Tablets (768px+) → false.
+ * Matches Tailwind's md: breakpoint exactly.
  */
 export function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return Math.min(window.screen.width, window.screen.height) <= 500;
-  });
+  const [isMobile, setIsMobile] = useState<boolean>(false); // SSR-safe: false until hydrated
 
   useEffect(() => {
-    const check = () => {
-      const shortSide = Math.min(window.screen.width, window.screen.height);
-      setIsMobile(shortSide <= 500);
-    };
-
-    check();
-    // screen dimensions can change on foldables or when mirroring to an
-    // external display, so we listen for resize as a safety net
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check(); // run immediately on mount so it reflects the actual viewport
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);

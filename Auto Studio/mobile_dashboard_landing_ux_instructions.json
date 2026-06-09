@@ -1,0 +1,167 @@
+{
+  "project": "AutoStudio AI — Dedicated Mobile Dashboard + Landing Page Mobile UX",
+  "framing": "This is a FRONTEND-ONLY pass to create a dedicated mobile experience. The desktop layout must not change a single pixel. The mobile experience should feel like a native iOS/Android app — not a squeezed desktop. Read all pre_checks before writing a single line of code.",
+  "hard_constraints": [
+    "Do NOT change any backend code, APIs, or business logic.",
+    "Do NOT alter the desktop layout. The 3-column dashboard (WorkflowSidebar + main content + RightPanel) at lg+ breakpoints stays exactly as it is today.",
+    "Do NOT redesign the visual branding or color system.",
+    "Do NOT touch the dashboard data-fetching logic or the GuidedCapture core capture logic.",
+    "All new UI copy MUST be added to both en.json and sv.json — zero hardcoded strings.",
+    "TypeScript must compile with zero errors after every change (run npx tsc --noEmit before reporting done).",
+    "Use min-h-dvh and env(safe-area-inset-*) everywhere on mobile — never 100vh, never ignore notch/home-indicator safe areas.",
+    "All touch targets must be ≥44×44px with ≥8px separation."
+  ],
+  "ground_truth_rule": "Do not report anything as done without screenshots of the actual rendered result at each device size listed in the test matrix. Claims without visual proof will not be accepted.",
+
+  "pre_checks_confirmed_from_codebase": [
+    "Dashboard is a single large component (app/[locale]/dashboard/page.tsx, ~350 lines). WorkflowSidebar and RightPanel are already wrapped in `hidden lg:flex` — on mobile they simply disappear, leaving a plain scrollable list of step-sections. There is NO mobile-specific layout, navigation, or UX today.",
+    "DashboardNav (top bar with plan badge, language toggle, logout) is always rendered — on mobile it shows but is desktop-styled. The mobile header spec below replaces it on small screens.",
+    "The GuidedCapture modal opens in a fixed overlay at 70vh height (`max-h-[90vh]`). On mobile this is not full-screen and conflicts with browser chrome (address bar, bottom bar). It must become true full-screen on mobile.",
+    "No bottom navigation exists anywhere. It must be built from scratch.",
+    "Tailwind config has no explicit screen breakpoints defined — it uses Tailwind defaults (sm:640, md:768, lg:1024, xl:1280). This plan uses those defaults.",
+    "The studio carousel currently renders as `grid grid-cols-2 sm:grid-cols-4` — on mobile this is a 2-column grid, not a swipeable carousel. The mobile spec replaces this with CSS scroll-snap (no extra JS library needed).",
+    "The landing page Navbar does not have a mobile hamburger menu or bottom tab bar — it hides the nav links but shows only the logo + CTA on small screens. The mobile landing spec adds a proper mobile nav."
+  ],
+
+  "architecture_decision": {
+    "approach": "Conditional render by breakpoint using a `useIsMobile()` hook (SSR-safe: default false, set true in useEffect if window.innerWidth < 768). The dashboard page renders either `<MobileDashboard>` or the existing 3-column desktop layout. No existing desktop code changes. All mobile components live in `components/dashboard/mobile/`.",
+    "why_not_css_only": "The mobile experience is structurally different (bottom nav, single-column full-screen flow, different component tree) — pure CSS show/hide would mean shipping both trees and managing deeply nested responsive overrides across 350+ lines. A conditional render is cleaner, safer, and keeps desktop code untouched.",
+    "shared_state": "All state (selectedStudio, file, previewUrl, processing, resultImage, projects, account, etc.) lives in the parent dashboard/page.tsx and is passed as props to both MobileDashboard and the desktop layout. No data-fetching duplication."
+  },
+
+  "part_1_mobile_dashboard": {
+    "new_files_to_create": [
+      {
+        "path": "hooks/useIsMobile.ts",
+        "spec": "SSR-safe hook. Default: false. In useEffect, set true if window.matchMedia('(max-width: 767px)').matches. Add listener for resize/orientation change. Return `isMobile: boolean`."
+      },
+      {
+        "path": "components/dashboard/mobile/MobileHeader.tsx",
+        "spec": "Replaces DashboardNav on mobile. Minimal: AutoStudio logo (left) + plan badge pill (center or right) + avatar/account icon (right, links to /dashboard/account). No desktop nav links. Height: 48px. Background: white. Border-bottom: 1px solid #e8e8e8. Position: sticky top-0 z-10. Safe-area-inset-top padding. Hides DashboardNav completely — do NOT render DashboardNav on mobile."
+      },
+      {
+        "path": "components/dashboard/mobile/BottomNav.tsx",
+        "spec": "Fixed bottom tab bar. 3 tabs: Projects (grid icon) · Capture (camera icon) · Account (person icon). Tab labels below icons. Active tab: accent color (#CC2020) icon + label. Inactive: #888888. Height: 56px + env(safe-area-inset-bottom). Background: white. Border-top: 1px solid #e8e8e8. Touch targets: full tab width, ≥56px height total. Lucide icons, 1.5px stroke, 22px size. Use Next.js <Link> for Projects (/dashboard) and Account (/dashboard/account). Capture tab triggers the capture flow (callback prop, does NOT navigate to a new route — opens the full-screen capture modal inline). z-index: 50."
+      },
+      {
+        "path": "components/dashboard/mobile/StudioCarousel.tsx",
+        "spec": "Horizontal swipeable carousel. CSS scroll-snap: scroll-snap-type x mandatory on the container; scroll-snap-align start on each card. overflow-x scroll, scrollbar-width none. One card visible at a time (each card is 85vw wide with auto margins creating a peek of the next card). Card height: auto (keeps aspect ratio). Studio info below image: name + description. Selected ring: 3px solid #CC2020 + checkmark badge. Tap to select. Show dot indicators below carousel (filled dot = selected, hollow = others). Animate selection ring with a quick scale-in. Receives studios array and selectedStudio/onSelect as props — no data fetching inside this component."
+      },
+      {
+        "path": "components/dashboard/mobile/WorkflowProgress.tsx",
+        "spec": "Sticky step progress bar shown while the user is in the workflow (steps 1-5). 'Step X of 5' text (large, centered). Thin filled progress bar below it (width: (step/5)*100%). Accent color (#CC2020). Background white with bottom border. Sticks below MobileHeader (top: 48px + safe-area-inset-top). Animate the bar fill with CSS transition (300ms ease). Hide when resultImage is shown (step complete). Props: currentStep (1-5), totalSteps (5)."
+      },
+      {
+        "path": "components/dashboard/mobile/MobileCapture.tsx",
+        "spec": "Full-screen capture modal for mobile. Uses GuidedCapture internally. Covers the entire screen: position fixed, inset-0, z-50, background black. Height: 100dvh (not vh). Close button top-right inside safe area. On completion, calls onCaptureComplete and dismisses. No desktop-modal wrapper (no rounded-2xl, no max-w-4xl, no p-4 padding) — truly full-screen edge to edge. This is specifically for mobile; the desktop modal wrapper in dashboard/page.tsx stays for desktop."
+      },
+      {
+        "path": "components/dashboard/mobile/ProjectsList.tsx",
+        "spec": "Standalone project list for the Projects tab in bottom nav. Shows all projects as vertical cards: thumbnail (result_image), vehicle/file name, studio name, date, status badge. Tap a card to open the result in a detail view (ResultsView). Empty state: illustration + 'No projects yet — capture your first vehicle'. Pull-to-refresh is a bonus but not required. Receives projects array as prop."
+      },
+      {
+        "path": "components/dashboard/mobile/ResultsView.tsx",
+        "spec": "Result display after processing completes. Full-width result image (object-contain, white bg). Action row with 4 buttons: Download (primary, accent) · Share · View Original · New Photo. Download: triggers file download (existing handleDownload logic). Share: uses navigator.share() (Web Share API) if available, fallback to copying the image URL to clipboard with a toast confirmation. View Original: shows the pre-processed uploaded photo in a lightbox/sheet. New Photo: resets state (existing newGeneration logic). Buttons: full-width stacked or 2x2 grid. Min touch target 44px height each."
+      },
+      {
+        "path": "components/dashboard/mobile/MobileDashboard.tsx",
+        "spec": "The root mobile layout component. Receives ALL state and handlers from the parent page as props (no data fetching here). Renders: MobileHeader (sticky top) + scrollable content area + BottomNav (fixed bottom). Content area has padding-bottom equal to BottomNav height + safe-area. The active 'view' is tracked in a local `mobileView` state ('workflow' | 'projects' | 'account-redirect'). 'workflow' shows the step-by-step flow. 'projects' shows ProjectsList. 'account-redirect' uses router.push to /dashboard/account. Within the workflow view, render steps sequentially — not all at once. Show one section at a time, advancing with a 'Continue' button. This creates the native-app step-by-step feel. Step sections: (1) Studio carousel, (2) Photo guide tips, (3) Good/bad examples (simplified — 3 tips only, no grid), (4) Upload zone (single zone on mobile, device upload + camera capture as two large buttons), (5) Process button + result. WorkflowProgress sits sticky below MobileHeader and updates as the user advances steps."
+      }
+    ],
+    "changes_to_existing_files": [
+      {
+        "file": "app/[locale]/dashboard/page.tsx",
+        "change": "Import useIsMobile and MobileDashboard. Wrap the entire return statement: if (isMobile) return <MobileDashboard ...all_props />. Else return the existing desktop layout unchanged. Pass ALL existing state and handlers as props to MobileDashboard. The GuidedCapture overlay block in the current return stays only in the desktop branch — MobileCapture handles it for mobile. No other changes to this file."
+      },
+      {
+        "file": "components/GuidedCapture.tsx",
+        "change": "NO STRUCTURAL CHANGES. Only: the `h-[70vh]` wrapper div inside the desktop modal should add `md:h-[70vh]` and `h-full` so that on mobile (inside MobileCapture's full-screen wrapper) it fills 100% height correctly. One-line change."
+      }
+    ],
+    "step_by_step_mobile_workflow": {
+      "note": "This is the key UX difference from the desktop. Mobile shows steps one at a time, not all stacked.",
+      "step_1": "Choose Studio — full-screen swipeable carousel. Large 'Confirm Studio' button at bottom. Advance to step 2 on confirm.",
+      "step_2": "Photo Guide — scrollable tips in a simple list. 'Got it, Continue' button at bottom. Advance to step 3.",
+      "step_3": "Good vs Bad — 3 quick tips with icons (simplified from the desktop 6-tip grid). 'Ready to Capture' button. Advance to step 4.",
+      "step_4": "Capture / Upload — two large stacked buttons: 'Take Photos (Guided)' (opens MobileCapture full-screen) and 'Upload from Gallery'. After capture or upload, show thumbnail confirmation. 'Use This Photo' button advances to step 5.",
+      "step_5": "Process — large 'Process with AI' button, studio confirmation, quality selector. After processing, show ResultsView. 'Start New' resets to step 1."
+    }
+  },
+
+  "part_2_landing_page_mobile": {
+    "scope": "Mobile-first improvements to the landing page Navbar, HeroSection, and general responsiveness. Do NOT touch the visual design — only fix mobile layout and navigation.",
+    "issues_to_fix": [
+      {
+        "id": "LP-M1",
+        "component": "components/landing/Navbar.tsx",
+        "problem": "No hamburger menu or mobile nav. Nav links are hidden on mobile but there is no way for users to access Pricing, Studios, About, etc.",
+        "fix": "Add a hamburger button (three lines icon, lucide 'Menu') visible only on mobile (lg:hidden). On tap, a slide-in drawer opens from the right (full height, white bg, z-40, animate slide-in 250ms). Drawer shows: all nav links (Studios, Pricing, About), Start Free Trial CTA, close button (X). Outside tap closes the drawer. No blur/glassmorphism — clean white card only. The drawer is a standard `<nav>` inside a fixed overlay."
+      },
+      {
+        "id": "LP-M2",
+        "component": "components/landing/HeroSection.tsx",
+        "problem": "The 2x2 hero card grid on the right side stacks weirdly on small screens. The headline and CTA are not optimized for one-handed mobile reading.",
+        "fix": "Below 768px: hide the hero card grid (it's decorative) — show only the headline, subheadline, and CTAs. Or replace the 2x2 grid with a single hero image (first card only, full width). CTAs become full-width stacked buttons (Start Free Trial on top, View Demo below). Text alignment: left on tablet, centered on mobile. Headline font size: clamp(2rem, 8vw, 3.75rem)."
+      },
+      {
+        "id": "LP-M3",
+        "component": "All landing sections",
+        "problem": "Section padding, grid gaps, and type sizes are sized for desktop. No horizontal scroll should exist.",
+        "fix": "Audit every section for: horizontal overflow (add `overflow-x: hidden` to the root layout if any section causes it), minimum font sizes (body min 16px — never smaller than 14px on mobile), and grid columns (never more than 2 columns below 768px, 1 column below 480px)."
+      },
+      {
+        "id": "LP-M4",
+        "component": "components/landing/Footer.tsx",
+        "problem": "4-column footer grid collapses to 1 column but link spacing is tight.",
+        "fix": "On mobile: 2-column grid for the link sections, full-width for the brand section and CTA. Increase tap target padding on all footer links (min 36px height). The email/newsletter row (if present) becomes full-width."
+      }
+    ]
+  },
+
+  "part_3_tablet_adaptive_layout": {
+    "scope": "At md (768px) through lg-1 (1023px) — the in-between state. Not mobile, not desktop. Should feel intentionally designed, not just a squashed desktop.",
+    "requirements": [
+      "DashboardNav stays (it works fine at tablet widths).",
+      "Main content column: full-width (no sidebar, no right panel — both hidden at md, same as today). Add a compact horizontal step indicator at top of main content (Step 1 · Step 2 · ... Step 5 — pill tabs, horizontally scrollable if needed). This replaces the WorkflowSidebar for tablet.",
+      "Studio grid: 3-column at md (currently jumps from 2 to 4 — add `md:grid-cols-3`).",
+      "Upload zones: stay side-by-side (2-column grid is fine at 768px).",
+      "Right panel data (Usage + Recent Projects): show as a compact 2-column info bar below the CTA step, not hidden entirely. Just credits remaining + last 2 project thumbnails."
+    ]
+  },
+
+  "part_4_testing_matrix": {
+    "required_screenshots": {
+      "desktop_1440": "Full 3-column dashboard. Studio grid 4-column. WorkflowSidebar and RightPanel visible.",
+      "tablet_768": "No sidebar, no right panel. Horizontal step indicator visible. Studio grid 3-column. Compact usage info below step 5.",
+      "mobile_375_portrait": "MobileDashboard: MobileHeader visible, BottomNav fixed, WorkflowProgress sticky, StudioCarousel with single card visible + peek.",
+      "mobile_375_capture": "MobileCapture: fully full-screen (0px margin, 100dvh), camera view visible, no desktop modal chrome.",
+      "mobile_375_projects": "ProjectsList tab: list of project cards with thumbnails and action buttons.",
+      "mobile_375_result": "ResultsView: Download, Share, View Original, New Photo buttons all visible above fold.",
+      "ipad_1024": "Standard desktop 3-column layout (lg threshold).",
+      "landing_mobile_375": "Hero section with full-width stacked CTAs, no hero card grid. Hamburger menu button visible.",
+      "landing_mobile_nav_open": "Slide-in drawer open with all nav links."
+    },
+    "test_devices": ["iPhone Safari 390x844", "iPhone SE Safari 375x667", "Android Chrome 400x900", "iPad Safari 768x1024 and 1024x1366"]
+  },
+
+  "part_5_quality_checklist": [
+    "npx tsc --noEmit → zero errors",
+    "No horizontal scroll at any breakpoint (375, 768, 1024, 1440)",
+    "All touch targets ≥44×44px (verified with DevTools element inspection)",
+    "Bottom nav is visible above the keyboard when an input is focused — test on real iPhone (use keyboard-inset CSS env if needed)",
+    "Studio carousel scroll-snap works with a single swipe gesture — does not require two swipes to advance",
+    "MobileCapture is truly full-screen on iPhone Safari (no white bars, no desktop modal chrome) — test with actual Safari, not just Chrome DevTools mobile emulation",
+    "Capture button in GuidedCapture has ≥56px height on mobile",
+    "All new strings exist in en.json AND sv.json",
+    "git diff --stat shows only frontend/** changes — zero backend files touched",
+    "The desktop layout is pixel-identical to before (screenshot the desktop at 1440px before and after, compare)"
+  ],
+
+  "communication_rules": [
+    "Do not start building until you have confirmed the `useIsMobile` hook approach works in the SSR context of Next.js App Router — the first step should be building and testing the hook in isolation before wiring it into the dashboard page.",
+    "Build in this order: (1) useIsMobile hook, (2) MobileHeader + BottomNav shell (static, no real data), (3) wire hook into dashboard/page.tsx and confirm desktop unchanged, (4) StudioCarousel + WorkflowProgress, (5) full MobileDashboard step flow, (6) MobileCapture full-screen, (7) ResultsView, (8) ProjectsList, (9) landing page mobile fixes. Do not build everything at once and try to fix ten problems simultaneously.",
+    "After step 3, take a screenshot of the desktop layout and confirm it is unchanged before continuing.",
+    "Do not report this as done without all screenshots in the test matrix above.",
+    "Do not push to GitHub until the user gives explicit approval after reviewing screenshots."
+  ]
+}

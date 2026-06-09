@@ -332,6 +332,7 @@ export default function Dashboard() {
         handleGenerateAll={handleGenerateAll}
         handleDownload={handleDownload}
         onNewGeneration={newGeneration}
+        onProjectDeleted={(id) => setProjects((prev) => prev.filter((p) => p.id !== id))}
       />
     );
   }
