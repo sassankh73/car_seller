@@ -247,13 +247,23 @@ async def get_current_user_info(request: Request):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
         )
-    return UserResponse(
-        id=user.id,
-        email=user.email,
-        name=user.name,
-        role=user.role.value if user.role else "FREE",
-        is_active=user.is_active,
-        is_disabled=user.is_disabled,
-        force_password_reset=user.force_password_reset,
-        created_at=user.created_at,
+    logger.debug(
+        "/api/auth/me: user id=%s email=%s role=%s is_active=%s is_disabled=%s",
+        user.id, user.email, user.role, user.is_active, user.is_disabled,
     )
+    try:
+        resp = UserResponse(
+            id=user.id,
+            email=user.email,
+            name=user.name,
+            role=user.role.value if user.role else "FREE",
+            is_active=user.is_active,
+            is_disabled=user.is_disabled,
+            force_password_reset=user.force_password_reset,
+            created_at=user.created_at,
+        )
+        logger.debug("/api/auth/me: serialized OK role=%s", resp.role)
+        return resp
+    except Exception as exc:
+        logger.error("/api/auth/me: serialization failed for user id=%s: %s\n%s", user.id, exc, traceback.format_exc())
+        raise

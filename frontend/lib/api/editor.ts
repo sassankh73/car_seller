@@ -4,11 +4,13 @@
  */
 import { authFetch } from "@/context/AuthContext";
 import type {
+  Customer,
   EditorRating,
   EditorUser,
   Ticket,
   TicketBadge,
   TicketCreate,
+  TicketImage,
   TicketListResponse,
   TicketNote,
   TicketUpdate,
@@ -205,4 +207,62 @@ export async function adminRateTicket(ticketId: number, stars: number, note?: st
     body: JSON.stringify({ stars, note: note ?? null }),
   });
   return handleResponse<EditorRating>(res);
+}
+
+export async function uploadImageResult(
+  ticketId: number,
+  imageId: number,
+  file: File,
+  onProgress?: (pct: number) => void,
+): Promise<TicketImage> {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const xhr = new XMLHttpRequest();
+    xhr.withCredentials = true;
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText) as TicketImage);
+      } else {
+        const err = JSON.parse(xhr.responseText || "{}");
+        reject(new Error(err.detail || `Upload failed: ${xhr.status}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Upload failed — network error"));
+    xhr.open("POST", `/api/editor/tickets/${ticketId}/images/${imageId}/upload-result`);
+    xhr.send(formData);
+  });
+}
+
+export async function adminListCustomers(): Promise<Customer[]> {
+  const res = await authFetch("/api/admin/editor/customers");
+  return handleResponse<Customer[]>(res);
+}
+
+export async function adminGetStats(): Promise<{
+  leaderboard: {
+    id: number;
+    name: string;
+    email: string;
+    is_active: boolean;
+    completed_tickets: number;
+    open_tickets: number;
+    avg_delivery_minutes: number | null;
+    rating_avg: number;
+    rating_count: number;
+  }[];
+  summary: {
+    open_tickets: number;
+    in_progress_tickets: number;
+    waiting_review: number;
+    total_editors: number;
+  };
+}> {
+  const res = await authFetch("/api/admin/editor/stats");
+  return handleResponse(res);
 }

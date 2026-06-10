@@ -4,12 +4,17 @@ Authentication middleware for AutoStudio AI.
 This module contains middleware functions for JWT authentication.
 """
 
+import logging
+import traceback
+
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.models import SessionLocal, Role
 from app.services.auth import decode_access_token, get_user_by_email
+
+logger = logging.getLogger(__name__)
 
 
 async def authenticate_middleware(request: Request, call_next):
@@ -85,6 +90,8 @@ async def authenticate_middleware(request: Request, call_next):
                 content={"detail": "Invalid token"},
             )
 
+        logger.debug("auth_middleware: validating user email=%s path=%s", payload.sub, path)
+
         # Get user from database
         user = get_user_by_email(db, email=payload.sub)
         if not user or not user.is_active:
@@ -100,12 +107,23 @@ async def authenticate_middleware(request: Request, call_next):
                 content={"detail": "Account is disabled. Please contact support."},
             )
 
+        logger.debug("auth_middleware: user id=%s role=%s path=%s", user.id, user.role, path)
+
         # Add user and db session to request state
         request.state.current_user = user
         request.state.db = db
 
         response = await call_next(request)
         return response
+    except Exception as exc:
+        logger.error(
+            "auth_middleware UNHANDLED EXCEPTION: path=%s method=%s error=%s\n%s",
+            path, request.method, exc, traceback.format_exc(),
+        )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal server error"},
+        )
     finally:
         db.close()
 

@@ -524,7 +524,7 @@
         "cta": "Process with AI",
         "ctaInfo": "Uses 1 credit · ~15 seconds · Studio: {studio}",
         "ctaSelectBoth": "Select a studio and upload a photo to continue",
-        "result": "Your result is ready",
+        "result": "Your AutoStudio images are ready",
         "download": "Download Image",
         "newGeneration": "New Generation"
       },
@@ -709,7 +709,11 @@
     "logoFileTooLarge": "File size must be less than 2 MB",
     "logoFileTypeInvalid": "Only PNG, JPG, and SVG files are supported",
     "profileUpdateSuccess": "Profile updated successfully",
-    "profileUpdateError": "Failed to update profile"
+    "profileUpdateError": "Failed to update profile",
+    "aiProcessing": "Processing your photos…",
+    "aiCompleted": "Your AutoStudio images are ready.",
+    "readyForDownload": "Ready for Download",
+    "finalReady": "Your final AutoStudio images are ready."
   },
   "auth": {
     "login": {
@@ -962,9 +966,11 @@
       },
       "status": {
         "open": "Open",
+        "claimed": "Claimed",
         "in_progress": "In Progress",
         "review": "In Review",
         "done": "Done",
+        "delivered": "Delivered",
         "rejected": "Rejected"
       },
       "overdue": "Overdue",

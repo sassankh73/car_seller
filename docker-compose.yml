@@ -66,6 +66,8 @@ services:
       - BACKEND_HOST=backend
       - BACKEND_PORT=8001
       - NEXT_PUBLIC_CAMERA_DEBUG=false
+      - HOSTNAME=0.0.0.0
+      - PORT=3000
     depends_on:
       backend:
         condition: service_healthy

@@ -20,7 +20,7 @@ interface AuthContextType {
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   changePassword: (email: string, currentPassword: string, newPassword: string) => Promise<boolean>;
   changePasswordWithToken: (currentPassword: string, newPassword: string, confirmPassword: string) => Promise<{ success: boolean; requireRelogin?: boolean; detail?: string }>;
   updateProfile: (name?: string, email?: string) => Promise<{ success: boolean; user?: User; detail?: string }>;
@@ -181,15 +181,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = useCallback(() => {
-    // Clear cookie server-side (fire-and-forget — don't block UI)
-    fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
+  const logout = useCallback(async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } catch {
+      // Ignore network errors — still clear local state
+    }
     setUser(null);
     setToken(null);
     setNeedsPasswordReset(false);
-    router.push("/");
-    router.refresh();
-  }, [router]);
+    // Hard-navigate to root so the page fully reloads with no auth state.
+    // router.push() + router.refresh() keep the React tree alive and re-run
+    // useEffects including fetchCurrentUser(), which races against the cookie deletion.
+    window.location.href = "/";
+  }, []);
 
   const changePassword = async (email: string, currentPassword: string, newPassword: string): Promise<boolean> => {
     try {

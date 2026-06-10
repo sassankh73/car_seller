@@ -179,7 +179,19 @@ def login(user: UserLogin, response: Response, db: Session = Depends(get_db)):
 
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie(key="auth_token", path="/")
+    is_prod = os.getenv("ENVIRONMENT", "development") == "production"
+    # Must match ALL attributes used in _set_auth_cookie exactly.
+    # Firefox and Safari will not delete the cookie if samesite/secure differ.
+    response.set_cookie(
+        key="auth_token",
+        value="",
+        httponly=True,
+        secure=is_prod,
+        samesite="lax",
+        path="/",
+        max_age=0,
+        expires=0,
+    )
     return {"detail": "Logged out successfully"}
 
 

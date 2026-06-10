@@ -21,7 +21,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models import Project, Subscription, Ticket, TicketNote, User, get_db, Role, PlanTier
+from app.models import Project, Subscription, Ticket, TicketImage, TicketNote, User, get_db, Role, PlanTier
 from app.middleware.auth import get_current_admin, get_db_session
 from app.services.auth import hash_password
 from app.schemas.editor import (
@@ -637,6 +637,41 @@ async def get_available_roles(
 # Editor Portal — Ticket Management (Admin)
 # ============================================================================
 
+@router.get("/admin/editor/customers")
+async def admin_list_customers(
+    request: Request,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db_session),
+):
+    """List all customers (non-admin, non-editor users) with their pending project count."""
+    from app.models import Project as ProjectModel
+    customers = db.query(User).filter(
+        User.role.notin_(["ADMIN", "EDITOR"]),
+        User.is_active.is_(True),
+    ).order_by(User.name).all()
+
+    result = []
+    for c in customers:
+        projects = db.query(ProjectModel).filter(ProjectModel.user_id == c.id).all()
+        result.append({
+            "id": c.id,
+            "email": c.email,
+            "name": c.name or c.email,
+            "project_count": len(projects),
+            "projects": [
+                {
+                    "id": p.id,
+                    "name": p.name,
+                    "image_url": p.image_url,
+                    "original_image_url": p.original_image_url,
+                    "created_at": p.created_at.isoformat() if p.created_at else None,
+                }
+                for p in projects
+            ],
+        })
+    return result
+
+
 @router.get("/admin/editor/tickets", response_model=TicketListResponse)
 async def admin_list_tickets(
     request: Request,
@@ -648,7 +683,16 @@ async def admin_list_tickets(
     current_user=Depends(get_current_admin),
     db: Session = Depends(get_db_session),
 ):
-    q = db.query(Ticket)
+    from sqlalchemy.orm import joinedload
+    from app.models import Project as ProjectModel, TicketNote as TicketNoteModel
+    q = db.query(Ticket).options(
+        joinedload(Ticket.project).joinedload(ProjectModel.owner),
+        joinedload(Ticket.notes).joinedload(TicketNoteModel.author),
+        joinedload(Ticket.assigned_to),
+        joinedload(Ticket.customer),
+        joinedload(Ticket.rating),
+        joinedload(Ticket.images),
+    )
     if status_filter:
         q = q.filter(Ticket.status == status_filter)
     if priority:
@@ -657,7 +701,7 @@ async def admin_list_tickets(
         q = q.filter(Ticket.assigned_to_id == assigned_to_id)
     total = q.count()
     tickets = q.order_by(Ticket.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
-    tickets.sort(key=lambda t: (PRIORITY_ORDER.get(t.priority, 0), t.created_at.timestamp()), reverse=True)
+    tickets.sort(key=lambda t: (PRIORITY_ORDER.get(t.priority, 0), (t.created_at.timestamp() if t.created_at else 0)), reverse=True)
     return TicketListResponse(
         items=[_build_ticket_response(t, hide_internal=False) for t in tickets],
         total=total, page=page, page_size=page_size,
@@ -673,33 +717,69 @@ async def admin_create_ticket(
     db: Session = Depends(get_db_session),
 ):
     from app.models import Project as ProjectModel
-    project = db.query(ProjectModel).filter(ProjectModel.id == body.project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
 
+    # Validate assignee
+    assignee = None
     if body.assigned_to_id is not None:
         assignee = db.query(User).filter(User.id == body.assigned_to_id).first()
         if not assignee:
             raise HTTPException(status_code=404, detail="Editor not found")
         if assignee.role != Role.EDITOR:
             raise HTTPException(status_code=400, detail="Assigned user is not an editor")
-    else:
-        assignee = None
+
+    # Determine customer
+    customer_user_id = body.customer_user_id
+
+    # Resolve projects list
+    project_ids: list[int] = []
+    if body.project_ids:
+        project_ids = body.project_ids
+    elif body.project_id:
+        project_ids = [body.project_id]
+
+    projects = []
+    for pid in project_ids:
+        p = db.query(ProjectModel).filter(ProjectModel.id == pid).first()
+        if not p:
+            raise HTTPException(status_code=404, detail=f"Project {pid} not found")
+        projects.append(p)
+        if not customer_user_id:
+            customer_user_id = p.user_id
+
+    # Primary project for legacy compat
+    primary_project = projects[0] if projects else None
 
     ticket = Ticket(
-        project_id=body.project_id,
+        project_id=primary_project.id if primary_project else None,
+        customer_user_id=customer_user_id,
         assigned_to_id=body.assigned_to_id,
         created_by_id=current_user.id,
         title=body.title,
         description=body.description,
         priority=body.priority,
         due_date=body.due_date,
-        original_image_url=project.image_url,
+        original_image_url=primary_project.image_url if primary_project else None,
         status="open",
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )
     db.add(ticket)
+    db.flush()  # get ticket.id before adding images
+
+    # Create TicketImage entries for each project
+    IMAGE_LABELS = ["front", "rear", "left_side", "right_side", "front_45", "rear_45"]
+    for i, proj in enumerate(projects):
+        label = IMAGE_LABELS[i] if i < len(IMAGE_LABELS) else f"photo_{i + 1}"
+        img = TicketImage(
+            ticket_id=ticket.id,
+            project_id=proj.id,
+            label=label,
+            sort_order=i,
+            original_image_url=proj.original_image_url or proj.image_url,
+            ai_result_url=proj.image_url if proj.original_image_url else None,
+        )
+        db.add(img)
+
     db.commit()
     db.refresh(ticket)
 
@@ -711,7 +791,7 @@ async def admin_create_ticket(
                 editor_name=assignee.name or assignee.email,
                 ticket_id=ticket.id,
                 ticket_title=ticket.title,
-                project_name=project.name,
+                project_name=primary_project.name if primary_project else ticket.title,
                 due_date=ticket.due_date,
                 admin_instructions=ticket.description,
             )
@@ -751,7 +831,7 @@ async def admin_update_ticket(
         ticket.due_date = body.due_date
     if body.status is not None:
         ticket.status = body.status
-        if body.status == "done":
+        if body.status in ("done", "delivered") and ticket.completed_at is None:
             ticket.completed_at = datetime.utcnow()
             # Notify the project owner that their job is complete
             try:
@@ -1030,3 +1110,57 @@ async def admin_demote_editor(
     user.role = Role.USER
     db.commit()
     return {"demoted": True, "tickets_unassigned": len(open_tickets)}
+
+
+@router.get("/admin/editor/stats")
+async def admin_editor_stats(
+    request: Request,
+    current_user=Depends(get_current_admin),
+    db: Session = Depends(get_db_session),
+):
+    """Editor leaderboard and summary stats for admin dashboard."""
+    editors = db.query(User).filter(User.role == Role.EDITOR).all()
+    leaderboard = []
+    for ed in editors:
+        completed = db.query(func.count(Ticket.id)).filter(
+            Ticket.assigned_to_id == ed.id, Ticket.status == "done"
+        ).scalar() or 0
+        open_count = db.query(func.count(Ticket.id)).filter(
+            Ticket.assigned_to_id == ed.id,
+            Ticket.status.in_(["claimed", "in_progress", "review"]),
+        ).scalar() or 0
+        avg_row = db.execute(
+            text(
+                "SELECT AVG(EXTRACT(EPOCH FROM (completed_at - claimed_at))/60) "
+                "FROM tickets WHERE assigned_to_id=:uid AND status='done' "
+                "AND claimed_at IS NOT NULL AND completed_at IS NOT NULL"
+            ),
+            {"uid": ed.id},
+        ).fetchone()
+        avg_min = round(float(avg_row[0]), 1) if avg_row and avg_row[0] else None
+        leaderboard.append({
+            "id": ed.id,
+            "name": ed.name or ed.email,
+            "email": ed.email,
+            "is_active": not ed.is_disabled,
+            "completed_tickets": completed,
+            "open_tickets": open_count,
+            "avg_delivery_minutes": avg_min,
+            "rating_avg": ed.rating_avg,
+            "rating_count": ed.rating_count,
+        })
+    leaderboard.sort(key=lambda x: x["completed_tickets"], reverse=True)
+
+    open_total = db.query(func.count(Ticket.id)).filter(Ticket.status == "open").scalar() or 0
+    waiting_review = db.query(func.count(Ticket.id)).filter(Ticket.status == "review").scalar() or 0
+    in_progress_total = db.query(func.count(Ticket.id)).filter(Ticket.status.in_(["claimed", "in_progress"])).scalar() or 0
+
+    return {
+        "leaderboard": leaderboard,
+        "summary": {
+            "open_tickets": open_total,
+            "in_progress_tickets": in_progress_total,
+            "waiting_review": waiting_review,
+            "total_editors": len(editors),
+        },
+    }

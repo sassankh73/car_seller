@@ -521,10 +521,10 @@
         }
       },
       "step5": {
-        "cta": "Bearbeta med AI",
-        "ctaInfo": "Använder 1 credit · ~15 sekunder · Studio: {studio}",
+        "cta": "Behandla med AI",
+        "ctaInfo": "Använder 1 kredit · ~15 sekunder · Studio: {studio}",
         "ctaSelectBoth": "Välj en studio och ladda upp ett foto för att fortsätta",
-        "result": "Ditt resultat är klart",
+        "result": "Dina AutoStudio-bilder är klara",
         "download": "Ladda ner bild",
         "newGeneration": "Ny generering"
       },
@@ -709,7 +709,11 @@
     "logoFileTooLarge": "Filstorleken måste vara mindre än 2 MB",
     "logoFileTypeInvalid": "Endast PNG, JPG och SVG-filer stöds",
     "profileUpdateSuccess": "Profil uppdaterad",
-    "profileUpdateError": "Misslyckades att uppdatera profil"
+    "profileUpdateError": "Misslyckades att uppdatera profil",
+    "aiProcessing": "Bearbetar dina foton…",
+    "aiCompleted": "Dina AutoStudio-bilder är klara.",
+    "readyForDownload": "Redo för nedladdning",
+    "finalReady": "Dina slutliga AutoStudio-bilder är klara."
   },
   "auth": {
     "login": {
@@ -962,9 +966,11 @@
       },
       "status": {
         "open": "Öppen",
+        "claimed": "Tilldelad",
         "in_progress": "Pågående",
         "review": "Granskning",
         "done": "Klar",
+        "delivered": "Levererad",
         "rejected": "Avvisad"
       },
       "overdue": "Försenad",

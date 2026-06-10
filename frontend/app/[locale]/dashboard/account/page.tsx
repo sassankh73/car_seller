@@ -153,7 +153,7 @@ export default function AccountPage() {
         // If the server requires re-login, force logout
         if (result.requireRelogin) {
           setTimeout(() => {
-            logout();
+            void logout();
           }, 2000);
         } else {
           fetchAccountData();

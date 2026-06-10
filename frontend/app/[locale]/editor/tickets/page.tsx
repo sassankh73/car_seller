@@ -16,9 +16,11 @@ const PRIORITY_COLOR: Record<string, string> = {
 
 const STATUS_COLOR: Record<string, string> = {
   open: "bg-yellow-100 text-yellow-700",
+  claimed: "bg-orange-100 text-orange-700",
   in_progress: "bg-blue-100 text-blue-700",
   review: "bg-purple-100 text-purple-700",
   done: "bg-green-100 text-green-700",
+  delivered: "bg-emerald-100 text-emerald-800",
   rejected: "bg-red-100 text-red-700",
 };
 
@@ -30,16 +32,22 @@ export default function EditorTicketsPage() {
   const router = useRouter();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
   const [claiming, setClaiming] = useState<number | null>(null);
 
-  useEffect(() => {
+  const fetchTickets = (f: string) => {
     setLoading(true);
-    getTickets(filter === "all" ? {} : { status: filter })
+    setApiError(null);
+    // "available" and "my_open" are client-side filters applied to unfiltered results
+    const isClientFilter = f === "available" || f === "my_open";
+    getTickets(isClientFilter || f === "all" ? {} : { status: f })
       .then((r) => setTickets(r.items))
-      .catch(console.error)
+      .catch((err) => { console.error(err); setApiError(err?.message || "Failed to load tickets"); })
       .finally(() => setLoading(false));
-  }, [filter]);
+  };
+
+  useEffect(() => { fetchTickets(filter); }, [filter]);
 
   const handleClaim = async (e: React.MouseEvent, ticket: Ticket) => {
     e.preventDefault();
@@ -51,12 +59,10 @@ export default function EditorTicketsPage() {
     } catch (err: any) {
       if (err.message?.includes("409") || err.message?.toLowerCase().includes("claimed")) {
         alert(t("alreadyClaimed"));
-        // Refresh list
-        const r = await getTickets(filter === "all" ? {} : { status: filter });
-        setTickets(r.items);
       } else {
         alert(err.message);
       }
+      fetchTickets(filter);
     } finally {
       setClaiming(null);
     }
@@ -73,7 +79,9 @@ export default function EditorTicketsPage() {
 
   const visibleTickets = tickets.filter((ticket) => {
     if (filter === "available") return ticket.assigned_to_id === null;
-    if (filter === "my_open") return ticket.assigned_to_id !== null && ticket.status === "open";
+    // "My Open" = tickets assigned to me, actively in work (claimed/in_progress/review)
+    if (filter === "my_open") return ticket.assigned_to_id !== null &&
+      ["claimed", "in_progress", "review"].includes(ticket.status);
     return true;
   });
 
@@ -104,7 +112,14 @@ export default function EditorTicketsPage() {
         </div>
       )}
 
-      {!loading && visibleTickets.length === 0 && (
+      {!loading && apiError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+          <p className="text-sm text-red-700 font-medium">Error loading tickets: {apiError}</p>
+          <button onClick={() => fetchTickets(filter)} className="mt-2 text-sm text-red-600 underline">Retry</button>
+        </div>
+      )}
+
+      {!loading && !apiError && visibleTickets.length === 0 && (
         <div className="text-center py-16 text-[#999]">
           <svg className="w-12 h-12 mx-auto mb-4 text-[#ddd]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />

@@ -77,7 +77,7 @@ export default function DashboardNav({ active, planName }: DashboardNavProps) {
             )}
             <LanguageSwitcher />
             <button
-              onClick={logout}
+              onClick={() => { void logout(); }}
               className="text-[#888888] hover:text-[#111111] transition-colors text-sm font-medium"
             >
               {t("navigation.logout")}

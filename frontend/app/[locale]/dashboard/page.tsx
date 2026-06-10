@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import { useRouter } from "next/navigation";
 import DashboardNav from "@/components/DashboardNav";
 import GuidedCapture from "@/components/GuidedCapture";
 import WorkflowSidebar from "@/components/dashboard/WorkflowSidebar";
@@ -117,8 +118,17 @@ export default function Dashboard() {
   const t = useTranslations("dashboard");
   const rt = useTranslations("dashboard.redesign");
   const commonT = useTranslations("common");
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const locale = useLocale();
   const isMobile = useIsMobile();
+
+  // Editors have no access to the normal dashboard
+  useEffect(() => {
+    if (!authLoading && user?.role === "EDITOR") {
+      router.replace(`/${locale}/editor/tickets`);
+    }
+  }, [authLoading, user, locale, router]);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [studios, setStudios] = useState<Studio[]>([]);
@@ -213,6 +223,9 @@ export default function Dashboard() {
     formData.append("enhance_wheels", enhanceWheels.toString());
     formData.append("enhance_paint", enhancePaint.toString());
     formData.append("export_quality", exportQuality);
+    formData.append("vehicle_order_id", crypto.randomUUID());
+    formData.append("image_label", "front");
+    formData.append("sort_order", "0");
 
     let stepIndex = 0;
     const interval = setInterval(() => {
@@ -259,11 +272,14 @@ export default function Dashboard() {
     "Rear View", "Right Side", "Front View",
   ];
 
+  const angleLabels = ["front_45", "left_side", "rear_45", "rear", "right_side", "front"];
+
   const handleGenerateAll = async (images: { blob: Blob; stepIndex: number }[]) => {
     if (!images.length) return;
     setProcessing(true);
     setResultImage(null);
     setApiError(null);
+    const vehicleOrderId = crypto.randomUUID();
     for (let i = 0; i < images.length; i++) {
       setBatchLabel(`Processing photo ${i + 1} of ${images.length}…`);
       const name = angleNames[images[i].stepIndex] ?? `Photo ${i + 1}`;
@@ -274,6 +290,9 @@ export default function Dashboard() {
       formData.append("enhance_wheels", enhanceWheels.toString());
       formData.append("enhance_paint", enhancePaint.toString());
       formData.append("export_quality", exportQuality);
+      formData.append("vehicle_order_id", vehicleOrderId);
+      formData.append("image_label", angleLabels[images[i].stepIndex] ?? `photo_${i + 1}`);
+      formData.append("sort_order", String(i));
       try {
         const res = await fetch("/api/studio/process", { method: "POST", credentials: "include", body: formData });
         if (!res.ok) continue;

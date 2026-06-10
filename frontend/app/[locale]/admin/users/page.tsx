@@ -42,7 +42,7 @@ interface Project {
   created_at?: string;
 }
 
-const ROLES = ["ADMIN", "PREMIUM", "FREE"];
+const ROLES = ["ADMIN", "EDITOR", "PREMIUM", "FREE"];
 
 export default function AdminUsers() {
   const t = useTranslations("admin");
@@ -348,7 +348,7 @@ export default function AdminUsers() {
           <div className="flex items-center space-x-4">
             <LanguageSwitcher />
             <span className="text-gray-400 text-sm">{user?.email}</span>
-            <button onClick={logout} className="text-red-400 hover:text-red-300 transition text-sm">Logout</button>
+            <button onClick={() => { void logout(); }} className="text-red-400 hover:text-red-300 transition text-sm">Logout</button>
             <Link href={`/${locale}/dashboard`} className="text-indigo-400 hover:text-indigo-300 transition">← {t("backToDashboard")}</Link>
           </div>
         </nav>
@@ -431,7 +431,7 @@ export default function AdminUsers() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{u.email}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{u.name || "-"}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${u.role === "ADMIN" ? "bg-yellow-500/20 text-yellow-400" : u.role === "PREMIUM" ? "bg-purple-500/20 text-purple-400" : "bg-gray-500/20 text-gray-400"}`}>{u.role}</span>
+                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${u.role === "ADMIN" ? "bg-yellow-500/20 text-yellow-400" : u.role === "EDITOR" ? "bg-blue-500/20 text-blue-400" : u.role === "PREMIUM" ? "bg-purple-500/20 text-purple-400" : "bg-gray-500/20 text-gray-400"}`}>{u.role}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col gap-1">
@@ -519,7 +519,7 @@ export default function AdminUsers() {
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">{t("role")}</label>
                   <select value={editRole} onChange={(e) => setEditRole(e.target.value)} className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                    {ROLES.map((r) => <option key={r} value={r}>{r === "ADMIN" ? "Admin" : r === "PREMIUM" ? "Premium" : "Free"}</option>)}
+                    {ROLES.map((r) => <option key={r} value={r}>{r === "ADMIN" ? "Admin" : r === "EDITOR" ? "Editor" : r === "PREMIUM" ? "Premium" : "Free"}</option>)}
                   </select>
                 </div>
                 <div>

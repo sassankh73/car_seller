@@ -184,12 +184,14 @@ class Project(Base):
 
 
 class Ticket(Base):
-    """Editor workflow ticket — links a project to an editor for manual retouching."""
+    """Editor workflow ticket — one per customer order (vehicle), may contain multiple images."""
 
     __tablename__ = "tickets"
 
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    vehicle_order_id = Column(String(36), nullable=True, index=True)  # UUID linking all photos in one batch
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True, index=True)
+    customer_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     assigned_to_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     status = Column(String(30), default="open")
@@ -197,20 +199,26 @@ class Ticket(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     editor_note = Column(Text, nullable=True)
+    # Legacy single-image fields kept for backward compat
     original_image_url = Column(Text, nullable=True)
     ai_result_url = Column(Text, nullable=True)
     result_image_url = Column(Text, nullable=True)
     due_date = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
+    claimed_at = Column(DateTime, nullable=True)
+    started_at = Column(DateTime, nullable=True)
+    delivered_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    project = relationship("Project", back_populates="tickets")
+    project = relationship("Project", back_populates="tickets", foreign_keys=[project_id])
+    customer = relationship("User", foreign_keys=[customer_user_id])
     assigned_to = relationship("User", foreign_keys=[assigned_to_id], back_populates="assigned_tickets")
     created_by = relationship("User", foreign_keys=[created_by_id])
     notes = relationship("TicketNote", back_populates="ticket", cascade="all, delete-orphan", order_by="TicketNote.created_at")
     rating = relationship("EditorRating", back_populates="ticket", uselist=False)
+    images = relationship("TicketImage", back_populates="ticket", cascade="all, delete-orphan", order_by="TicketImage.sort_order")
 
     def __repr__(self) -> str:
         return f"<Ticket(id={self.id}, title='{self.title}', status='{self.status}')>"
@@ -259,6 +267,44 @@ class EditorRating(Base):
 
     def __repr__(self) -> str:
         return f"<EditorRating(id={self.id}, ticket_id={self.ticket_id}, stars={self.stars})>"
+
+
+class TicketImage(Base):
+    """One photo angle/view within a customer order ticket."""
+
+    __tablename__ = "ticket_images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+    label = Column(String(50), default="photo")  # front, rear, left_side, right_side, front_45, rear_45, other
+    sort_order = Column(Integer, default=0)
+    original_image_url = Column(Text, nullable=True)
+    ai_result_url = Column(Text, nullable=True)
+    editor_result_url = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    ticket = relationship("Ticket", back_populates="images")
+    project = relationship("Project")
+
+    def __repr__(self) -> str:
+        return f"<TicketImage(id={self.id}, ticket_id={self.ticket_id}, label='{self.label}')>"
+
+
+class DownloadLog(Base):
+    """Audit log for file downloads by editors."""
+    __tablename__ = "download_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True)
+    downloaded_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    file_type = Column(String(30), nullable=False)  # 'original', 'ai_result', 'editor_result', 'zip'
+    downloaded_at = Column(DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<DownloadLog(ticket={self.ticket_id}, by={self.downloaded_by_id}, type={self.file_type})>"
 
 
 def get_db():
@@ -388,6 +434,49 @@ def init_db():
         # tickets table — v2 columns
         ticket_cols = [c["name"] for c in inspector.get_columns("tickets")]
         _add_col_if_missing(conn, "tickets", "ai_result_url", "TEXT", ticket_cols)
+        _add_col_if_missing(conn, "tickets", "claimed_at", "TIMESTAMP", ticket_cols)
+        _add_col_if_missing(conn, "tickets", "started_at", "TIMESTAMP", ticket_cols)
+        # tickets table — v3 customer-order columns
+        _add_col_if_missing(conn, "tickets", "customer_user_id", "INTEGER REFERENCES users(id) ON DELETE SET NULL", ticket_cols)
+        _add_col_if_missing(conn, "tickets", "delivered_at", "TIMESTAMP", ticket_cols)
+        _add_col_if_missing(conn, "tickets", "vehicle_order_id", "VARCHAR(36)", ticket_cols)
+        # Make project_id nullable for tickets that span multiple projects
+        try:
+            conn.execute(text("ALTER TABLE tickets ALTER COLUMN project_id DROP NOT NULL"))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+
+        # ticket_images table
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS ticket_images (
+                id SERIAL PRIMARY KEY,
+                ticket_id INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+                project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+                label VARCHAR(50) NOT NULL DEFAULT 'photo',
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                original_image_url TEXT,
+                ai_result_url TEXT,
+                editor_result_url TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_ticket_images_ticket_id ON ticket_images(ticket_id)"))
+        conn.commit()
+
+        # download_logs audit table
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS download_logs (
+                id SERIAL PRIMARY KEY,
+                ticket_id INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+                downloaded_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                file_type VARCHAR(30) NOT NULL,
+                downloaded_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_download_logs_ticket_id ON download_logs(ticket_id)"))
+        conn.commit()
 
         # users table — editor rating columns
         user_cols2 = [c["name"] for c in inspector.get_columns("users")]
@@ -395,7 +484,7 @@ def init_db():
         _add_col_if_missing(conn, "users", "rating_count", "INTEGER DEFAULT 0", user_cols2)
 
 
-_ALLOWED_TABLES = {"users", "subscriptions", "usages", "projects", "tickets", "ticket_notes", "editor_ratings"}
+_ALLOWED_TABLES = {"users", "subscriptions", "usages", "projects", "tickets", "ticket_notes", "editor_ratings", "download_logs", "ticket_images"}
 _ALLOWED_COLS = {
     "last_login", "password_changed_at", "is_disabled", "force_password_reset",
     "logo_data", "logo_mime_type", "logo_placement", "logo_scale",
@@ -405,9 +494,10 @@ _ALLOWED_COLS = {
     # projects — editor workflow
     "original_image_url", "editor_result_url",
     # tickets
-    "id", "project_id", "assigned_to_id", "created_by_id", "status", "priority",
+    "id", "project_id", "assigned_to_id", "created_by_id", "customer_user_id", "status", "priority",
     "title", "description", "editor_note", "result_image_url", "ai_result_url",
-    "due_date", "completed_at", "created_at", "updated_at",
+    "due_date", "completed_at", "claimed_at", "started_at", "delivered_at", "created_at", "updated_at",
+    "vehicle_order_id",
     # ticket_notes
     "ticket_id", "author_id", "body", "is_internal",
     # editor_ratings

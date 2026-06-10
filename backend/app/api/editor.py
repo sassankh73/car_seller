@@ -15,12 +15,13 @@ from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session, joinedload
 
 from app.middleware.auth import get_current_editor, get_db_session
-from app.models import Role, Ticket, TicketNote, User
+from app.models import DownloadLog, Project, Role, Ticket, TicketImage, TicketNote, User
 from app.schemas.editor import (
     EditorRatingResponse,
     EditorUserResponse,
     TicketBadgeResponse,
     TicketEditorSubmit,
+    TicketImageResponse,
     TicketListResponse,
     TicketNoteCreate,
     TicketNoteResponse,
@@ -47,7 +48,7 @@ def _build_ticket_response(ticket: Ticket, hide_internal: bool = False) -> Ticke
             id=n.id,
             ticket_id=n.ticket_id,
             author_id=n.author_id,
-            author_name=n.author.name or n.author.email if n.author else None,
+            author_name=(n.author.name or n.author.email) if n.author else None,
             body=n.body,
             is_internal=n.is_internal,
             created_at=n.created_at,
@@ -69,13 +70,38 @@ def _build_ticket_response(ticket: Ticket, hide_internal: bool = False) -> Ticke
         )
 
     owner_logo_url = None
-    if ticket.project and ticket.project.owner and ticket.project.owner.logo_data:
-        owner_logo_url = f"/api/editor/tickets/{ticket.id}/owner-logo"
+    logo_placement = None
+    logo_scale = None
+    if ticket.project and ticket.project.owner:
+        owner = ticket.project.owner
+        if owner.logo_data:
+            owner_logo_url = f"/api/editor/tickets/{ticket.id}/owner-logo"
+        logo_placement = getattr(owner, "logo_placement", None)
+        logo_scale = getattr(owner, "logo_scale", None)
+
+    images_resp = [
+        TicketImageResponse(
+            id=img.id,
+            ticket_id=img.ticket_id,
+            project_id=img.project_id,
+            label=img.label,
+            sort_order=img.sort_order,
+            original_image_url=img.original_image_url,
+            ai_result_url=img.ai_result_url,
+            editor_result_url=img.editor_result_url,
+            created_at=img.created_at,
+            updated_at=img.updated_at,
+        )
+        for img in ticket.images
+    ]
 
     return TicketResponse(
         id=ticket.id,
         project_id=ticket.project_id,
         project_name=ticket.project.name if ticket.project else None,
+        customer_user_id=ticket.customer_user_id,
+        customer_name=(ticket.customer.name or ticket.customer.email) if ticket.customer else None,
+        customer_email=ticket.customer.email if ticket.customer else None,
         assigned_to_id=ticket.assigned_to_id,
         assigned_to_name=(ticket.assigned_to.name or ticket.assigned_to.email) if ticket.assigned_to else None,
         created_by_id=ticket.created_by_id,
@@ -88,12 +114,18 @@ def _build_ticket_response(ticket: Ticket, hide_internal: bool = False) -> Ticke
         ai_result_url=ticket.ai_result_url,
         result_image_url=ticket.result_image_url,
         owner_logo_url=owner_logo_url,
+        logo_placement=logo_placement,
+        logo_scale=logo_scale,
         due_date=ticket.due_date,
         completed_at=ticket.completed_at,
+        claimed_at=ticket.claimed_at,
+        started_at=ticket.started_at,
+        delivered_at=ticket.delivered_at,
         created_at=ticket.created_at,
         updated_at=ticket.updated_at,
         notes=notes,
         rating=rating_resp,
+        images=images_resp,
     )
 
 
@@ -101,10 +133,12 @@ def _require_ticket(db: Session, ticket_id: int, current_user: User) -> Ticket:
     ticket = (
         db.query(Ticket)
         .options(
-            joinedload(Ticket.project).joinedload("owner"),
-            joinedload(Ticket.notes).joinedload("author"),
+            joinedload(Ticket.project).joinedload(Project.owner),
+            joinedload(Ticket.notes).joinedload(TicketNote.author),
             joinedload(Ticket.assigned_to),
+            joinedload(Ticket.customer),
             joinedload(Ticket.rating),
+            joinedload(Ticket.images),
         )
         .filter(Ticket.id == ticket_id)
         .first()
@@ -139,44 +173,57 @@ async def list_tickets(
     current_user: User = Depends(get_current_editor),
     db: Session = Depends(get_db_session),
 ):
-    q = db.query(Ticket).options(
-        joinedload(Ticket.project).joinedload("owner"),
-        joinedload(Ticket.notes).joinedload("author"),
-        joinedload(Ticket.assigned_to),
-        joinedload(Ticket.rating),
-    )
-    if current_user.role == Role.EDITOR:
-        # Show editor's own tickets AND unassigned claimable tickets
-        q = q.filter(
-            or_(
-                Ticket.assigned_to_id == current_user.id,
-                Ticket.assigned_to_id.is_(None),
-            )
+    try:
+        from app.models import Project  # noqa — ensure Project in SA registry
+        q = db.query(Ticket).options(
+            joinedload(Ticket.project).joinedload(Project.owner),
+            joinedload(Ticket.notes).joinedload(TicketNote.author),
+            joinedload(Ticket.assigned_to),
+            joinedload(Ticket.customer),
+            joinedload(Ticket.rating),
+            joinedload(Ticket.images),
         )
-        # Exclude done/rejected unassigned tickets
-        q = q.filter(
-            or_(
-                Ticket.assigned_to_id == current_user.id,
-                Ticket.status.notin_(["done", "rejected"]),
+        if current_user.role == Role.EDITOR:
+            # Show editor's own tickets AND unassigned claimable tickets
+            q = q.filter(
+                or_(
+                    Ticket.assigned_to_id == current_user.id,
+                    Ticket.assigned_to_id.is_(None),
+                )
             )
+            # Exclude done/rejected unassigned tickets
+            q = q.filter(
+                or_(
+                    Ticket.assigned_to_id == current_user.id,
+                    Ticket.status.notin_(["done", "rejected", "delivered"]),
+                )
+            )
+        if status_filter:
+            q = q.filter(Ticket.status == status_filter)
+        if priority:
+            q = q.filter(Ticket.priority == priority)
+
+        total = q.count()
+        tickets_list = q.order_by(Ticket.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+        tickets_list.sort(key=lambda t: (PRIORITY_ORDER.get(t.priority, 0), (t.created_at.timestamp() if t.created_at else 0)), reverse=True)
+
+        hide = current_user.role == Role.EDITOR
+        items = []
+        for t in tickets_list:
+            try:
+                items.append(_build_ticket_response(t, hide_internal=hide))
+            except Exception as exc:
+                logger.error("list_tickets: failed to build response for ticket id=%s: %s", t.id, exc, exc_info=True)
+        return TicketListResponse(
+            items=items,
+            total=total,
+            page=page,
+            page_size=page_size,
+            pages=max(1, math.ceil(total / page_size)),
         )
-    if status_filter:
-        q = q.filter(Ticket.status == status_filter)
-    if priority:
-        q = q.filter(Ticket.priority == priority)
-
-    total = q.count()
-    tickets = q.order_by(Ticket.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
-    tickets.sort(key=lambda t: (PRIORITY_ORDER.get(t.priority, 0), t.created_at.timestamp()), reverse=True)
-
-    hide = current_user.role == Role.EDITOR
-    return TicketListResponse(
-        items=[_build_ticket_response(t, hide_internal=hide) for t in tickets],
-        total=total,
-        page=page,
-        page_size=page_size,
-        pages=max(1, math.ceil(total / page_size)),
-    )
+    except Exception as exc:
+        logger.error("list_tickets FAILED for user id=%s role=%s: %s", current_user.id, current_user.role, exc, exc_info=True)
+        raise
 
 
 @router.get("/editor/tickets/{ticket_id}", response_model=TicketResponse)
@@ -200,10 +247,10 @@ async def claim_ticket(
     # Atomic claim: UPDATE only succeeds if ticket is still unassigned
     result = db.execute(
         text(
-            "UPDATE tickets SET assigned_to_id=:uid, status=:st, updated_at=NOW()"
+            "UPDATE tickets SET assigned_to_id=:uid, status=:st, claimed_at=NOW(), updated_at=NOW()"
             " WHERE id=:tid AND assigned_to_id IS NULL RETURNING id"
         ),
-        {"uid": current_user.id, "st": "in_progress", "tid": ticket_id},
+        {"uid": current_user.id, "st": "claimed", "tid": ticket_id},
     )
     row = result.fetchone()
     if row is None:
@@ -254,8 +301,17 @@ async def upload_result(
     result_url = f"/static/editor_results/{safe_name}"
 
     ticket.result_image_url = result_url
-    ticket.status = "review"
+    ticket.status = "in_progress"
+    if ticket.started_at is None:
+        ticket.started_at = datetime.utcnow()
     ticket.updated_at = datetime.utcnow()
+
+    # Propagate editor result back to the Project so the user's dashboard shows it
+    if ticket.project_id:
+        proj = db.query(Project).filter(Project.id == ticket.project_id).first()
+        if proj:
+            proj.editor_result_url = result_url
+
     db.commit()
     db.refresh(ticket)
 
@@ -275,6 +331,58 @@ async def upload_result(
         logger.exception("Failed to send result notification email (non-fatal)")
 
     return _build_ticket_response(ticket, hide_internal=(current_user.role == Role.EDITOR))
+
+
+@router.post("/editor/tickets/{ticket_id}/images/{image_id}/upload-result", response_model=TicketImageResponse)
+async def upload_image_result(
+    ticket_id: int,
+    image_id: int,
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_editor),
+    db: Session = Depends(get_db_session),
+):
+    """Upload the editor's result for a single image within a multi-image ticket."""
+    ticket = _require_ticket(db, ticket_id, current_user)
+    img = db.query(TicketImage).filter(TicketImage.id == image_id, TicketImage.ticket_id == ticket_id).first()
+    if not img:
+        raise HTTPException(status_code=404, detail="Image not found on this ticket")
+
+    data = await file.read()
+    if len(data) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (max 20 MB)")
+    _validate_image_upload(file, data)
+
+    ext = Path(file.filename or "result.jpg").suffix.lower() or ".jpg"
+    safe_name = f"result_{ticket_id}_{image_id}_{uuid.uuid4().hex}{ext}"
+    dest = EDITOR_RESULTS_DIR / safe_name
+    dest.write_bytes(data)
+    result_url = f"/static/editor_results/{safe_name}"
+
+    img.editor_result_url = result_url
+    img.updated_at = datetime.utcnow()
+
+    # Move ticket to in_progress on first upload
+    if ticket.status == "claimed":
+        ticket.status = "in_progress"
+    if ticket.started_at is None:
+        ticket.started_at = datetime.utcnow()
+    ticket.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(img)
+    return TicketImageResponse(
+        id=img.id,
+        ticket_id=img.ticket_id,
+        project_id=img.project_id,
+        label=img.label,
+        sort_order=img.sort_order,
+        original_image_url=img.original_image_url,
+        ai_result_url=img.ai_result_url,
+        editor_result_url=img.editor_result_url,
+        created_at=img.created_at,
+        updated_at=img.updated_at,
+    )
 
 
 @router.post("/editor/tickets/{ticket_id}/submit", response_model=TicketResponse)
@@ -369,12 +477,22 @@ async def download_ticket_zip(
         return p if p.exists() else None
 
     files: list[tuple[str, Path]] = []
+    # Legacy single-image fields
     if p := url_to_path(ticket.original_image_url):
         files.append(("original" + p.suffix, p))
     if p := url_to_path(ticket.ai_result_url):
         files.append(("ai_result" + p.suffix, p))
     if p := url_to_path(ticket.result_image_url):
         files.append(("editor_result" + p.suffix, p))
+    # Multi-image ticket_images
+    for img in ticket.images:
+        lbl = img.label or f"img{img.sort_order}"
+        if p := url_to_path(img.original_image_url):
+            files.append((f"{lbl}_original{p.suffix}", p))
+        if p := url_to_path(img.ai_result_url):
+            files.append((f"{lbl}_ai{p.suffix}", p))
+        if p := url_to_path(img.editor_result_url):
+            files.append((f"{lbl}_edited{p.suffix}", p))
 
     if not files:
         raise HTTPException(status_code=404, detail="No files available for this ticket")
@@ -384,6 +502,13 @@ async def download_ticket_zip(
         for arc_name, path in files:
             zf.write(path, arc_name)
     buf.seek(0)
+
+    try:
+        log = DownloadLog(ticket_id=ticket_id, downloaded_by_id=current_user.id, file_type="zip")
+        db.add(log)
+        db.commit()
+    except Exception:
+        logger.warning("Failed to write download log (non-fatal)")
 
     from fastapi.responses import StreamingResponse
     return StreamingResponse(
@@ -399,16 +524,34 @@ async def get_badge(
     current_user: User = Depends(get_current_editor),
     db: Session = Depends(get_db_session),
 ):
+    from datetime import date
     base = db.query(Ticket).filter(Ticket.assigned_to_id == current_user.id)
     available_count = db.query(Ticket).filter(
         Ticket.assigned_to_id.is_(None),
         Ticket.status == "open",
     ).count()
+    today_start = datetime.combine(date.today(), datetime.min.time())
+    completed_today = db.query(func.count(Ticket.id)).filter(
+        Ticket.assigned_to_id == current_user.id,
+        Ticket.status == "done",
+        Ticket.completed_at >= today_start,
+    ).scalar() or 0
+    avg_row = db.execute(
+        text(
+            "SELECT AVG(EXTRACT(EPOCH FROM (completed_at - claimed_at))/60) "
+            "FROM tickets WHERE assigned_to_id=:uid AND status='done' "
+            "AND claimed_at IS NOT NULL AND completed_at IS NOT NULL"
+        ),
+        {"uid": current_user.id},
+    ).fetchone()
+    avg_delivery_minutes = round(float(avg_row[0]), 1) if avg_row and avg_row[0] else None
     return TicketBadgeResponse(
         open_count=base.filter(Ticket.status == "open").count(),
-        in_progress_count=base.filter(Ticket.status == "in_progress").count(),
+        in_progress_count=base.filter(Ticket.status.in_(["claimed", "in_progress"])).count(),
         review_count=base.filter(Ticket.status == "review").count(),
         available_count=available_count,
+        completed_today=completed_today,
+        avg_delivery_minutes=avg_delivery_minutes,
     )
 
 

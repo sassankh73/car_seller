@@ -137,7 +137,7 @@ export default function AdminDashboard() {
           <div className="flex items-center space-x-4">
             <LanguageSwitcher />
             <span className="text-gray-400 text-sm">{user?.email}</span>
-            <button onClick={logout} className="text-red-400 hover:text-red-300 transition text-sm">
+            <button onClick={() => { void logout(); }} className="text-red-400 hover:text-red-300 transition text-sm">
               Logout
             </button>
             <Link

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/context/AuthContext";
 import { getBadge } from "@/lib/api/editor";
-import type { EditorUser } from "@/types/editor";
+import type { EditorUser, TicketBadge } from "@/types/editor";
 import { authFetch } from "@/context/AuthContext";
 
 function StarDisplay({ avg, count }: { avg: number; count: number }) {
@@ -35,12 +35,11 @@ export default function EditorProfilePage() {
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [editorMe, setEditorMe] = useState<EditorUser | null>(null);
+  const [badge, setBadge] = useState<TicketBadge | null>(null);
 
   useEffect(() => {
-    authFetch("/api/editor/me")
-      .then((r) => r.json())
-      .then(setEditorMe)
-      .catch(() => {});
+    authFetch("/api/editor/me").then((r) => r.json()).then(setEditorMe).catch(() => {});
+    getBadge().then(setBadge).catch(() => {});
   }, []);
 
   const handleChange = async (e: React.FormEvent) => {
@@ -63,6 +62,21 @@ export default function EditorProfilePage() {
         <p className="font-medium text-[#1a1a1a]">{user?.email}</p>
         {user?.name && <><p className="text-sm text-[#888] pt-2">Name</p><p className="font-medium text-[#1a1a1a]">{user.name}</p></>}
       </div>
+
+      {badge && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-xl border border-[#e8e8e8] p-4">
+            <p className="text-xs text-[#888] mb-1">Completed Today</p>
+            <p className="text-2xl font-bold text-green-600">{badge.completed_today}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-[#e8e8e8] p-4">
+            <p className="text-xs text-[#888] mb-1">Avg Delivery</p>
+            <p className="text-2xl font-bold text-blue-600">
+              {badge.avg_delivery_minutes !== null ? `${badge.avg_delivery_minutes}m` : "—"}
+            </p>
+          </div>
+        </div>
+      )}
 
       {editorMe && (
         <div className="bg-white rounded-xl border border-[#e8e8e8] p-5 space-y-3">

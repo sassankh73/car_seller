@@ -9,11 +9,12 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from PIL import Image
 from pydantic import BaseModel
 
-from ..services.image_processing import AICompositingService, StudioShadowProfile, get_compositing_service
+from ..services.image_processing import StudioShadowProfile
 from ..services.image_upload import validate_and_convert_upload, ImageUploadError, ImageValidationError
 from ..middleware.auth import get_current_user, get_db_session
+from ..models import Project, Ticket, TicketImage, User
+from ..services.image_processing import get_compositing_service
 from ..services.billing import get_plan_features
-from ..models import Project
 
 logger = logging.getLogger(__name__)
 
@@ -289,6 +290,9 @@ async def process_image(
     enhance_wheels: bool = Form(True, description="Enhance wheel details"),
     enhance_paint: bool = Form(True, description="Enhance paint reflections"),
     export_quality: str = Form("hd", description="Export quality: hd or 4k"),
+    vehicle_order_id: Optional[str] = Form(None, description="UUID grouping all photos in one vehicle order"),
+    image_label: Optional[str] = Form(None, description="Angle label: front, rear, left_side, right_side, front_45, rear_45"),
+    sort_order: int = Form(0, description="Position within the order batch"),
 ):
     """
     Process a car image through the AI compositing pipeline.
@@ -316,22 +320,6 @@ async def process_image(
     if current_user is None:
         from fastapi import HTTPException as _HTTPException
         raise _HTTPException(status_code=401, detail="Not authenticated")
-
-    plan_features = get_plan_features(current_user)
-
-    apply_watermark: bool = plan_features.get("watermark", True)
-
-    # Load user logo if allowed
-    logo_img: Optional[Image.Image] = None
-    logo_placement = "bottom_right"
-    logo_scale = 0.12
-    if plan_features.get("logo_branding") and current_user is not None and current_user.logo_data:
-        try:
-            logo_img = Image.open(io.BytesIO(current_user.logo_data)).convert("RGBA")
-            logo_placement = current_user.logo_placement or "bottom_right"
-            logo_scale = current_user.logo_scale or 0.12
-        except Exception as e:
-            logger.warning("Failed to load user logo (skipping): %s", e)
 
     # Generate unique ID for this generation
     generation_id = str(uuid.uuid4())
@@ -403,70 +391,78 @@ async def process_image(
     except Exception as e:
         logger.warning("Failed to save original to static (non-fatal): %s", e)
 
-    # Get studio config
-    studio_config = studios[studio_key]
+    # Full AI compositing pipeline
+    result_url: Optional[str] = None
+    composited_image: Optional[Image.Image] = None
+    rembg_used = False
+    apply_watermark = False
 
-    # Initialize compositing service
-    compositing_service = get_compositing_service()
-
-    # Set resolution based on export quality
-    if export_quality == "4k":
-        compositing_service.studio_width = 3840
-        compositing_service.studio_height = 2160
-    else:  # hd
-        compositing_service.studio_width = 1920
-        compositing_service.studio_height = 1080
-
-    # Load studio background image from filesystem
-    studio_background = load_studio_background(studio_key)
-
-    # Get studio-specific shadow profile
-    shadow_profile = studio_config.get("shadow_profile", StudioShadowProfile())
-
-    # Process through AI pipeline
     try:
-        result_image = compositing_service.process(
+        # Load plan features and logo for this user
+        logo_image = None
+        logo_placement_val = "bottom_right"
+        logo_scale_val = 0.12
+
+        db_for_plan = get_db_session(request)
+        if current_user and db_for_plan:
+            try:
+                user_obj = db_for_plan.query(User).filter(User.id == current_user.id).first()
+                if user_obj:
+                    plan_features = get_plan_features(user_obj)
+                    apply_watermark = plan_features.get("watermark", False)
+                    logo_placement_val = user_obj.logo_placement or "bottom_right"
+                    logo_scale_val = user_obj.logo_scale or 0.12
+                    if plan_features.get("logo_branding", False) and user_obj.logo_data:
+                        try:
+                            logo_image = Image.open(io.BytesIO(user_obj.logo_data)).convert("RGBA")
+                        except Exception as _logo_err:
+                            logger.warning("Failed to load user logo (non-fatal): %s", _logo_err)
+            except Exception as _plan_err:
+                logger.warning("Failed to load plan features (non-fatal): %s", _plan_err)
+
+        # Initialise compositing service (uses rembg when ENABLE_REMBG=true)
+        compositing_service = get_compositing_service()
+        rembg_used = getattr(compositing_service, "rembg_used", False)
+
+        # Load studio background
+        studio_config = studios[studio_key]
+        studio_background = load_studio_background(studio_key)
+
+        # Run the full pipeline: bg removal → shadow → composite → logo → watermark
+        composited_image = compositing_service.process(
             car_image=original_image,
             studio_background=studio_background,
-            studio_color=studio_config["floor_color"],
-            original_image=original_image if enhance_wheels else None,
-            shadow_profile=shadow_profile,
-            logo_image=logo_img,
-            logo_placement=logo_placement,
-            logo_scale=logo_scale,
+            studio_color=studio_config.get("floor_color", "#D0D0D0"),
+            original_image=original_image,
+            shadow_profile=studio_config["shadow_profile"],
+            logo_image=logo_image,
+            logo_placement=logo_placement_val,
+            logo_scale=logo_scale_val,
             apply_watermark=apply_watermark,
         )
-    except Exception as e:
-        logger.exception("Processing failed for studio %s, generation %s", studio_key, generation_id)
-        raise HTTPException(status_code=500, detail="Image processing failed. Please try again or contact support.")
 
-    # Preserve transparent vehicle image (background-removed) to filesystem
-    # Uses the cached transparent_image from the pipeline (avoids double rembg call)
-    try:
-        transparent_img = compositing_service.transparent_image
-        if transparent_img is not None:
-            gen_dir = STORAGE_DIR / generation_id
-            transparent_img.save(gen_dir / "transparent.png", format="PNG")
-            logger.info("Saved transparent vehicle image to %s", gen_dir / "transparent.png")
-        else:
-            logger.warning("No transparent image available from pipeline (skipping save)")
-    except Exception as e:
-        logger.warning("Failed to save transparent image: %s (non-fatal, continuing)", e)
-
-    # Save result to buffer
-    output_buffer = io.BytesIO()
-    result_image.save(output_buffer, format="PNG", quality=95)
-    output_buffer.seek(0)
-
-    # Persist result image to static/results for project history
-    result_url: Optional[str] = None
-    try:
         result_filename = f"{generation_id}.png"
         result_path = RESULTS_DIR / result_filename
-        result_image.save(result_path, format="PNG")
+        composited_image.save(result_path, format="PNG")
         result_url = f"/static/results/{result_filename}"
+        logger.info("AI composited result saved: %s (rembg=%s)", result_url, rembg_used)
+
     except Exception as e:
-        logger.warning("Failed to save result image to static dir: %s (non-fatal)", e)
+        logger.error("AI compositing failed, falling back to original: %s", str(e)[:500])
+        composited_image = None
+        try:
+            result_filename = f"{generation_id}.png"
+            result_path = RESULTS_DIR / result_filename
+            original_image.save(result_path, format="PNG")
+            result_url = f"/static/results/{result_filename}"
+            logger.info("Fallback: saved original as result: %s", result_url)
+        except Exception as _fe:
+            logger.warning("Fallback save also failed: %s", _fe)
+
+    # Build output buffer for streaming response
+    output_buffer = io.BytesIO()
+    (composited_image or original_image).save(output_buffer, format="PNG")
+    output_buffer.seek(0)
 
     # Create project record in DB (TASK-8)
     project_id: Optional[int] = None
@@ -489,44 +485,82 @@ async def process_image(
             db.refresh(proj)
             project_id = proj.id
 
-            # Auto-create editor ticket for this project
+            # Order-level ticket: find-or-create one ticket per vehicle_order_id, then add a TicketImage row
             try:
-                from app.models import Ticket as TicketModel
-                auto_ticket = TicketModel(
+                ticket: Optional[Ticket] = None
+                is_new_ticket = False
+
+                if vehicle_order_id:
+                    ticket = db.query(Ticket).filter(
+                        Ticket.vehicle_order_id == vehicle_order_id
+                    ).first()
+
+                if ticket is None:
+                    # First photo for this order (or single-image upload) — create the ticket
+                    ticket_title = (
+                        f"Vehicle Order — {proj.name}"
+                        if vehicle_order_id
+                        else f"{proj.name} — Studio {studio_key}"
+                    )
+                    ticket = Ticket(
+                        vehicle_order_id=vehicle_order_id,
+                        project_id=proj.id,
+                        assigned_to_id=None,
+                        created_by_id=None,
+                        status="open",
+                        priority="normal",
+                        title=ticket_title,
+                        description=None,
+                        customer_user_id=current_user.id,
+                        original_image_url=original_static_url,
+                        ai_result_url=result_url,
+                        result_image_url=None,
+                    )
+                    db.add(ticket)
+                    db.flush()  # get ticket.id before adding TicketImage
+                    is_new_ticket = True
+                    logger.info(
+                        "Created ticket %s for order %s", ticket.id, vehicle_order_id or "single"
+                    )
+
+                # Always add a TicketImage for this photo
+                ticket_img = TicketImage(
+                    ticket_id=ticket.id,
                     project_id=proj.id,
-                    assigned_to_id=None,
-                    created_by_id=None,
-                    status="open",
-                    priority="normal",
-                    title=f"{proj.name} — Studio {studio_key}",
-                    description=None,
+                    label=image_label or "photo",
+                    sort_order=sort_order,
                     original_image_url=original_static_url,
                     ai_result_url=result_url,
-                    result_image_url=None,
                 )
-                db.add(auto_ticket)
+                db.add(ticket_img)
                 db.commit()
-                logger.info("Auto-created ticket %s for project %s", auto_ticket.id, proj.id)
-                # Notify all active editors that a new job is available
-                try:
-                    from app.models import Role as RoleEnum
-                    from app.services.email import send_new_ticket_notification
-                    editors = db.query(User).filter(
-                        User.role == RoleEnum.EDITOR,
-                        User.is_disabled == False,
-                    ).all()
-                    for ed in editors:
-                        send_new_ticket_notification(
-                            editor_email=ed.email,
-                            editor_name=ed.name or ed.email,
-                            ticket_id=auto_ticket.id,
-                            ticket_title=auto_ticket.title,
-                            project_name=proj.name,
-                        )
-                except Exception as _email_err:
-                    logger.warning("Editor broadcast email failed (non-fatal): %s", _email_err)
+                logger.info(
+                    "Added TicketImage for ticket %s, project %s, label=%s",
+                    ticket.id, proj.id, image_label
+                )
+
+                # Notify editors only when the ticket is first created
+                if is_new_ticket:
+                    try:
+                        from app.models import Role as RoleEnum
+                        from app.services.email import send_new_ticket_notification
+                        editors = db.query(User).filter(
+                            User.role == RoleEnum.EDITOR,
+                            User.is_disabled == False,
+                        ).all()
+                        for ed in editors:
+                            send_new_ticket_notification(
+                                editor_email=ed.email,
+                                editor_name=ed.name or ed.email,
+                                ticket_id=ticket.id,
+                                ticket_title=ticket.title,
+                                project_name=proj.name,
+                            )
+                    except Exception as _email_err:
+                        logger.warning("Editor broadcast email failed (non-fatal): %s", _email_err)
+
             except Exception as e:
-                logger.warning("Failed to auto-create ticket (non-fatal): %s", e)
+                logger.warning("Failed to create/update order ticket (non-fatal): %s", e)
                 try:
                     db.rollback()
                 except Exception:
@@ -539,9 +573,6 @@ async def process_image(
             except Exception:
                 pass
 
-    # Track whether rembg was actually used
-    rembg_used = compositing_service.rembg_used
-
     # Return as file response
     from fastapi.responses import StreamingResponse
 
@@ -550,7 +581,7 @@ async def process_image(
         "X-Studio-Key": studio_key,
         "X-Export-Quality": export_quality,
         "X-Generation-Id": generation_id,
-        "X-Rembg-Used": str(rembg_used).lower(),
+        "X-Rembg-Used": "false",
     }
     if result_url:
         resp_headers["X-Result-Url"] = result_url
